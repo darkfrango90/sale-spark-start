@@ -6,6 +6,7 @@ export interface Product {
   description?: string;
   category?: string;
   unit: string;
+  density?: number; // Peso em Kg por m³
   costPrice: number;
   salePrice: number;
   stock: number;
