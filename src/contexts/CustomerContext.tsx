@@ -36,12 +36,21 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
         id: c.id,
         code: c.code,
         name: c.name,
+        tradeName: c.trade_name || undefined,
         type: c.type as 'fisica' | 'juridica',
         cpfCnpj: c.cpf_cnpj,
+        rgIe: c.rg_ie || undefined,
         phone: c.phone || '',
+        cellphone: c.cellphone || undefined,
         email: c.email || undefined,
+        zipCode: c.zip_code || undefined,
+        street: c.street || undefined,
+        number: c.number || undefined,
+        complement: c.complement || undefined,
+        neighborhood: c.neighborhood || undefined,
         city: c.city || undefined,
         state: c.state || undefined,
+        birthDate: c.birth_date || undefined,
         notes: c.notes || undefined,
         active: c.active,
         createdAt: new Date(c.created_at)
@@ -86,12 +95,21 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
         .insert({
           code: customerData.code,
           name: customerData.name,
+          trade_name: customerData.tradeName || null,
           type: customerData.type,
           cpf_cnpj: customerData.cpfCnpj,
+          rg_ie: customerData.rgIe || null,
           phone: customerData.phone || null,
+          cellphone: customerData.cellphone || null,
           email: customerData.email || null,
+          zip_code: customerData.zipCode || null,
+          street: customerData.street || null,
+          number: customerData.number || null,
+          complement: customerData.complement || null,
+          neighborhood: customerData.neighborhood || null,
           city: customerData.city || null,
           state: customerData.state || null,
+          birth_date: customerData.birthDate || null,
           notes: customerData.notes || null,
           active: customerData.active
         });
@@ -110,12 +128,21 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
       const updateData: any = {};
       if (customerData.code !== undefined) updateData.code = customerData.code;
       if (customerData.name !== undefined) updateData.name = customerData.name;
+      if (customerData.tradeName !== undefined) updateData.trade_name = customerData.tradeName || null;
       if (customerData.type !== undefined) updateData.type = customerData.type;
       if (customerData.cpfCnpj !== undefined) updateData.cpf_cnpj = customerData.cpfCnpj;
+      if (customerData.rgIe !== undefined) updateData.rg_ie = customerData.rgIe || null;
       if (customerData.phone !== undefined) updateData.phone = customerData.phone || null;
+      if (customerData.cellphone !== undefined) updateData.cellphone = customerData.cellphone || null;
       if (customerData.email !== undefined) updateData.email = customerData.email || null;
+      if (customerData.zipCode !== undefined) updateData.zip_code = customerData.zipCode || null;
+      if (customerData.street !== undefined) updateData.street = customerData.street || null;
+      if (customerData.number !== undefined) updateData.number = customerData.number || null;
+      if (customerData.complement !== undefined) updateData.complement = customerData.complement || null;
+      if (customerData.neighborhood !== undefined) updateData.neighborhood = customerData.neighborhood || null;
       if (customerData.city !== undefined) updateData.city = customerData.city || null;
       if (customerData.state !== undefined) updateData.state = customerData.state || null;
+      if (customerData.birthDate !== undefined) updateData.birth_date = customerData.birthDate || null;
       if (customerData.notes !== undefined) updateData.notes = customerData.notes || null;
       if (customerData.active !== undefined) updateData.active = customerData.active;
 
