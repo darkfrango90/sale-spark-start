@@ -8,10 +8,12 @@ import { CustomerProvider } from "@/contexts/CustomerContext";
 import { ProductProvider } from "@/contexts/ProductContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { SalesProvider } from "@/contexts/SalesContext";
+import { CompanyProvider } from "@/contexts/CompanyContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import UserManagement from "./pages/settings/UserManagement";
 import PaymentMethods from "./pages/settings/PaymentMethods";
+import CompanySettingsPage from "./pages/settings/CompanySettings";
 import CustomerManagement from "./pages/customers/CustomerManagement";
 import ProductManagement from "./pages/products/ProductManagement";
 import NewSale from "./pages/sales/NewSale";
@@ -43,24 +45,27 @@ const App = () => (
         <ProductProvider>
           <SettingsProvider>
             <SalesProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                  <Routes>
-                    <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-                    <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-                    <Route path="/configuracao/usuarios" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-                    <Route path="/configuracao/pagamentos" element={<ProtectedRoute><PaymentMethods /></ProtectedRoute>} />
-                    <Route path="/cadastro/clientes" element={<ProtectedRoute><CustomerManagement /></ProtectedRoute>} />
-                    <Route path="/cadastro/produtos" element={<ProtectedRoute><ProductManagement /></ProtectedRoute>} />
-                    <Route path="/vendas/nova" element={<ProtectedRoute><NewSale /></ProtectedRoute>} />
-                    <Route path="/vendas/pedidos" element={<ProtectedRoute><SalesList type="pedido" /></ProtectedRoute>} />
-                    <Route path="/vendas/orcamentos" element={<ProtectedRoute><SalesList type="orcamento" /></ProtectedRoute>} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </BrowserRouter>
-              </TooltipProvider>
+              <CompanyProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  <BrowserRouter>
+                    <Routes>
+                      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+                      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+                      <Route path="/configuracao/usuarios" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+                      <Route path="/configuracao/pagamentos" element={<ProtectedRoute><PaymentMethods /></ProtectedRoute>} />
+                      <Route path="/configuracao/empresa" element={<ProtectedRoute><CompanySettingsPage /></ProtectedRoute>} />
+                      <Route path="/cadastro/clientes" element={<ProtectedRoute><CustomerManagement /></ProtectedRoute>} />
+                      <Route path="/cadastro/produtos" element={<ProtectedRoute><ProductManagement /></ProtectedRoute>} />
+                      <Route path="/vendas/nova" element={<ProtectedRoute><NewSale /></ProtectedRoute>} />
+                      <Route path="/vendas/pedidos" element={<ProtectedRoute><SalesList type="pedido" /></ProtectedRoute>} />
+                      <Route path="/vendas/orcamentos" element={<ProtectedRoute><SalesList type="orcamento" /></ProtectedRoute>} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </BrowserRouter>
+                </TooltipProvider>
+              </CompanyProvider>
             </SalesProvider>
           </SettingsProvider>
         </ProductProvider>
