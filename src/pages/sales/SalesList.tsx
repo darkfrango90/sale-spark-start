@@ -89,13 +89,21 @@ const SalesList = ({ type }: SalesListProps) => {
     setIsConvertDialogOpen(true);
   };
 
-  const confirmConvert = () => {
+  const confirmConvert = async () => {
     if (saleToConvert) {
-      const newSale = convertQuoteToSale(saleToConvert.id);
-      if (newSale) {
+      try {
+        const newSale = await convertQuoteToSale(saleToConvert.id);
+        if (newSale) {
+          toast({
+            title: "Orçamento convertido",
+            description: `Orçamento ${saleToConvert.number} convertido para Pedido ${newSale.number}.`,
+          });
+        }
+      } catch (error) {
         toast({
-          title: "Orçamento convertido",
-          description: `Orçamento ${saleToConvert.number} convertido para Pedido ${newSale.number}.`,
+          title: "Erro",
+          description: "Falha ao converter orçamento.",
+          variant: "destructive",
         });
       }
       setIsConvertDialogOpen(false);

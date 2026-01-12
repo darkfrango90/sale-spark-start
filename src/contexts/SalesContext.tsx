@@ -1,36 +1,102 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Sale } from '@/types/sales';
+import { Sale, SaleItem } from '@/types/sales';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface SalesContextType {
   sales: Sale[];
-  addSale: (sale: Omit<Sale, 'id' | 'createdAt' | 'updatedAt'>) => Sale;
-  updateSale: (id: string, sale: Partial<Sale>) => void;
-  deleteSale: (id: string) => void;
+  loading: boolean;
+  addSale: (sale: Omit<Sale, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Sale>;
+  updateSale: (id: string, sale: Partial<Sale>) => Promise<void>;
+  deleteSale: (id: string) => Promise<void>;
   getNextSaleNumber: () => string;
   getNextQuoteNumber: () => string;
-  convertQuoteToSale: (quoteId: string) => Sale | undefined;
+  convertQuoteToSale: (quoteId: string) => Promise<Sale | undefined>;
   getSalesByType: (type: 'pedido' | 'orcamento') => Sale[];
+  refreshSales: () => Promise<void>;
 }
 
 const SalesContext = createContext<SalesContextType | undefined>(undefined);
 
 export const SalesProvider = ({ children }: { children: ReactNode }) => {
-  const [sales, setSales] = useState<Sale[]>(() => {
-    const stored = localStorage.getItem('sales');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return parsed.map((s: Sale) => ({
-        ...s,
-        createdAt: new Date(s.createdAt),
-        updatedAt: new Date(s.updatedAt)
-      }));
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchSales = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch sales
+      const { data: salesData, error: salesError } = await supabase
+        .from('sales')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (salesError) throw salesError;
+
+      // Fetch all sale items
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('sale_items')
+        .select('*');
+
+      if (itemsError) throw itemsError;
+
+      const mappedSales: Sale[] = (salesData || []).map(s => {
+        const saleItems: SaleItem[] = (itemsData || [])
+          .filter(i => i.sale_id === s.id)
+          .map(i => ({
+            id: i.id,
+            productId: i.product_id,
+            productCode: i.product_code,
+            productName: i.product_name,
+            unit: i.unit,
+            quantity: Number(i.quantity),
+            unitPrice: Number(i.unit_price),
+            discount: Number(i.discount),
+            total: Number(i.total),
+            density: i.density ? Number(i.density) : undefined,
+            weight: i.weight ? Number(i.weight) : undefined
+          }));
+
+        return {
+          id: s.id,
+          type: s.type as 'pedido' | 'orcamento',
+          number: s.number,
+          customerId: s.customer_id,
+          customerCode: s.customer_code,
+          customerName: s.customer_name,
+          customerCpfCnpj: s.customer_cpf_cnpj,
+          paymentMethodId: s.payment_method_id || '',
+          paymentMethodName: s.payment_method_name || '',
+          items: saleItems,
+          subtotal: Number(s.subtotal),
+          discount: Number(s.discount),
+          total: Number(s.total),
+          totalWeight: Number(s.total_weight),
+          notes: s.notes || undefined,
+          status: s.status as 'pendente' | 'finalizado' | 'cancelado',
+          createdAt: new Date(s.created_at),
+          updatedAt: new Date(s.updated_at)
+        };
+      });
+
+      setSales(mappedSales);
+    } catch (error) {
+      console.error('Error fetching sales:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao carregar vendas.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-    return [];
-  });
+  };
 
   useEffect(() => {
-    localStorage.setItem('sales', JSON.stringify(sales));
-  }, [sales]);
+    fetchSales();
+  }, []);
 
   const getNextSaleNumber = (): string => {
     const pedidos = sales.filter(s => s.type === 'pedido');
@@ -53,51 +119,138 @@ export const SalesProvider = ({ children }: { children: ReactNode }) => {
     return `ORC-${String(maxNumber + 1).padStart(5, '0')}`;
   };
 
-  const addSale = (saleData: Omit<Sale, 'id' | 'createdAt' | 'updatedAt'>): Sale => {
-    const now = new Date();
-    const newSale: Sale = {
-      ...saleData,
-      id: crypto.randomUUID(),
-      createdAt: now,
-      updatedAt: now
-    };
-    setSales(prev => [...prev, newSale]);
-    return newSale;
+  const addSale = async (saleData: Omit<Sale, 'id' | 'createdAt' | 'updatedAt'>): Promise<Sale> => {
+    try {
+      // Insert sale
+      const { data: saleResult, error: saleError } = await supabase
+        .from('sales')
+        .insert({
+          type: saleData.type,
+          number: saleData.number,
+          customer_id: saleData.customerId,
+          customer_code: saleData.customerCode,
+          customer_name: saleData.customerName,
+          customer_cpf_cnpj: saleData.customerCpfCnpj,
+          payment_method_id: saleData.paymentMethodId || null,
+          payment_method_name: saleData.paymentMethodName || null,
+          subtotal: saleData.subtotal,
+          discount: saleData.discount,
+          total: saleData.total,
+          total_weight: saleData.totalWeight,
+          notes: saleData.notes || null,
+          status: saleData.status
+        })
+        .select()
+        .single();
+
+      if (saleError) throw saleError;
+
+      // Insert sale items
+      if (saleData.items.length > 0) {
+        const itemsToInsert = saleData.items.map(item => ({
+          sale_id: saleResult.id,
+          product_id: item.productId,
+          product_code: item.productCode,
+          product_name: item.productName,
+          unit: item.unit,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          discount: item.discount,
+          total: item.total,
+          density: item.density || null,
+          weight: item.weight || null
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('sale_items')
+          .insert(itemsToInsert);
+
+        if (itemsError) throw itemsError;
+      }
+
+      await fetchSales();
+
+      // Return the created sale
+      const newSale: Sale = {
+        id: saleResult.id,
+        type: saleResult.type as 'pedido' | 'orcamento',
+        number: saleResult.number,
+        customerId: saleResult.customer_id,
+        customerCode: saleResult.customer_code,
+        customerName: saleResult.customer_name,
+        customerCpfCnpj: saleResult.customer_cpf_cnpj,
+        paymentMethodId: saleResult.payment_method_id || '',
+        paymentMethodName: saleResult.payment_method_name || '',
+        items: saleData.items,
+        subtotal: Number(saleResult.subtotal),
+        discount: Number(saleResult.discount),
+        total: Number(saleResult.total),
+        totalWeight: Number(saleResult.total_weight),
+        notes: saleResult.notes || undefined,
+        status: saleResult.status as 'pendente' | 'finalizado' | 'cancelado',
+        createdAt: new Date(saleResult.created_at),
+        updatedAt: new Date(saleResult.updated_at)
+      };
+
+      return newSale;
+    } catch (error: any) {
+      console.error('Error adding sale:', error);
+      throw error;
+    }
   };
 
-  const updateSale = (id: string, saleData: Partial<Sale>) => {
-    setSales(prev => 
-      prev.map(sale => 
-        sale.id === id ? { ...sale, ...saleData, updatedAt: new Date() } : sale
-      )
-    );
+  const updateSale = async (id: string, saleData: Partial<Sale>) => {
+    try {
+      const updateData: any = {};
+      if (saleData.status !== undefined) updateData.status = saleData.status;
+      if (saleData.notes !== undefined) updateData.notes = saleData.notes;
+
+      const { error } = await supabase
+        .from('sales')
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await fetchSales();
+    } catch (error: any) {
+      console.error('Error updating sale:', error);
+      throw error;
+    }
   };
 
-  const deleteSale = (id: string) => {
-    setSales(prev => prev.filter(sale => sale.id !== id));
+  const deleteSale = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('sales')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await fetchSales();
+    } catch (error: any) {
+      console.error('Error deleting sale:', error);
+      throw error;
+    }
   };
 
-  const convertQuoteToSale = (quoteId: string): Sale | undefined => {
+  const convertQuoteToSale = async (quoteId: string): Promise<Sale | undefined> => {
     const quote = sales.find(s => s.id === quoteId && s.type === 'orcamento');
     if (!quote) return undefined;
 
     const newSaleNumber = getNextSaleNumber();
-    const now = new Date();
     
-    const newSale: Sale = {
+    const newSale = await addSale({
       ...quote,
-      id: crypto.randomUUID(),
       type: 'pedido',
       number: newSaleNumber,
       status: 'pendente',
-      createdAt: now,
-      updatedAt: now
-    };
+      totalWeight: quote.totalWeight
+    });
 
-    setSales(prev => [...prev, newSale]);
-    
-    // Mark quote as converted (finalizado)
-    updateSale(quoteId, { status: 'finalizado' });
+    // Mark quote as converted
+    await updateSale(quoteId, { status: 'finalizado' });
     
     return newSale;
   };
@@ -109,13 +262,15 @@ export const SalesProvider = ({ children }: { children: ReactNode }) => {
   return (
     <SalesContext.Provider value={{
       sales,
+      loading,
       addSale,
       updateSale,
       deleteSale,
       getNextSaleNumber,
       getNextQuoteNumber,
       convertQuoteToSale,
-      getSalesByType
+      getSalesByType,
+      refreshSales: fetchSales
     }}>
       {children}
     </SalesContext.Provider>
