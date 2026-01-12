@@ -230,7 +230,7 @@ const NewSale = () => {
     }).format(value);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedCustomer) {
       toast({
         title: "Erro",
@@ -258,40 +258,49 @@ const NewSale = () => {
       return;
     }
 
-    const selectedPayment = paymentMethods.find(p => p.id === paymentMethodId);
+    try {
+      const selectedPayment = paymentMethods.find(p => p.id === paymentMethodId);
 
-    const newSale = addSale({
-      type: saleType,
-      number: saleNumber,
-      customerId: selectedCustomer.id,
-      customerCode: selectedCustomer.code,
-      customerName: selectedCustomer.name,
-      customerCpfCnpj: selectedCustomer.cpfCnpj,
-      paymentMethodId,
-      paymentMethodName: selectedPayment?.name || '',
-      items,
-      subtotal,
-      discount: totalDiscount,
-      total,
-      totalWeight,
-      notes: notes || undefined,
-      status: 'pendente',
-    });
+      const newSale = await addSale({
+        type: saleType,
+        number: saleNumber,
+        customerId: selectedCustomer.id,
+        customerCode: selectedCustomer.code,
+        customerName: selectedCustomer.name,
+        customerCpfCnpj: selectedCustomer.cpfCnpj,
+        paymentMethodId,
+        paymentMethodName: selectedPayment?.name || '',
+        items,
+        subtotal,
+        discount: totalDiscount,
+        total,
+        totalWeight,
+        notes: notes || undefined,
+        status: 'pendente',
+      });
 
-    toast({
-      title: saleType === 'pedido' ? "Pedido criado" : "Orçamento criado",
-      description: `${saleType === 'pedido' ? 'Pedido' : 'Orçamento'} ${saleNumber} criado com sucesso.`,
-    });
+      toast({
+        title: saleType === 'pedido' ? "Pedido criado" : "Orçamento criado",
+        description: `${saleType === 'pedido' ? 'Pedido' : 'Orçamento'} ${saleNumber} criado com sucesso.`,
+      });
 
-    // Open print modal
-    setSavedSale(newSale);
-    setPrintModalOpen(true);
+      // Open print modal
+      setSavedSale(newSale);
+      setPrintModalOpen(true);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao salvar. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleClosePrint = () => {
     setPrintModalOpen(false);
     navigate(saleType === 'pedido' ? '/vendas/pedidos' : '/vendas/orcamentos');
   };
+
 
   return (
     <div className="min-h-screen bg-background">

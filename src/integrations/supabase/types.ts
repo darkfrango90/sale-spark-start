@@ -14,7 +14,267 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      customers: {
+        Row: {
+          active: boolean
+          address: string | null
+          city: string | null
+          code: string
+          cpf_cnpj: string
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          state: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          address?: string | null
+          city?: string | null
+          code: string
+          cpf_cnpj: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          state?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          address?: string | null
+          city?: string | null
+          code?: string
+          cpf_cnpj?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          state?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payment_methods: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          active: boolean
+          category: string | null
+          code: string
+          cost_price: number
+          created_at: string
+          density: number | null
+          description: string | null
+          id: string
+          min_stock: number
+          name: string
+          sale_price: number
+          stock: number
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category?: string | null
+          code: string
+          cost_price?: number
+          created_at?: string
+          density?: number | null
+          description?: string | null
+          id?: string
+          min_stock?: number
+          name: string
+          sale_price?: number
+          stock?: number
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string | null
+          code?: string
+          cost_price?: number
+          created_at?: string
+          density?: number | null
+          description?: string | null
+          id?: string
+          min_stock?: number
+          name?: string
+          sale_price?: number
+          stock?: number
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sale_items: {
+        Row: {
+          created_at: string
+          density: number | null
+          discount: number
+          id: string
+          product_code: string
+          product_id: string
+          product_name: string
+          quantity: number
+          sale_id: string
+          total: number
+          unit: string
+          unit_price: number
+          weight: number | null
+        }
+        Insert: {
+          created_at?: string
+          density?: number | null
+          discount?: number
+          id?: string
+          product_code: string
+          product_id: string
+          product_name: string
+          quantity?: number
+          sale_id: string
+          total?: number
+          unit: string
+          unit_price?: number
+          weight?: number | null
+        }
+        Update: {
+          created_at?: string
+          density?: number | null
+          discount?: number
+          id?: string
+          product_code?: string
+          product_id?: string
+          product_name?: string
+          quantity?: number
+          sale_id?: string
+          total?: number
+          unit?: string
+          unit_price?: number
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales: {
+        Row: {
+          created_at: string
+          customer_code: string
+          customer_cpf_cnpj: string
+          customer_id: string
+          customer_name: string
+          discount: number
+          id: string
+          notes: string | null
+          number: string
+          payment_method_id: string | null
+          payment_method_name: string | null
+          status: string
+          subtotal: number
+          total: number
+          total_weight: number
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_code: string
+          customer_cpf_cnpj: string
+          customer_id: string
+          customer_name: string
+          discount?: number
+          id?: string
+          notes?: string | null
+          number: string
+          payment_method_id?: string | null
+          payment_method_name?: string | null
+          status?: string
+          subtotal?: number
+          total?: number
+          total_weight?: number
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_code?: string
+          customer_cpf_cnpj?: string
+          customer_id?: string
+          customer_name?: string
+          discount?: number
+          id?: string
+          notes?: string | null
+          number?: string
+          payment_method_id?: string | null
+          payment_method_name?: string | null
+          status?: string
+          subtotal?: number
+          total?: number
+          total_weight?: number
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
