@@ -13,8 +13,10 @@ export interface SaleItem {
   unit: string;
   quantity: number;
   unitPrice: number;
-  discount: number;
+  discount: number; // Em R$ (valor absoluto)
   total: number;
+  density?: number; // Densidade do produto (Kg/m³)
+  weight?: number; // Peso calculado (Kg)
 }
 
 export interface Sale {
@@ -31,6 +33,7 @@ export interface Sale {
   subtotal: number;
   discount: number;
   total: number;
+  totalWeight: number; // Peso total em Kg
   notes?: string;
   status: 'pendente' | 'finalizado' | 'cancelado';
   createdAt: Date;
