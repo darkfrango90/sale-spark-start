@@ -1,82 +1,123 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { PaymentMethod } from '@/types/sales';
-
-const defaultPaymentMethods: Omit<PaymentMethod, 'id' | 'createdAt'>[] = [
-  { name: 'Pix', active: true },
-  { name: 'Cartão de Crédito', active: true },
-  { name: 'Cartão de Débito', active: true },
-  { name: 'Cheque à Vista', active: true },
-  { name: 'Cheque a Prazo', active: true },
-  { name: 'Transferência BB', active: true },
-  { name: 'Dinheiro', active: true },
-  { name: 'À Prazo', active: true },
-];
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface SettingsContextType {
   paymentMethods: PaymentMethod[];
-  addPaymentMethod: (method: Omit<PaymentMethod, 'id' | 'createdAt'>) => PaymentMethod;
-  updatePaymentMethod: (id: string, method: Partial<PaymentMethod>) => void;
-  deletePaymentMethod: (id: string) => void;
+  loading: boolean;
+  addPaymentMethod: (name: string) => Promise<void>;
+  updatePaymentMethod: (id: string, data: Partial<PaymentMethod>) => Promise<void>;
+  deletePaymentMethod: (id: string) => Promise<void>;
   getActivePaymentMethods: () => PaymentMethod[];
+  refreshPaymentMethods: () => Promise<void>;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(() => {
-    const stored = localStorage.getItem('paymentMethods');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return parsed.map((p: PaymentMethod) => ({
-        ...p,
-        createdAt: new Date(p.createdAt)
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchPaymentMethods = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('payment_methods')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+
+      const mappedMethods: PaymentMethod[] = (data || []).map(pm => ({
+        id: pm.id,
+        name: pm.name,
+        active: pm.active,
+        createdAt: new Date(pm.created_at)
       }));
+
+      setPaymentMethods(mappedMethods);
+    } catch (error) {
+      console.error('Error fetching payment methods:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao carregar condições de pagamento.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-    // Initialize with default payment methods
-    return defaultPaymentMethods.map(method => ({
-      ...method,
-      id: crypto.randomUUID(),
-      createdAt: new Date()
-    }));
-  });
+  };
 
   useEffect(() => {
-    localStorage.setItem('paymentMethods', JSON.stringify(paymentMethods));
-  }, [paymentMethods]);
-
-  const addPaymentMethod = (methodData: Omit<PaymentMethod, 'id' | 'createdAt'>): PaymentMethod => {
-    const newMethod: PaymentMethod = {
-      ...methodData,
-      id: crypto.randomUUID(),
-      createdAt: new Date()
-    };
-    setPaymentMethods(prev => [...prev, newMethod]);
-    return newMethod;
-  };
-
-  const updatePaymentMethod = (id: string, methodData: Partial<PaymentMethod>) => {
-    setPaymentMethods(prev => 
-      prev.map(method => 
-        method.id === id ? { ...method, ...methodData } : method
-      )
-    );
-  };
-
-  const deletePaymentMethod = (id: string) => {
-    setPaymentMethods(prev => prev.filter(method => method.id !== id));
-  };
+    fetchPaymentMethods();
+  }, []);
 
   const getActivePaymentMethods = (): PaymentMethod[] => {
-    return paymentMethods.filter(m => m.active);
+    return paymentMethods.filter(pm => pm.active);
+  };
+
+  const addPaymentMethod = async (name: string) => {
+    try {
+      const { error } = await supabase
+        .from('payment_methods')
+        .insert({ name, active: true });
+
+      if (error) throw error;
+
+      await fetchPaymentMethods();
+    } catch (error: any) {
+      console.error('Error adding payment method:', error);
+      throw error;
+    }
+  };
+
+  const updatePaymentMethod = async (id: string, data: Partial<PaymentMethod>) => {
+    try {
+      const updateData: any = {};
+      if (data.name !== undefined) updateData.name = data.name;
+      if (data.active !== undefined) updateData.active = data.active;
+
+      const { error } = await supabase
+        .from('payment_methods')
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await fetchPaymentMethods();
+    } catch (error: any) {
+      console.error('Error updating payment method:', error);
+      throw error;
+    }
+  };
+
+  const deletePaymentMethod = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('payment_methods')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await fetchPaymentMethods();
+    } catch (error: any) {
+      console.error('Error deleting payment method:', error);
+      throw error;
+    }
   };
 
   return (
     <SettingsContext.Provider value={{
       paymentMethods,
+      loading,
       addPaymentMethod,
       updatePaymentMethod,
       deletePaymentMethod,
-      getActivePaymentMethods
+      getActivePaymentMethods,
+      refreshPaymentMethods: fetchPaymentMethods
     }}>
       {children}
     </SettingsContext.Provider>
