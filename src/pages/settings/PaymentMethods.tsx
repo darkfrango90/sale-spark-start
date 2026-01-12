@@ -86,7 +86,7 @@ const PaymentMethods = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name.trim()) {
@@ -98,23 +98,31 @@ const PaymentMethods = () => {
       return;
     }
 
-    if (editingMethod) {
-      updatePaymentMethod(editingMethod.id, formData);
+    try {
+      if (editingMethod) {
+        await updatePaymentMethod(editingMethod.id, { name: formData.name, active: formData.active });
+        toast({
+          title: "Condição atualizada",
+          description: `A condição "${formData.name}" foi atualizada com sucesso.`,
+        });
+      } else {
+        await addPaymentMethod(formData.name);
+        toast({
+          title: "Condição cadastrada",
+          description: `A condição "${formData.name}" foi cadastrada com sucesso.`,
+        });
+      }
+
+      setIsDialogOpen(false);
+      setFormData(emptyFormData);
+      setEditingMethod(null);
+    } catch (error) {
       toast({
-        title: "Condição atualizada",
-        description: `A condição "${formData.name}" foi atualizada com sucesso.`,
-      });
-    } else {
-      addPaymentMethod(formData);
-      toast({
-        title: "Condição cadastrada",
-        description: `A condição "${formData.name}" foi cadastrada com sucesso.`,
+        title: "Erro",
+        description: "Falha ao salvar. Tente novamente.",
+        variant: "destructive",
       });
     }
-
-    setIsDialogOpen(false);
-    setFormData(emptyFormData);
-    setEditingMethod(null);
   };
 
   return (
