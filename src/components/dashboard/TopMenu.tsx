@@ -27,14 +27,14 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   { label: "Cadastro", items: [
     { label: "Clientes", path: "/cadastro/clientes" },
-    { label: "Produtos" },
+    { label: "Produtos", path: "/cadastro/produtos" },
     { label: "Fornecedores" },
     { label: "Funcionários" }
   ]},
   { label: "Vendas", items: [
-    { label: "Nova Venda" },
-    { label: "Orçamentos" },
-    { label: "Pedidos" }
+    { label: "Nova Venda", path: "/vendas/nova" },
+    { label: "Orçamentos", path: "/vendas/orcamentos" },
+    { label: "Pedidos", path: "/vendas/pedidos" }
   ]},
   { label: "O.S.", items: [
     { label: "Nova O.S." },
@@ -60,6 +60,7 @@ const menuItems: MenuItem[] = [
   { label: "Configuração", items: [
     { label: "Empresa" },
     { label: "Usuários", path: "/configuracao/usuarios" },
+    { label: "Condições de Pagamento", path: "/configuracao/pagamentos" },
     { label: "Sistema" }
   ]},
 ];
@@ -82,8 +83,8 @@ const TopMenu = () => {
 
   const shortcutItems: ShortcutItem[] = [
     { icon: Users, label: "Clientes", color: "text-blue-600", action: () => navigate('/cadastro/clientes') },
-    { icon: Package, label: "Produtos", color: "text-green-600" },
-    { icon: ShoppingCart, label: "Vendas", color: "text-orange-600" },
+    { icon: Package, label: "Produtos", color: "text-green-600", action: () => navigate('/cadastro/produtos') },
+    { icon: ShoppingCart, label: "Vendas", color: "text-orange-600", action: () => navigate('/vendas/nova') },
     { icon: ClipboardList, label: "O.S.", color: "text-purple-600" },
     { icon: Receipt, label: "Boletos", color: "text-cyan-600" },
     { icon: Wallet, label: "Caixa", color: "text-emerald-600" },
