@@ -26,7 +26,7 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   { label: "Cadastro", items: [
-    { label: "Clientes" },
+    { label: "Clientes", path: "/cadastro/clientes" },
     { label: "Produtos" },
     { label: "Fornecedores" },
     { label: "Funcionários" }
@@ -81,7 +81,7 @@ const TopMenu = () => {
   };
 
   const shortcutItems: ShortcutItem[] = [
-    { icon: Users, label: "Clientes", color: "text-blue-600" },
+    { icon: Users, label: "Clientes", color: "text-blue-600", action: () => navigate('/cadastro/clientes') },
     { icon: Package, label: "Produtos", color: "text-green-600" },
     { icon: ShoppingCart, label: "Vendas", color: "text-orange-600" },
     { icon: ClipboardList, label: "O.S.", color: "text-purple-600" },
