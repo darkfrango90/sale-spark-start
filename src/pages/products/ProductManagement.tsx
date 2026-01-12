@@ -48,6 +48,7 @@ interface ProductFormData {
   description: string;
   category: string;
   unit: string;
+  density: string;
   costPrice: string;
   salePrice: string;
   stock: string;
@@ -62,6 +63,7 @@ const emptyFormData: ProductFormData = {
   description: '',
   category: '',
   unit: 'UN',
+  density: '',
   costPrice: '',
   salePrice: '',
   stock: '0',
@@ -104,6 +106,7 @@ const ProductManagement = () => {
       description: product.description || '',
       category: product.category || '',
       unit: product.unit,
+      density: product.density?.toString() || '',
       costPrice: product.costPrice.toString(),
       salePrice: product.salePrice.toString(),
       stock: product.stock.toString(),
@@ -149,6 +152,7 @@ const ProductManagement = () => {
       description: formData.description || undefined,
       category: formData.category || undefined,
       unit: formData.unit,
+      density: formData.density ? parseFloat(formData.density) : undefined,
       costPrice: parseFloat(formData.costPrice) || 0,
       salePrice: parseFloat(formData.salePrice) || 0,
       stock: parseFloat(formData.stock) || 0,
@@ -329,7 +333,7 @@ const ProductManagement = () => {
                   placeholder="Descrição do produto"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="category">Categoria</Label>
                   <Input
@@ -356,6 +360,17 @@ const ProductManagement = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="density">Densidade (Kg/m³)</Label>
+                  <Input
+                    id="density"
+                    type="number"
+                    step="0.01"
+                    value={formData.density}
+                    onChange={(e) => setFormData(prev => ({ ...prev, density: e.target.value }))}
+                    placeholder="Ex: 750"
+                  />
                 </div>
               </div>
             </div>
