@@ -63,16 +63,16 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
           th { background: #f5f5f5; text-align: left; font-weight: bold; }
           .text-right { text-align: right; }
           .text-center { text-align: center; }
-          .totals { display: flex; justify-content: flex-end; margin-bottom: 20px; }
+          .totals-section { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+          .payment-info { flex: 1; padding-right: 20px; }
+          .payment-info h3 { font-size: 14px; font-weight: bold; margin-bottom: 8px; }
+          .payment-info p { font-size: 14px; }
+          .payment-info .notes { margin-top: 15px; }
           .totals-box { width: 280px; border: 1px solid #000; padding: 10px; }
           .totals-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px; }
           .totals-row.discount { color: red; }
           .totals-row.total { font-size: 19px; font-weight: bold; border-top: 1px solid #000; padding-top: 8px; margin-top: 8px; }
           .totals-row.weight { font-size: 14px; border-top: 1px solid #000; padding-top: 8px; margin-top: 8px; }
-          .payment-notes { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; }
-          .payment-notes > div { border: 1px solid #000; padding: 10px; }
-          .payment-notes h3 { font-size: 14px; font-weight: bold; margin-bottom: 8px; }
-          .payment-notes p { font-size: 14px; min-height: 30px; }
           .signatures { margin-top: 50px; }
           .signatures h3 { font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 40px; }
           .signatures-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px; }
@@ -157,7 +157,17 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
           </table>
         </div>
 
-        <div class="totals">
+        <div class="totals-section">
+          <div class="payment-info">
+            <h3>CONDIÇÃO DE PAGAMENTO:</h3>
+            <p>${sale.paymentMethodName || '-'}</p>
+            ${sale.notes ? `
+            <div class="notes">
+              <h3>OBSERVAÇÕES:</h3>
+              <p>${sale.notes}</p>
+            </div>
+            ` : ''}
+          </div>
           <div class="totals-box">
             <div class="totals-row">
               <span>Subtotal:</span>
@@ -175,17 +185,6 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
               <span>PESO TOTAL:</span>
               <span>${formatWeight(sale.totalWeight)} Kg</span>
             </div>
-          </div>
-        </div>
-
-        <div class="payment-notes">
-          <div>
-            <h3>CONDIÇÃO DE PAGAMENTO</h3>
-            <p>${sale.paymentMethodName || '-'}</p>
-          </div>
-          <div>
-            <h3>OBSERVAÇÕES</h3>
-            <p>${sale.notes || '-'}</p>
           </div>
         </div>
 
@@ -346,8 +345,18 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
             </table>
           </div>
 
-          {/* Totals */}
-          <div className="flex justify-end mb-6">
+          {/* Totals and Payment Info */}
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex-1 pr-4">
+              <h3 className="font-bold text-sm mb-2">CONDIÇÃO DE PAGAMENTO:</h3>
+              <p className="text-sm">{sale.paymentMethodName || '-'}</p>
+              {sale.notes && (
+                <div className="mt-4">
+                  <h3 className="font-bold text-sm mb-2">OBSERVAÇÕES:</h3>
+                  <p className="text-sm">{sale.notes}</p>
+                </div>
+              )}
+            </div>
             <div className="w-72 border border-black p-3">
               <div className="flex justify-between text-sm mb-1">
                 <span>Subtotal:</span>
@@ -365,18 +374,6 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
                 <span>PESO TOTAL:</span>
                 <span>{formatWeight(sale.totalWeight)} Kg</span>
               </div>
-            </div>
-          </div>
-
-          {/* Payment and Notes */}
-          <div className="grid grid-cols-2 gap-4 mb-8">
-            <div className="border border-black p-3">
-              <h3 className="font-bold text-sm mb-2">CONDIÇÃO DE PAGAMENTO</h3>
-              <p className="text-sm">{sale.paymentMethodName}</p>
-            </div>
-            <div className="border border-black p-3">
-              <h3 className="font-bold text-sm mb-2">OBSERVAÇÕES</h3>
-              <p className="text-sm min-h-[40px]">{sale.notes || '-'}</p>
             </div>
           </div>
 
