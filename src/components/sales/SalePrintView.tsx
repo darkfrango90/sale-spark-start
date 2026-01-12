@@ -104,6 +104,8 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
           </div>
         </div>
 
+        <p style="text-align: center; font-weight: bold; font-size: 12px; margin-bottom: 15px; border: 1px solid #000; padding: 8px; background: #f5f5f5;">NÃO É DOCUMENTO FISCAL - NÃO É VALIDO COMO RECIBO E COMO GARANTIA DE MERCADORIA, NÃO COMPROVA PAGAMENTO.</p>
+
         <div class="customer">
           <h3>DADOS DO CLIENTE</h3>
           <div class="customer-grid">
@@ -241,7 +243,7 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
           </div>
 
           {/* Document Info */}
-          <div className="flex justify-between items-start mb-6">
+          <div className="flex justify-between items-start mb-4">
             <div>
               <h2 className="text-xl font-bold uppercase">
                 {sale.type === 'pedido' ? 'PEDIDO' : 'ORÇAMENTO'}
@@ -257,6 +259,11 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
               </p>
             </div>
           </div>
+
+          {/* Aviso Fiscal */}
+          <p className="text-center font-bold text-xs mb-4 border border-black p-2 bg-gray-100">
+            NÃO É DOCUMENTO FISCAL - NÃO É VALIDO COMO RECIBO E COMO GARANTIA DE MERCADORIA, NÃO COMPROVA PAGAMENTO.
+          </p>
 
           {/* Customer Info */}
           <div className="border border-black p-3 mb-4">
