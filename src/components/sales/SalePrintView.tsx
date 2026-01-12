@@ -110,7 +110,17 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
             <div><strong>Código:</strong> ${sale.customerCode}</div>
             <div><strong>CPF/CNPJ:</strong> ${sale.customerCpfCnpj}</div>
             <div class="full"><strong>Nome:</strong> ${sale.customerName}</div>
+            ${sale.customerPhone ? `<div class="full"><strong>Telefone:</strong> ${sale.customerPhone}</div>` : ''}
           </div>
+          ${sale.customerAddress || sale.customerNeighborhood || sale.customerCity ? `
+          <h3 style="margin-top: 10px;">ENDEREÇO DE ENTREGA</h3>
+          <div class="customer-grid">
+            ${sale.customerAddress ? `<div class="full"><strong>Endereço:</strong> ${sale.customerAddress}</div>` : ''}
+            ${sale.customerNeighborhood ? `<div><strong>Bairro:</strong> ${sale.customerNeighborhood}</div>` : ''}
+            ${sale.customerCity && sale.customerState ? `<div><strong>Cidade:</strong> ${sale.customerCity}/${sale.customerState}</div>` : ''}
+            ${sale.customerZipCode ? `<div><strong>CEP:</strong> ${sale.customerZipCode}</div>` : ''}
+          </div>
+          ` : ''}
         </div>
 
         <div class="items">
@@ -261,7 +271,39 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
               <div className="col-span-2">
                 <span className="font-medium">Nome:</span> {sale.customerName}
               </div>
+              {sale.customerPhone && (
+                <div className="col-span-2">
+                  <span className="font-medium">Telefone:</span> {sale.customerPhone}
+                </div>
+              )}
             </div>
+            {(sale.customerAddress || sale.customerNeighborhood || sale.customerCity) && (
+              <>
+                <h3 className="font-bold text-sm mt-3 mb-2 border-b border-black pb-1">ENDEREÇO DE ENTREGA</h3>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  {sale.customerAddress && (
+                    <div className="col-span-2">
+                      <span className="font-medium">Endereço:</span> {sale.customerAddress}
+                    </div>
+                  )}
+                  {sale.customerNeighborhood && (
+                    <div>
+                      <span className="font-medium">Bairro:</span> {sale.customerNeighborhood}
+                    </div>
+                  )}
+                  {sale.customerCity && sale.customerState && (
+                    <div>
+                      <span className="font-medium">Cidade:</span> {sale.customerCity}/{sale.customerState}
+                    </div>
+                  )}
+                  {sale.customerZipCode && (
+                    <div>
+                      <span className="font-medium">CEP:</span> {sale.customerZipCode}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Items Table */}

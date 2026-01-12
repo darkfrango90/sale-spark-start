@@ -245,10 +245,16 @@ export type Database = {
       sales: {
         Row: {
           created_at: string
+          customer_address: string | null
+          customer_city: string | null
           customer_code: string
           customer_cpf_cnpj: string
           customer_id: string
           customer_name: string
+          customer_neighborhood: string | null
+          customer_phone: string | null
+          customer_state: string | null
+          customer_zip_code: string | null
           discount: number
           id: string
           notes: string | null
@@ -264,10 +270,16 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          customer_address?: string | null
+          customer_city?: string | null
           customer_code: string
           customer_cpf_cnpj: string
           customer_id: string
           customer_name: string
+          customer_neighborhood?: string | null
+          customer_phone?: string | null
+          customer_state?: string | null
+          customer_zip_code?: string | null
           discount?: number
           id?: string
           notes?: string | null
@@ -283,10 +295,16 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          customer_address?: string | null
+          customer_city?: string | null
           customer_code?: string
           customer_cpf_cnpj?: string
           customer_id?: string
           customer_name?: string
+          customer_neighborhood?: string | null
+          customer_phone?: string | null
+          customer_state?: string | null
+          customer_zip_code?: string | null
           discount?: number
           id?: string
           notes?: string | null

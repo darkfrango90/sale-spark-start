@@ -27,6 +27,12 @@ export interface Sale {
   customerCode: string;
   customerName: string;
   customerCpfCnpj: string;
+  customerPhone?: string;
+  customerAddress?: string;
+  customerNeighborhood?: string;
+  customerCity?: string;
+  customerState?: string;
+  customerZipCode?: string;
   paymentMethodId: string;
   paymentMethodName: string;
   items: SaleItem[];
