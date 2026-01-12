@@ -2,6 +2,7 @@ export interface Customer {
   id: string;
   code: string;
   name: string;
+  tradeName?: string;
   type: 'fisica' | 'juridica';
   cpfCnpj: string;
   rgIe?: string;

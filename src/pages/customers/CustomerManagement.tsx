@@ -90,6 +90,7 @@ const formatCEP = (value: string): string => {
 interface CustomerFormData {
   code: string;
   name: string;
+  tradeName: string;
   type: 'fisica' | 'juridica';
   cpfCnpj: string;
   rgIe: string;
@@ -111,6 +112,7 @@ interface CustomerFormData {
 const emptyFormData: CustomerFormData = {
   code: '',
   name: '',
+  tradeName: '',
   type: 'fisica',
   cpfCnpj: '',
   rgIe: '',
@@ -153,6 +155,7 @@ const CustomerManagement = () => {
       setFormData({
         code: customer.code,
         name: customer.name,
+        tradeName: customer.tradeName || '',
         type: customer.type,
         cpfCnpj: customer.cpfCnpj,
         rgIe: customer.rgIe || '',
@@ -191,7 +194,8 @@ const CustomerManagement = () => {
       ...prev,
       type: value,
       cpfCnpj: '',
-      rgIe: ''
+      rgIe: '',
+      tradeName: value === 'fisica' ? '' : prev.tradeName
     }));
   };
 
@@ -231,6 +235,7 @@ const CustomerManagement = () => {
     const customerData = {
       code: formData.code,
       name: formData.name,
+      tradeName: formData.type === 'juridica' ? formData.tradeName || undefined : undefined,
       type: formData.type,
       cpfCnpj: formData.cpfCnpj,
       rgIe: formData.rgIe || undefined,
@@ -444,6 +449,17 @@ const CustomerManagement = () => {
                     placeholder={formData.type === 'fisica' ? 'Digite o nome completo' : 'Digite a razão social'}
                   />
                 </div>
+                {formData.type === 'juridica' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="tradeName">Nome Fantasia</Label>
+                    <Input
+                      id="tradeName"
+                      value={formData.tradeName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, tradeName: e.target.value }))}
+                      placeholder="Digite o nome fantasia"
+                    />
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
