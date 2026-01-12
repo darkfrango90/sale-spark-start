@@ -1,5 +1,5 @@
 import { DollarSign, ShoppingCart, Users, TrendingUp } from "lucide-react";
-import Sidebar from "@/components/dashboard/Sidebar";
+import TopMenu from "@/components/dashboard/TopMenu";
 import Header from "@/components/dashboard/Header";
 import StatCard from "@/components/dashboard/StatCard";
 import RecentSales from "@/components/dashboard/RecentSales";
@@ -8,9 +8,9 @@ import QuickActions from "@/components/dashboard/QuickActions";
 const Index = () => {
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar />
+      <TopMenu />
       
-      <div className="ml-64">
+      <div className="pt-[104px]">
         <Header />
         
         <main className="p-6 space-y-6">
