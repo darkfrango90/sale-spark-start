@@ -8,7 +8,7 @@ interface SalesContextType {
   loading: boolean;
   addSale: (sale: Omit<Sale, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Sale>;
   updateSale: (id: string, sale: Partial<Sale>) => Promise<void>;
-  deleteSale: (id: string) => Promise<void>;
+  deleteSale: (id: string, reason: string) => Promise<void>;
   getNextSaleNumber: () => string;
   getNextQuoteNumber: () => string;
   convertQuoteToSale: (quoteId: string) => Promise<Sale | undefined>;
@@ -219,8 +219,27 @@ export const SalesProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const deleteSale = async (id: string) => {
+  const deleteSale = async (id: string, reason: string) => {
     try {
+      const sale = sales.find(s => s.id === id);
+      
+      if (sale) {
+        // Record the deletion with reason
+        const { error: deletionError } = await supabase
+          .from('sales_deletions')
+          .insert({
+            sale_id: id,
+            sale_number: sale.number,
+            sale_type: sale.type,
+            customer_name: sale.customerName,
+            total: sale.total,
+            reason: reason
+          });
+
+        if (deletionError) throw deletionError;
+      }
+
+      // Delete the sale (cascade will handle sale_items)
       const { error } = await supabase
         .from('sales')
         .delete()

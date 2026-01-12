@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      company_settings: {
+        Row: {
+          address: string | null
+          city: string | null
+          cnpj: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string | null
+          phone: string | null
+          state: string | null
+          updated_at: string
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          cnpj?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          cnpj?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           active: boolean
@@ -274,6 +316,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sales_deletions: {
+        Row: {
+          customer_name: string
+          deleted_at: string
+          deleted_by: string | null
+          id: string
+          reason: string
+          sale_id: string | null
+          sale_number: string
+          sale_type: string
+          total: number
+        }
+        Insert: {
+          customer_name: string
+          deleted_at?: string
+          deleted_by?: string | null
+          id?: string
+          reason: string
+          sale_id?: string | null
+          sale_number: string
+          sale_type: string
+          total: number
+        }
+        Update: {
+          customer_name?: string
+          deleted_at?: string
+          deleted_by?: string | null
+          id?: string
+          reason?: string
+          sale_id?: string | null
+          sale_number?: string
+          sale_type?: string
+          total?: number
+        }
+        Relationships: []
       }
     }
     Views: {

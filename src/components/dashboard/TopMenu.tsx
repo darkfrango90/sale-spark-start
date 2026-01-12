@@ -58,7 +58,7 @@ const menuItems: MenuItem[] = [
     { label: "Clientes" }
   ]},
   { label: "Configuração", items: [
-    { label: "Empresa" },
+    { label: "Empresa", path: "/configuracao/empresa" },
     { label: "Usuários", path: "/configuracao/usuarios" },
     { label: "Condições de Pagamento", path: "/configuracao/pagamentos" },
     { label: "Sistema" }

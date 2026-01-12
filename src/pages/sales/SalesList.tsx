@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import TopMenu from "@/components/dashboard/TopMenu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -29,12 +30,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, Plus, Eye, Trash2, RefreshCw, FileText, ShoppingBag } from "lucide-react";
+import { Search, Plus, Eye, Trash2, RefreshCw, FileText, ShoppingBag, Printer } from "lucide-react";
 import { useSales } from "@/contexts/SalesContext";
 import { Sale } from "@/types/sales";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import SalePrintView from "@/components/sales/SalePrintView";
 
 interface SalesListProps {
   type?: 'pedido' | 'orcamento';
@@ -42,19 +44,26 @@ interface SalesListProps {
 
 const SalesList = ({ type }: SalesListProps) => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const typeFromParams = searchParams.get('type') as 'pedido' | 'orcamento' | null;
-  const filterType = type || typeFromParams;
+  const filterType = type;
   
   const { sales, deleteSale, convertQuoteToSale, updateSale } = useSales();
   const { toast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  
+  // Delete dialog
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
+  const [deleteReason, setDeleteReason] = useState('');
+  
+  // Convert dialog
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const [saleToConvert, setSaleToConvert] = useState<Sale | null>(null);
+  
+  // Print modal
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [saleToPrint, setSaleToPrint] = useState<Sale | null>(null);
 
   const filteredSales = sales.filter(sale => {
     const matchesType = !filterType || sale.type === filterType;
@@ -69,18 +78,28 @@ const SalesList = ({ type }: SalesListProps) => {
 
   const handleDelete = (sale: Sale) => {
     setSaleToDelete(sale);
+    setDeleteReason('');
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
-    if (saleToDelete) {
-      deleteSale(saleToDelete.id);
-      toast({
-        title: "Excluído",
-        description: `${saleToDelete.type === 'pedido' ? 'Pedido' : 'Orçamento'} ${saleToDelete.number} excluído com sucesso.`,
-      });
+  const confirmDelete = async () => {
+    if (saleToDelete && deleteReason.trim()) {
+      try {
+        await deleteSale(saleToDelete.id, deleteReason.trim());
+        toast({
+          title: "Excluído",
+          description: `${saleToDelete.type === 'pedido' ? 'Pedido' : 'Orçamento'} ${saleToDelete.number} excluído com sucesso.`,
+        });
+      } catch (error) {
+        toast({
+          title: "Erro",
+          description: "Falha ao excluir.",
+          variant: "destructive",
+        });
+      }
       setIsDeleteDialogOpen(false);
       setSaleToDelete(null);
+      setDeleteReason('');
     }
   };
 
@@ -125,6 +144,11 @@ const SalesList = ({ type }: SalesListProps) => {
       title: "Cancelado",
       description: `${sale.type === 'pedido' ? 'Pedido' : 'Orçamento'} ${sale.number} cancelado.`,
     });
+  };
+
+  const handlePrint = (sale: Sale) => {
+    setSaleToPrint(sale);
+    setPrintModalOpen(true);
   };
 
   const formatCurrency = (value: number) => {
@@ -222,7 +246,7 @@ const SalesList = ({ type }: SalesListProps) => {
                     <TableHead>Pagamento</TableHead>
                     <TableHead className="w-24">Status</TableHead>
                     <TableHead className="w-32">Data</TableHead>
-                    <TableHead className="w-40">Ações</TableHead>
+                    <TableHead className="w-48">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -252,6 +276,14 @@ const SalesList = ({ type }: SalesListProps) => {
                             <Button variant="ghost" size="icon" title="Visualizar">
                               <Eye className="h-4 w-4" />
                             </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              title="Reimprimir"
+                              onClick={() => handlePrint(sale)}
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
                             {sale.type === 'orcamento' && sale.status === 'pendente' && (
                               <Button 
                                 variant="ghost" 
@@ -263,14 +295,24 @@ const SalesList = ({ type }: SalesListProps) => {
                               </Button>
                             )}
                             {sale.status === 'pendente' && (
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                title="Cancelar"
-                                onClick={() => handleCancel(sale)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                              <>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  title="Cancelar"
+                                  onClick={() => handleCancel(sale)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-orange-500" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  title="Excluir"
+                                  onClick={() => handleDelete(sale)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </>
                             )}
                           </div>
                         </TableCell>
@@ -284,24 +326,41 @@ const SalesList = ({ type }: SalesListProps) => {
         </Card>
       </main>
 
+      {/* Delete Dialog with Reason */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogTitle>Justificar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir o {saleToDelete?.type === 'pedido' ? 'pedido' : 'orçamento'} "{saleToDelete?.number}"?
-              Esta ação não pode ser desfeita.
+              Para excluir o {saleToDelete?.type === 'pedido' ? 'pedido' : 'orçamento'} "{saleToDelete?.number}", 
+              informe o motivo da exclusão:
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <Textarea
+            placeholder="Digite o motivo da exclusão..."
+            value={deleteReason}
+            onChange={(e) => setDeleteReason(e.target.value)}
+            className="min-h-[80px]"
+          />
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogCancel onClick={() => {
+              setDeleteReason('');
+              setSaleToDelete(null);
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete} 
+              disabled={!deleteReason.trim()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Convert Dialog */}
       <AlertDialog open={isConvertDialogOpen} onOpenChange={setIsConvertDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -319,6 +378,16 @@ const SalesList = ({ type }: SalesListProps) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Print Modal */}
+      <SalePrintView 
+        sale={saleToPrint} 
+        open={printModalOpen} 
+        onClose={() => {
+          setPrintModalOpen(false);
+          setSaleToPrint(null);
+        }} 
+      />
     </div>
   );
 };

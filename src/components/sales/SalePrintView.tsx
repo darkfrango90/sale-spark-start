@@ -4,6 +4,7 @@ import { Sale } from "@/types/sales";
 import { Printer, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useCompany } from "@/contexts/CompanyContext";
 
 interface SalePrintViewProps {
   sale: Sale | null;
@@ -12,6 +13,8 @@ interface SalePrintViewProps {
 }
 
 const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
+  const { company } = useCompany();
+  
   if (!sale) return null;
 
   const handlePrint = () => {
@@ -39,9 +42,17 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
         <div className="print-content p-6 bg-white text-black">
           {/* Header */}
           <div className="text-center border-b-2 border-black pb-4 mb-4">
-            <h1 className="text-2xl font-bold">SUA EMPRESA</h1>
-            <p className="text-sm">Endereço da empresa - Cidade/UF - CEP: 00000-000</p>
-            <p className="text-sm">Tel: (00) 0000-0000 | CNPJ: 00.000.000/0001-00</p>
+            <h1 className="text-2xl font-bold">{company?.name || 'EMPRESA'}</h1>
+            <p className="text-sm">
+              {company?.address ? `${company.address}` : 'Endereço não configurado'}
+              {company?.city && company?.state ? ` - ${company.city}/${company.state}` : ''}
+              {company?.zipCode ? ` - CEP: ${company.zipCode}` : ''}
+            </p>
+            <p className="text-sm">
+              {company?.phone ? `Tel: ${company.phone}` : ''}
+              {company?.phone && company?.cnpj ? ' | ' : ''}
+              {company?.cnpj ? `CNPJ: ${company.cnpj}` : ''}
+            </p>
           </div>
 
           {/* Document Info */}

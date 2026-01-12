@@ -150,7 +150,7 @@ const NewSale = () => {
   };
 
   const calculateItemWeight = (quantity: number, unit: string, density?: number): number => {
-    if (unit === 'M³' && density) {
+    if ((unit === 'M³' || unit === 'M3') && density) {
       return quantity * density;
     } else if (unit === 'KG') {
       return quantity;
