@@ -47,38 +47,38 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: Arial, sans-serif; padding: 20px; color: #000; background: #fff; }
           .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 15px; }
-          .header h1 { font-size: 24px; margin-bottom: 5px; }
-          .header p { font-size: 12px; }
+          .header h1 { font-size: 29px; margin-bottom: 5px; }
+          .header p { font-size: 14px; }
           .doc-info { display: flex; justify-content: space-between; margin-bottom: 20px; }
-          .doc-info h2 { font-size: 18px; }
-          .doc-info .number { font-size: 16px; font-family: monospace; font-weight: bold; }
-          .doc-info .date { text-align: right; font-size: 12px; }
+          .doc-info h2 { font-size: 22px; }
+          .doc-info .number { font-size: 19px; font-family: monospace; font-weight: bold; }
+          .doc-info .date { text-align: right; font-size: 14px; }
           .customer { border: 1px solid #000; padding: 10px; margin-bottom: 15px; }
-          .customer h3 { font-size: 12px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 8px; }
-          .customer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 12px; }
+          .customer h3 { font-size: 14px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 8px; }
+          .customer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 14px; }
           .customer-grid .full { grid-column: span 2; }
-          .items h3 { font-size: 12px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 8px; }
-          table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 15px; }
+          .items h3 { font-size: 14px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 8px; }
+          table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 15px; }
           th, td { border: 1px solid #ddd; padding: 5px; }
           th { background: #f5f5f5; text-align: left; font-weight: bold; }
           .text-right { text-align: right; }
           .text-center { text-align: center; }
           .totals { display: flex; justify-content: flex-end; margin-bottom: 20px; }
-          .totals-box { width: 250px; border: 1px solid #000; padding: 10px; }
-          .totals-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
+          .totals-box { width: 280px; border: 1px solid #000; padding: 10px; }
+          .totals-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px; }
           .totals-row.discount { color: red; }
-          .totals-row.total { font-size: 16px; font-weight: bold; border-top: 1px solid #000; padding-top: 8px; margin-top: 8px; }
-          .totals-row.weight { font-size: 12px; border-top: 1px solid #000; padding-top: 8px; margin-top: 8px; }
+          .totals-row.total { font-size: 19px; font-weight: bold; border-top: 1px solid #000; padding-top: 8px; margin-top: 8px; }
+          .totals-row.weight { font-size: 14px; border-top: 1px solid #000; padding-top: 8px; margin-top: 8px; }
           .payment-notes { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; }
           .payment-notes > div { border: 1px solid #000; padding: 10px; }
-          .payment-notes h3 { font-size: 12px; font-weight: bold; margin-bottom: 8px; }
-          .payment-notes p { font-size: 12px; min-height: 30px; }
+          .payment-notes h3 { font-size: 14px; font-weight: bold; margin-bottom: 8px; }
+          .payment-notes p { font-size: 14px; min-height: 30px; }
           .signatures { margin-top: 50px; }
-          .signatures h3 { font-size: 12px; font-weight: bold; text-align: center; margin-bottom: 40px; }
+          .signatures h3 { font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 40px; }
           .signatures-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px; }
           .signature-line { text-align: center; }
           .signature-line .line { border-bottom: 1px solid #000; height: 40px; margin-bottom: 5px; }
-          .signature-line p { font-size: 12px; }
+          .signature-line p { font-size: 14px; }
           .zebra { background: #f9f9f9; }
           @media print {
             body { padding: 10px; }
