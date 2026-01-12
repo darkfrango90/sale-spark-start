@@ -152,3 +152,61 @@
     box-shadow: var(--shadow-lg);
   }
 }
+
+/* Print Styles */
+@media print {
+  body {
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Hide everything except print content */
+  body > *:not(.print-dialog-container) {
+    display: none !important;
+  }
+
+  /* Show only print dialog */
+  [role="dialog"] {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: white !important;
+    overflow: visible !important;
+  }
+
+  [data-radix-dialog-overlay] {
+    display: none !important;
+  }
+
+  .print-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 20px !important;
+    margin: 0 !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  .print\\:hidden {
+    display: none !important;
+  }
+
+  /* Table styles for print */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  th, td {
+    border: 1px solid #ddd !important;
+    padding: 4px 8px !important;
+  }
+}

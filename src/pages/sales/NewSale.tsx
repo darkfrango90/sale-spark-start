@@ -40,10 +40,11 @@ import { useSales } from "@/contexts/SalesContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useCustomers } from "@/contexts/CustomerContext";
 import { useProducts } from "@/contexts/ProductContext";
-import { SaleItem } from "@/types/sales";
+import { Sale, SaleItem } from "@/types/sales";
 import { Customer } from "@/types/customer";
 import { Product } from "@/types/product";
 import { useToast } from "@/hooks/use-toast";
+import SalePrintView from "@/components/sales/SalePrintView";
 
 const NewSale = () => {
   const navigate = useNavigate();
@@ -74,6 +75,10 @@ const NewSale = () => {
   // Payment
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [notes, setNotes] = useState('');
+
+  // Print
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [savedSale, setSavedSale] = useState<Sale | null>(null);
 
   const paymentMethods = getActivePaymentMethods();
 
@@ -144,17 +149,33 @@ const NewSale = () => {
     setFilteredProducts([]);
   };
 
+  const calculateItemWeight = (quantity: number, unit: string, density?: number): number => {
+    if (unit === 'M³' && density) {
+      return quantity * density;
+    } else if (unit === 'KG') {
+      return quantity;
+    }
+    return 0;
+  };
+
   const addProductToItems = (product: Product) => {
     const existingIndex = items.findIndex(i => i.productId === product.id);
     
     if (existingIndex >= 0) {
       const updatedItems = [...items];
-      updatedItems[existingIndex].quantity += 1;
-      updatedItems[existingIndex].total = 
-        (updatedItems[existingIndex].quantity * updatedItems[existingIndex].unitPrice) * 
-        (1 - updatedItems[existingIndex].discount / 100);
+      const item = updatedItems[existingIndex];
+      const newQuantity = item.quantity + 1;
+      const newTotal = (newQuantity * item.unitPrice) - item.discount;
+      const newWeight = calculateItemWeight(newQuantity, item.unit, item.density);
+      updatedItems[existingIndex] = {
+        ...item,
+        quantity: newQuantity,
+        total: newTotal,
+        weight: newWeight
+      };
       setItems(updatedItems);
     } else {
+      const weight = calculateItemWeight(1, product.unit, product.density);
       const newItem: SaleItem = {
         id: crypto.randomUUID(),
         productId: product.id,
@@ -165,6 +186,8 @@ const NewSale = () => {
         unitPrice: product.salePrice,
         discount: 0,
         total: product.salePrice,
+        density: product.density,
+        weight: weight,
       };
       setItems([...items, newItem]);
     }
@@ -173,8 +196,9 @@ const NewSale = () => {
   const updateItemQuantity = (itemId: string, quantity: number) => {
     setItems(items.map(item => {
       if (item.id === itemId) {
-        const newTotal = (quantity * item.unitPrice) * (1 - item.discount / 100);
-        return { ...item, quantity, total: newTotal };
+        const newTotal = (quantity * item.unitPrice) - item.discount;
+        const newWeight = calculateItemWeight(quantity, item.unit, item.density);
+        return { ...item, quantity, total: newTotal, weight: newWeight };
       }
       return item;
     }));
@@ -183,8 +207,8 @@ const NewSale = () => {
   const updateItemDiscount = (itemId: string, discount: number) => {
     setItems(items.map(item => {
       if (item.id === itemId) {
-        const newTotal = (item.quantity * item.unitPrice) * (1 - discount / 100);
-        return { ...item, discount, total: newTotal };
+        const newTotal = (item.quantity * item.unitPrice) - discount;
+        return { ...item, discount, total: Math.max(0, newTotal) };
       }
       return item;
     }));
@@ -195,8 +219,9 @@ const NewSale = () => {
   };
 
   const subtotal = items.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
-  const totalDiscount = items.reduce((acc, item) => acc + (item.quantity * item.unitPrice * item.discount / 100), 0);
+  const totalDiscount = items.reduce((acc, item) => acc + item.discount, 0);
   const total = subtotal - totalDiscount;
+  const totalWeight = items.reduce((acc, item) => acc + (item.weight || 0), 0);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -235,7 +260,7 @@ const NewSale = () => {
 
     const selectedPayment = paymentMethods.find(p => p.id === paymentMethodId);
 
-    addSale({
+    const newSale = addSale({
       type: saleType,
       number: saleNumber,
       customerId: selectedCustomer.id,
@@ -248,6 +273,7 @@ const NewSale = () => {
       subtotal,
       discount: totalDiscount,
       total,
+      totalWeight,
       notes: notes || undefined,
       status: 'pendente',
     });
@@ -257,6 +283,13 @@ const NewSale = () => {
       description: `${saleType === 'pedido' ? 'Pedido' : 'Orçamento'} ${saleNumber} criado com sucesso.`,
     });
 
+    // Open print modal
+    setSavedSale(newSale);
+    setPrintModalOpen(true);
+  };
+
+  const handleClosePrint = () => {
+    setPrintModalOpen(false);
     navigate(saleType === 'pedido' ? '/vendas/pedidos' : '/vendas/orcamentos');
   };
 
@@ -470,7 +503,7 @@ const NewSale = () => {
                       <TableHead className="w-16">Un.</TableHead>
                       <TableHead className="w-24 text-right">Qtd</TableHead>
                       <TableHead className="w-32 text-right">Preço Unit.</TableHead>
-                      <TableHead className="w-24 text-right">Desc. %</TableHead>
+                      <TableHead className="w-28 text-right">Desc. R$</TableHead>
                       <TableHead className="w-32 text-right">Total</TableHead>
                       <TableHead className="w-16"></TableHead>
                     </TableRow>
@@ -491,7 +524,8 @@ const NewSale = () => {
                           <TableCell>
                             <Input
                               type="number"
-                              min="1"
+                              min="0.01"
+                              step="0.01"
                               value={item.quantity}
                               onChange={(e) => updateItemQuantity(item.id, parseFloat(e.target.value) || 1)}
                               className="w-20 text-right"
@@ -502,10 +536,10 @@ const NewSale = () => {
                             <Input
                               type="number"
                               min="0"
-                              max="100"
+                              step="0.01"
                               value={item.discount}
                               onChange={(e) => updateItemDiscount(item.id, parseFloat(e.target.value) || 0)}
-                              className="w-20 text-right"
+                              className="w-24 text-right"
                             />
                           </TableCell>
                           <TableCell className="text-right font-medium">{formatCurrency(item.total)}</TableCell>
@@ -523,7 +557,7 @@ const NewSale = () => {
 
               {/* Totals */}
               <div className="flex justify-end">
-                <div className="w-64 space-y-2">
+                <div className="w-72 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal:</span>
                     <span>{formatCurrency(subtotal)}</span>
@@ -535,6 +569,10 @@ const NewSale = () => {
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>TOTAL:</span>
                     <span>{formatCurrency(total)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-muted-foreground pt-1">
+                    <span>Peso Total:</span>
+                    <span>{totalWeight.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} Kg</span>
                   </div>
                 </div>
               </div>
@@ -586,6 +624,13 @@ const NewSale = () => {
           </CardContent>
         </Card>
       </main>
+
+      {/* Print Modal */}
+      <SalePrintView 
+        sale={savedSale} 
+        open={printModalOpen} 
+        onClose={handleClosePrint} 
+      />
     </div>
   );
 };
