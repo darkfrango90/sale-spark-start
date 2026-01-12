@@ -60,50 +60,77 @@ export type Database = {
         Row: {
           active: boolean
           address: string | null
+          birth_date: string | null
+          cellphone: string | null
           city: string | null
           code: string
+          complement: string | null
           cpf_cnpj: string
           created_at: string
           email: string | null
           id: string
           name: string
+          neighborhood: string | null
           notes: string | null
+          number: string | null
           phone: string | null
+          rg_ie: string | null
           state: string | null
+          street: string | null
+          trade_name: string | null
           type: string
           updated_at: string
+          zip_code: string | null
         }
         Insert: {
           active?: boolean
           address?: string | null
+          birth_date?: string | null
+          cellphone?: string | null
           city?: string | null
           code: string
+          complement?: string | null
           cpf_cnpj: string
           created_at?: string
           email?: string | null
           id?: string
           name: string
+          neighborhood?: string | null
           notes?: string | null
+          number?: string | null
           phone?: string | null
+          rg_ie?: string | null
           state?: string | null
+          street?: string | null
+          trade_name?: string | null
           type: string
           updated_at?: string
+          zip_code?: string | null
         }
         Update: {
           active?: boolean
           address?: string | null
+          birth_date?: string | null
+          cellphone?: string | null
           city?: string | null
           code?: string
+          complement?: string | null
           cpf_cnpj?: string
           created_at?: string
           email?: string | null
           id?: string
           name?: string
+          neighborhood?: string | null
           notes?: string | null
+          number?: string | null
           phone?: string | null
+          rg_ie?: string | null
           state?: string | null
+          street?: string | null
+          trade_name?: string | null
           type?: string
           updated_at?: string
+          zip_code?: string | null
         }
         Relationships: []
       }
