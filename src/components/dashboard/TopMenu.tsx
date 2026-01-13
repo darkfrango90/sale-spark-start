@@ -2,8 +2,6 @@ import {
   Users, 
   Package, 
   ShoppingCart, 
-  ClipboardList, 
-  Receipt, 
   Wallet, 
   BarChart3, 
   Settings,
@@ -35,10 +33,6 @@ const menuItems: MenuItem[] = [
     { label: "Nova Venda", path: "/vendas/nova" },
     { label: "Orçamentos", path: "/vendas/orcamentos" },
     { label: "Pedidos", path: "/vendas/pedidos" }
-  ]},
-  { label: "O.S.", items: [
-    { label: "Nova O.S." },
-    { label: "Consultar O.S." }
   ]},
   { label: "Movimentação", items: [
     { label: "Entrada" },
@@ -85,8 +79,6 @@ const TopMenu = () => {
     { icon: Users, label: "Clientes", color: "text-blue-600", action: () => navigate('/cadastro/clientes') },
     { icon: Package, label: "Produtos", color: "text-green-600", action: () => navigate('/cadastro/produtos') },
     { icon: ShoppingCart, label: "Vendas", color: "text-orange-600", action: () => navigate('/vendas/nova') },
-    { icon: ClipboardList, label: "O.S.", color: "text-purple-600" },
-    { icon: Receipt, label: "Boletos", color: "text-cyan-600" },
     { icon: Wallet, label: "Caixa", color: "text-emerald-600" },
     { icon: BarChart3, label: "Relatórios", color: "text-indigo-600" },
     { icon: Settings, label: "Config.", color: "text-slate-600", action: () => navigate('/configuracao/usuarios') },
