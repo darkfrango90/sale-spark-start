@@ -14,6 +14,87 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts_payable: {
+        Row: {
+          competence_date: string
+          created_at: string | null
+          due_date: string
+          final_amount: number
+          id: string
+          installment_number: number | null
+          interest_penalty: number | null
+          invoice_number: string | null
+          notes: string | null
+          original_amount: number
+          paying_account_id: string | null
+          payment_date: string | null
+          payment_type: string
+          status: string | null
+          supplier_code: string
+          supplier_id: string
+          supplier_name: string
+          total_installments: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          competence_date: string
+          created_at?: string | null
+          due_date: string
+          final_amount: number
+          id?: string
+          installment_number?: number | null
+          interest_penalty?: number | null
+          invoice_number?: string | null
+          notes?: string | null
+          original_amount: number
+          paying_account_id?: string | null
+          payment_date?: string | null
+          payment_type: string
+          status?: string | null
+          supplier_code: string
+          supplier_id: string
+          supplier_name: string
+          total_installments?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          competence_date?: string
+          created_at?: string | null
+          due_date?: string
+          final_amount?: number
+          id?: string
+          installment_number?: number | null
+          interest_penalty?: number | null
+          invoice_number?: string | null
+          notes?: string | null
+          original_amount?: number
+          paying_account_id?: string | null
+          payment_date?: string | null
+          payment_type?: string
+          status?: string | null
+          supplier_code?: string
+          supplier_id?: string
+          supplier_name?: string
+          total_installments?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_payable_paying_account_id_fkey"
+            columns: ["paying_account_id"]
+            isOneToOne: false
+            referencedRelation: "receiving_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_payable_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounts_receivable: {
         Row: {
           created_at: string | null
@@ -476,6 +557,81 @@ export type Database = {
           sale_number?: string
           sale_type?: string
           total?: number
+        }
+        Relationships: []
+      }
+      suppliers: {
+        Row: {
+          active: boolean | null
+          birth_date: string | null
+          cellphone: string | null
+          city: string | null
+          code: string
+          complement: string | null
+          cpf_cnpj: string
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string
+          neighborhood: string | null
+          notes: string | null
+          number: string | null
+          phone: string | null
+          rg_ie: string | null
+          state: string | null
+          street: string | null
+          trade_name: string | null
+          type: string
+          updated_at: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          birth_date?: string | null
+          cellphone?: string | null
+          city?: string | null
+          code: string
+          complement?: string | null
+          cpf_cnpj: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          neighborhood?: string | null
+          notes?: string | null
+          number?: string | null
+          phone?: string | null
+          rg_ie?: string | null
+          state?: string | null
+          street?: string | null
+          trade_name?: string | null
+          type: string
+          updated_at?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          birth_date?: string | null
+          cellphone?: string | null
+          city?: string | null
+          code?: string
+          complement?: string | null
+          cpf_cnpj?: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          neighborhood?: string | null
+          notes?: string | null
+          number?: string | null
+          phone?: string | null
+          rg_ie?: string | null
+          state?: string | null
+          street?: string | null
+          trade_name?: string | null
+          type?: string
+          updated_at?: string | null
+          zip_code?: string | null
         }
         Relationships: []
       }

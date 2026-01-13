@@ -23,3 +23,26 @@ export interface AccountReceivable {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface AccountPayable {
+  id: string;
+  supplierId: string;
+  supplierCode: string;
+  supplierName: string;
+  competenceDate: Date;
+  paymentType: 'boleto' | 'cheque_pre' | 'cartao_credito';
+  invoiceNumber?: string;
+  originalAmount: number;
+  interestPenalty: number;
+  finalAmount: number;
+  dueDate: Date;
+  installmentNumber: number;
+  totalInstallments: number;
+  status: 'pendente' | 'pago';
+  paymentDate?: Date;
+  payingAccountId?: string;
+  payingAccountName?: string;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
