@@ -35,7 +35,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, Plus, Trash2, ShoppingCart } from "lucide-react";
+import { Search, Plus, Trash2, ShoppingCart, Upload, X } from "lucide-react";
 import { useSales } from "@/contexts/SalesContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useCustomers } from "@/contexts/CustomerContext";
@@ -45,6 +45,7 @@ import { Customer } from "@/types/customer";
 import { Product } from "@/types/product";
 import { useToast } from "@/hooks/use-toast";
 import SalePrintView from "@/components/sales/SalePrintView";
+import { supabase } from "@/integrations/supabase/client";
 
 const NewSale = () => {
   const navigate = useNavigate();
@@ -76,9 +77,14 @@ const NewSale = () => {
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Receipt/Proof
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+
   // Print
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [savedSale, setSavedSale] = useState<Sale | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const paymentMethods = getActivePaymentMethods();
 
@@ -230,6 +236,46 @@ const NewSale = () => {
     }).format(value);
   };
 
+  const handleReceiptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setReceiptFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setReceiptPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeReceipt = () => {
+    setReceiptFile(null);
+    setReceiptPreview(null);
+  };
+
+  const uploadReceipt = async (saleId: string): Promise<string | null> => {
+    if (!receiptFile) return null;
+
+    const fileExt = receiptFile.name.split('.').pop();
+    const fileName = `${saleId}-${Date.now()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('receipts')
+      .upload(filePath, receiptFile);
+
+    if (uploadError) {
+      console.error('Error uploading receipt:', uploadError);
+      return null;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('receipts')
+      .getPublicUrl(filePath);
+
+    return urlData.publicUrl;
+  };
+
   const handleSubmit = async () => {
     if (!selectedCustomer) {
       toast({
@@ -258,8 +304,11 @@ const NewSale = () => {
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
       const selectedPayment = paymentMethods.find(p => p.id === paymentMethodId);
+      const isDinheiro = selectedPayment?.name.toLowerCase() === 'dinheiro';
 
       const newSale = await addSale({
         type: saleType,
@@ -282,8 +331,32 @@ const NewSale = () => {
         total,
         totalWeight,
         notes: notes || undefined,
-        status: 'pendente',
+        status: isDinheiro ? 'finalizado' : 'pendente',
       });
+
+      // Upload receipt and create accounts receivable for non-cash payments
+      if (!isDinheiro && saleType === 'pedido') {
+        let receiptUrl: string | null = null;
+        
+        if (receiptFile) {
+          receiptUrl = await uploadReceipt(newSale.id);
+        }
+
+        // Create accounts receivable entry
+        const { error: arError } = await supabase
+          .from('accounts_receivable')
+          .insert({
+            sale_id: newSale.id,
+            original_amount: total,
+            final_amount: total,
+            status: 'pendente',
+            receipt_url: receiptUrl,
+          });
+
+        if (arError) {
+          console.error('Error creating accounts receivable:', arError);
+        }
+      }
 
       toast({
         title: saleType === 'pedido' ? "Pedido criado" : "Orçamento criado",
@@ -299,6 +372,8 @@ const NewSale = () => {
         description: "Falha ao salvar. Tente novamente.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -612,6 +687,48 @@ const NewSale = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                
+                {/* Receipt Upload - Only show for non-cash payments */}
+                {paymentMethodId && paymentMethods.find(p => p.id === paymentMethodId)?.name.toLowerCase() !== 'dinheiro' && (
+                  <div className="space-y-2">
+                    <Label>Comprovante de Pagamento</Label>
+                    {receiptPreview ? (
+                      <div className="relative inline-block">
+                        <img 
+                          src={receiptPreview} 
+                          alt="Comprovante" 
+                          className="h-24 w-auto rounded border object-cover"
+                        />
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute -top-2 -right-2 h-6 w-6"
+                          onClick={removeReceipt}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div>
+                        <input
+                          type="file"
+                          id="receipt"
+                          accept="image/*"
+                          onChange={handleReceiptChange}
+                          className="hidden"
+                        />
+                        <label htmlFor="receipt">
+                          <Button variant="outline" asChild className="cursor-pointer">
+                            <span>
+                              <Upload className="h-4 w-4 mr-2" />
+                              Anexar Comprovante
+                            </span>
+                          </Button>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -629,11 +746,11 @@ const NewSale = () => {
 
             {/* Actions */}
             <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => navigate(-1)}>
+              <Button type="button" variant="outline" onClick={() => navigate(-1)} disabled={isSubmitting}>
                 Cancelar
               </Button>
-              <Button onClick={handleSubmit}>
-                {saleType === 'pedido' ? 'Salvar Pedido' : 'Salvar Orçamento'}
+              <Button onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting ? 'Salvando...' : (saleType === 'pedido' ? 'Salvar Pedido' : 'Salvar Orçamento')}
               </Button>
             </div>
           </CardContent>

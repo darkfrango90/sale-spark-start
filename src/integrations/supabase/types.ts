@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts_receivable: {
+        Row: {
+          created_at: string | null
+          final_amount: number
+          id: string
+          interest_penalty: number | null
+          notes: string | null
+          original_amount: number
+          receipt_date: string | null
+          receipt_url: string | null
+          receiving_account_id: string | null
+          sale_id: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          final_amount: number
+          id?: string
+          interest_penalty?: number | null
+          notes?: string | null
+          original_amount: number
+          receipt_date?: string | null
+          receipt_url?: string | null
+          receiving_account_id?: string | null
+          sale_id: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          final_amount?: number
+          id?: string
+          interest_penalty?: number | null
+          notes?: string | null
+          original_amount?: number
+          receipt_date?: string | null
+          receipt_url?: string | null
+          receiving_account_id?: string | null
+          sale_id?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_receivable_receiving_account_id_fkey"
+            columns: ["receiving_account_id"]
+            isOneToOne: false
+            referencedRelation: "receiving_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_settings: {
         Row: {
           address: string | null
@@ -203,6 +263,27 @@ export type Database = {
           stock?: number
           unit?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      receiving_accounts: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          name?: string
         }
         Relationships: []
       }

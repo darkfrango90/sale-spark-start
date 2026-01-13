@@ -41,7 +41,7 @@ const menuItems: MenuItem[] = [
   ]},
   { label: "Financeiro", items: [
     { label: "Contas a Pagar" },
-    { label: "Contas a Receber" },
+    { label: "Contas a Receber", path: "/financeiro/contas-a-receber" },
     { label: "Caixa" },
     { label: "Bancos" }
   ]},
@@ -55,6 +55,7 @@ const menuItems: MenuItem[] = [
     { label: "Empresa", path: "/configuracao/empresa" },
     { label: "Usuários", path: "/configuracao/usuarios" },
     { label: "Condições de Pagamento", path: "/configuracao/pagamentos" },
+    { label: "Contas de Recebimento", path: "/configuracao/contas-recebimento" },
     { label: "Sistema" }
   ]},
 ];
