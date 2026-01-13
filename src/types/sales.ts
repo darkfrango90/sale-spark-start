@@ -12,8 +12,9 @@ export interface SaleItem {
   productName: string;
   unit: string;
   quantity: number;
-  unitPrice: number;
-  discount: number; // Em R$ (valor absoluto)
+  originalPrice: number; // Preço cadastrado do produto
+  unitPrice: number; // Preço praticado (editável)
+  discount: number; // Em R$ (calculado automaticamente: originalPrice - unitPrice * quantity)
   total: number;
   density?: number; // Densidade do produto (Kg/m³)
   weight?: number; // Peso calculado (Kg)
@@ -41,7 +42,8 @@ export interface Sale {
   total: number;
   totalWeight: number; // Peso total em Kg
   notes?: string;
-  status: 'pendente' | 'finalizado' | 'cancelado';
+  status: 'pendente' | 'finalizado' | 'cancelado' | 'excluido';
+  paymentType?: 'vista' | 'prazo'; // Forma de pagamento
   createdAt: Date;
   updatedAt: Date;
 }

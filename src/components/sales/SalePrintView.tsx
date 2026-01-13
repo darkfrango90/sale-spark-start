@@ -31,12 +31,34 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
     }).format(value);
   };
 
+  // Verifica se deve mostrar marca d'água
+  const showWatermark = sale.status === 'cancelado' || sale.status === 'excluido';
+  const watermarkText = sale.status === 'cancelado' ? 'CANCELADO' : 'EXCLUÍDO';
+
   const handlePrint = () => {
     const printWindow = window.open('', '_blank', 'width=800,height=600');
     if (!printWindow) {
       alert('Permita pop-ups para imprimir');
       return;
     }
+
+    // CSS para marca d'água
+    const watermarkStyles = showWatermark ? `
+      .watermark {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 120px;
+        font-weight: bold;
+        color: rgba(255, 0, 0, 0.15);
+        text-transform: uppercase;
+        z-index: 1000;
+        pointer-events: none;
+        white-space: nowrap;
+        letter-spacing: 10px;
+      }
+    ` : '';
 
     const printContent = `
       <!DOCTYPE html>
@@ -45,7 +67,7 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
         <title>${sale.type === 'pedido' ? 'Pedido' : 'Orçamento'} ${sale.number}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: Arial, sans-serif; padding: 20px; color: #000; background: #fff; }
+          body { font-family: Arial, sans-serif; padding: 20px; color: #000; background: #fff; position: relative; }
           .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 15px; }
           .header h1 { font-size: 29px; margin-bottom: 5px; }
           .header p { font-size: 14px; }
@@ -80,13 +102,21 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
           .signature-line .line { border-bottom: 1px solid #000; height: 40px; margin-bottom: 5px; }
           .signature-line p { font-size: 14px; }
           .zebra { background: #f9f9f9; }
+          ${watermarkStyles}
           @media print {
             body { padding: 10px; }
             @page { margin: 10mm; }
+            .watermark {
+              position: fixed;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
           }
         </style>
       </head>
       <body>
+        ${showWatermark ? `<div class="watermark">${watermarkText}</div>` : ''}
+        
         <div class="header">
           <h1>${company?.name || 'EMPRESA'}</h1>
           <p>${company?.address || 'Endereço não configurado'}${company?.city && company?.state ? ` - ${company.city}/${company.state}` : ''}${company?.zipCode ? ` - CEP: ${company.zipCode}` : ''}</p>
@@ -164,7 +194,7 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
             ${sale.notes ? `
             <div class="notes">
               <h3>OBSERVAÇÕES:</h3>
-              <p>${sale.notes}</p>
+              <p>${sale.notes.replace(/\[MOTIVO DA EXCLUSÃO\]:.*$/s, '').replace(/\[MOTIVO DO CANCELAMENTO\]:.*$/s, '').trim() || '-'}</p>
             </div>
             ` : ''}
           </div>
@@ -225,7 +255,19 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
         {/* Preview Content */}
-        <div className="p-6 bg-white text-black">
+        <div className="p-6 bg-white text-black relative">
+          {/* Marca d'água na preview */}
+          {showWatermark && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+              <span 
+                className="text-red-500/20 font-bold text-[80px] transform -rotate-45 whitespace-nowrap"
+                style={{ letterSpacing: '10px' }}
+              >
+                {watermarkText}
+              </span>
+            </div>
+          )}
+
           {/* Header */}
           <div className="text-center border-b-2 border-black pb-4 mb-4">
             <h1 className="text-2xl font-bold">{company?.name || 'EMPRESA'}</h1>
@@ -353,7 +395,12 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
               {sale.notes && (
                 <div className="mt-4">
                   <h3 className="font-bold text-sm mb-2">OBSERVAÇÕES:</h3>
-                  <p className="text-sm">{sale.notes}</p>
+                  <p className="text-sm">
+                    {sale.notes
+                      .replace(/\[MOTIVO DA EXCLUSÃO\]:.*$/s, '')
+                      .replace(/\[MOTIVO DO CANCELAMENTO\]:.*$/s, '')
+                      .trim() || '-'}
+                  </p>
                 </div>
               )}
             </div>
