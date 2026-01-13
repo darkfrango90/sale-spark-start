@@ -334,8 +334,8 @@ const NewSale = () => {
         status: isDinheiro ? 'finalizado' : 'pendente',
       });
 
-      // Upload receipt and create accounts receivable for non-cash payments
-      if (!isDinheiro && saleType === 'pedido') {
+      // Upload receipt and create accounts receivable for ALL sales (pedidos)
+      if (saleType === 'pedido') {
         let receiptUrl: string | null = null;
         
         if (receiptFile) {
@@ -343,14 +343,16 @@ const NewSale = () => {
         }
 
         // Create accounts receivable entry
+        // Dinheiro: status 'recebido' | Outros: status 'pendente'
         const { error: arError } = await supabase
           .from('accounts_receivable')
           .insert({
             sale_id: newSale.id,
             original_amount: total,
             final_amount: total,
-            status: 'pendente',
+            status: isDinheiro ? 'recebido' : 'pendente',
             receipt_url: receiptUrl,
+            receipt_date: isDinheiro ? new Date().toISOString().split('T')[0] : null,
           });
 
         if (arError) {
