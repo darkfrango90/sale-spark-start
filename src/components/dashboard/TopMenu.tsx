@@ -2,7 +2,6 @@ import {
   Users, 
   Package, 
   ShoppingCart, 
-  Wallet, 
   BarChart3, 
   Settings,
   LogOut,
@@ -10,6 +9,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,46 +17,52 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+interface SubMenuItem {
+  label: string;
+  path?: string;
+  module?: string;
+  action?: string;
+  adminOnly?: boolean;
+}
+
 interface MenuItem {
   label: string;
-  items?: { label: string; path?: string }[];
+  module?: string;
+  items?: SubMenuItem[];
 }
 
 const menuItems: MenuItem[] = [
-  { label: "Cadastro", items: [
-    { label: "Clientes", path: "/cadastro/clientes" },
-    { label: "Produtos", path: "/cadastro/produtos" },
-    { label: "Fornecedores", path: "/cadastro/fornecedores" },
-    { label: "Funcionários" }
+  { label: "Cadastro", module: "cadastro", items: [
+    { label: "Clientes", path: "/cadastro/clientes", module: "cadastro", action: "Clientes" },
+    { label: "Produtos", path: "/cadastro/produtos", module: "cadastro", action: "Produtos" },
+    { label: "Fornecedores", path: "/cadastro/fornecedores", module: "cadastro", action: "Fornecedores" },
   ]},
-  { label: "Vendas", items: [
-    { label: "Nova Venda", path: "/vendas/nova" },
-    { label: "Orçamentos", path: "/vendas/orcamentos" },
-    { label: "Pedidos", path: "/vendas/pedidos" }
+  { label: "Vendas", module: "vendas", items: [
+    { label: "Nova Venda", path: "/vendas/nova", module: "vendas", action: "Nova Venda" },
+    { label: "Orçamentos", path: "/vendas/orcamentos", module: "vendas", action: "Orçamentos" },
+    { label: "Pedidos", path: "/vendas/pedidos", module: "vendas", action: "Pedidos" }
   ]},
-  { label: "Movimentação", items: [
-    { label: "Entrada" },
-    { label: "Saída" },
-    { label: "Transferência" }
+  { label: "Movimentação", module: "movimentacao", items: [
+    { label: "Entrada", module: "movimentacao", action: "Entrada" },
+    { label: "Saída", module: "movimentacao", action: "Saída" },
+    { label: "Transferência", module: "movimentacao", action: "Transferência" }
   ]},
-  { label: "Financeiro", items: [
-    { label: "Contas a Pagar", path: "/financeiro/contas-a-pagar" },
-    { label: "Contas a Receber", path: "/financeiro/contas-a-receber" },
-    { label: "Caixa" },
-    { label: "Bancos" }
+  { label: "Financeiro", module: "financeiro", items: [
+    { label: "Contas a Pagar", path: "/financeiro/contas-a-pagar", module: "financeiro", action: "Contas a Pagar" },
+    { label: "Contas a Receber", path: "/financeiro/contas-a-receber", module: "financeiro", action: "Contas a Receber" },
   ]},
-  { label: "Relatórios", items: [
-    { label: "Vendas" },
-    { label: "Estoque" },
-    { label: "Financeiro" },
-    { label: "Clientes" }
+  { label: "Relatórios", module: "relatorios", items: [
+    { label: "Vendas", module: "relatorios", action: "Vendas" },
+    { label: "Estoque", module: "relatorios", action: "Estoque" },
+    { label: "Financeiro", module: "relatorios", action: "Financeiro" },
+    { label: "Clientes", module: "relatorios", action: "Clientes" }
   ]},
-  { label: "Configuração", items: [
-    { label: "Empresa", path: "/configuracao/empresa" },
-    { label: "Usuários", path: "/configuracao/usuarios" },
-    { label: "Condições de Pagamento", path: "/configuracao/pagamentos" },
-    { label: "Contas de Recebimento", path: "/configuracao/contas-recebimento" },
-    { label: "Sistema" }
+  { label: "Configuração", module: "configuracao", items: [
+    { label: "Empresa", path: "/configuracao/empresa", module: "configuracao", action: "Empresa" },
+    { label: "Usuários", path: "/configuracao/usuarios", adminOnly: true },
+    { label: "Condições de Pagamento", path: "/configuracao/pagamentos", module: "configuracao", action: "Empresa" },
+    { label: "Contas de Recebimento", path: "/configuracao/contas-recebimento", module: "configuracao", action: "Contas de Recebimento" },
+    { label: "Sistema", module: "configuracao", action: "Sistema" }
   ]},
 ];
 
@@ -65,11 +71,15 @@ interface ShortcutItem {
   label: string;
   color: string;
   action?: () => void;
+  module?: string;
+  actionName?: string;
+  adminOnly?: boolean;
 }
 
 const TopMenu = () => {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+  const { hasModuleAccess, hasActionAccess, isAdmin } = usePermissions();
 
   const handleLogout = () => {
     logout();
@@ -77,12 +87,11 @@ const TopMenu = () => {
   };
 
   const shortcutItems: ShortcutItem[] = [
-    { icon: Users, label: "Clientes", color: "text-blue-600", action: () => navigate('/cadastro/clientes') },
-    { icon: Package, label: "Produtos", color: "text-green-600", action: () => navigate('/cadastro/produtos') },
-    { icon: ShoppingCart, label: "Vendas", color: "text-orange-600", action: () => navigate('/vendas/nova') },
-    { icon: Wallet, label: "Caixa", color: "text-emerald-600" },
-    { icon: BarChart3, label: "Relatórios", color: "text-indigo-600" },
-    { icon: Settings, label: "Config.", color: "text-slate-600", action: () => navigate('/configuracao/usuarios') },
+    { icon: Users, label: "Clientes", color: "text-blue-600", action: () => navigate('/cadastro/clientes'), module: "cadastro", actionName: "Clientes" },
+    { icon: Package, label: "Produtos", color: "text-green-600", action: () => navigate('/cadastro/produtos'), module: "cadastro", actionName: "Produtos" },
+    { icon: ShoppingCart, label: "Vendas", color: "text-orange-600", action: () => navigate('/vendas/nova'), module: "vendas", actionName: "Nova Venda" },
+    { icon: BarChart3, label: "Relatórios", color: "text-indigo-600", module: "relatorios" },
+    { icon: Settings, label: "Config.", color: "text-slate-600", action: () => navigate('/configuracao/empresa'), module: "configuracao" },
     { icon: LogOut, label: "Sair", color: "text-rose-600", action: handleLogout },
   ];
 
@@ -91,6 +100,29 @@ const TopMenu = () => {
       navigate(path);
     }
   };
+
+  // Filter menu items based on permissions
+  const filteredMenuItems = menuItems.filter(item => {
+    if (!item.module) return true;
+    return hasModuleAccess(item.module);
+  }).map(item => ({
+    ...item,
+    items: item.items?.filter(subItem => {
+      if (subItem.adminOnly) return isAdmin;
+      if (!subItem.module || !subItem.action) return true;
+      return hasActionAccess(subItem.module, subItem.action);
+    })
+  })).filter(item => !item.items || item.items.length > 0);
+
+  // Filter shortcuts based on permissions
+  const filteredShortcuts = shortcutItems.filter(item => {
+    if (item.adminOnly) return isAdmin;
+    if (!item.module) return true;
+    if (item.actionName) {
+      return hasActionAccess(item.module, item.actionName);
+    }
+    return hasModuleAccess(item.module);
+  });
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50">
@@ -108,7 +140,7 @@ const TopMenu = () => {
 
             {/* Menu Items */}
             <nav className="flex items-center gap-1">
-              {menuItems.map((item) => (
+              {filteredMenuItems.map((item) => (
                 <DropdownMenu key={item.label}>
                   <DropdownMenuTrigger className="flex items-center gap-1 px-4 py-2 text-sm font-medium hover:bg-slate-700 rounded transition-colors">
                     {item.label}
@@ -144,7 +176,7 @@ const TopMenu = () => {
       {/* Shortcuts Bar */}
       <div className="bg-slate-100 border-b border-slate-300">
         <div className="flex items-center h-14 px-4 gap-1">
-          {shortcutItems.map((item) => (
+          {filteredShortcuts.map((item) => (
             <button
               key={item.label}
               className="flex flex-col items-center justify-center px-3 py-1 hover:bg-slate-200 rounded transition-colors min-w-[60px]"
