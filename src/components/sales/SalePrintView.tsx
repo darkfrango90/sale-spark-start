@@ -7,7 +7,7 @@ import { ptBR } from "date-fns/locale";
 import { useCompany } from "@/contexts/CompanyContext";
 
 interface SalePrintViewProps {
-  sale: Sale | null;
+  sale: (Sale & { sellerName?: string }) | null;
   open: boolean;
   onClose: () => void;
 }
@@ -127,14 +127,16 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
           <div>
             <h2>${sale.type === 'pedido' ? 'PEDIDO' : 'ORÇAMENTO'}</h2>
             <p class="number">Nº ${sale.number}</p>
+            ${sale.sellerName ? `<p style="font-size: 12px; margin-top: 5px;"><strong>Vendedor:</strong> ${sale.sellerName}</p>` : ''}
+          </div>
+          <div style="text-align: center; flex: 1; padding: 0 20px;">
+            <p style="font-weight: bold; font-size: 11px; border: 1px solid #000; padding: 5px; background: #f5f5f5;">NÃO É DOCUMENTO FISCAL - NÃO COMPROVA PAGAMENTO</p>
           </div>
           <div class="date">
             <p>Data: ${format(sale.createdAt, "dd/MM/yyyy", { locale: ptBR })}</p>
             <p>Hora: ${format(sale.createdAt, "HH:mm", { locale: ptBR })}</p>
           </div>
         </div>
-
-        <p style="text-align: center; font-weight: bold; font-size: 12px; margin-bottom: 15px; border: 1px solid #000; padding: 8px; background: #f5f5f5;">NÃO É DOCUMENTO FISCAL - NÃO É VALIDO COMO RECIBO E COMO GARANTIA DE MERCADORIA, NÃO COMPROVA PAGAMENTO.</p>
 
         <div class="customer">
           <h3>DADOS DO CLIENTE</h3>
@@ -283,13 +285,23 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
             </p>
           </div>
 
-          {/* Document Info */}
+          {/* Document Info - 3 colunas */}
           <div className="flex justify-between items-start mb-4">
             <div>
               <h2 className="text-xl font-bold uppercase">
                 {sale.type === 'pedido' ? 'PEDIDO' : 'ORÇAMENTO'}
               </h2>
               <p className="text-lg font-mono font-bold">Nº {sale.number}</p>
+              {sale.sellerName && (
+                <p className="text-xs mt-1">
+                  <span className="font-medium">Vendedor:</span> {sale.sellerName}
+                </p>
+              )}
+            </div>
+            <div className="flex-1 px-4 flex items-center justify-center">
+              <p className="text-center font-bold text-[10px] border border-black px-2 py-1 bg-gray-100">
+                NÃO É DOCUMENTO FISCAL - NÃO COMPROVA PAGAMENTO
+              </p>
             </div>
             <div className="text-right">
               <p className="text-sm">
@@ -300,11 +312,6 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
               </p>
             </div>
           </div>
-
-          {/* Aviso Fiscal */}
-          <p className="text-center font-bold text-xs mb-4 border border-black p-2 bg-gray-100">
-            NÃO É DOCUMENTO FISCAL - NÃO É VALIDO COMO RECIBO E COMO GARANTIA DE MERCADORIA, NÃO COMPROVA PAGAMENTO.
-          </p>
 
           {/* Customer Info */}
           <div className="border border-black p-3 mb-4">

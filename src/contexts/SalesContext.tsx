@@ -84,6 +84,7 @@ export const SalesProvider = ({ children }: { children: ReactNode }) => {
           totalWeight: Number(s.total_weight),
           notes: s.notes || undefined,
           status: s.status as 'pendente' | 'finalizado' | 'cancelado' | 'excluido',
+          sellerName: (s as any).seller_name || undefined,
           createdAt: new Date(s.created_at),
           updatedAt: new Date(s.updated_at)
         };
@@ -153,7 +154,8 @@ export const SalesProvider = ({ children }: { children: ReactNode }) => {
           total: saleData.total,
           total_weight: saleData.totalWeight,
           notes: saleData.notes || null,
-          status: saleData.status
+          status: saleData.status,
+          seller_name: (saleData as any).sellerName || null
         })
         .select()
         .single();
@@ -210,6 +212,7 @@ export const SalesProvider = ({ children }: { children: ReactNode }) => {
         totalWeight: Number(saleResult.total_weight),
         notes: saleResult.notes || undefined,
         status: saleResult.status as 'pendente' | 'finalizado' | 'cancelado' | 'excluido',
+        sellerName: (saleResult as any).seller_name || undefined,
         createdAt: new Date(saleResult.created_at),
         updatedAt: new Date(saleResult.updated_at)
       };
