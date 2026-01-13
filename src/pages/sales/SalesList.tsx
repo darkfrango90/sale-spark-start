@@ -36,7 +36,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, Plus, Eye, RefreshCw, FileText, ShoppingBag, Printer, Ban } from "lucide-react";
+import { Search, Plus, RefreshCw, FileText, ShoppingBag, Printer, Ban, Calendar } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { useSales } from "@/contexts/SalesContext";
 import { Sale } from "@/types/sales";
 import { useToast } from "@/hooks/use-toast";
@@ -58,6 +60,12 @@ const SalesList = ({ type }: SalesListProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   
+  // Novos filtros
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
+  const [paymentFilter, setPaymentFilter] = useState<string>('all');
+  const [minValue, setMinValue] = useState<string>('');
+  const [maxValue, setMaxValue] = useState<string>('');
   
   // Cancel dialog
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
@@ -72,6 +80,9 @@ const SalesList = ({ type }: SalesListProps) => {
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [saleToPrint, setSaleToPrint] = useState<Sale | null>(null);
 
+  // Obter lista única de condições de pagamento para o filtro
+  const paymentMethods = [...new Set(sales.filter(s => s.paymentMethodName).map(s => s.paymentMethodName))];
+
   const filteredSales = sales.filter(sale => {
     const matchesType = !filterType || sale.type === filterType;
     const matchesSearch = 
@@ -80,7 +91,19 @@ const SalesList = ({ type }: SalesListProps) => {
       sale.customerCpfCnpj.includes(searchTerm);
     const matchesStatus = statusFilter === 'all' || sale.status === statusFilter;
     
-    return matchesType && matchesSearch && matchesStatus;
+    // Novos filtros
+    const saleDate = new Date(sale.createdAt);
+    saleDate.setHours(0, 0, 0, 0);
+    
+    const matchesDateFrom = !dateFrom || saleDate >= dateFrom;
+    const matchesDateTo = !dateTo || saleDate <= dateTo;
+    const matchesPayment = paymentFilter === 'all' || sale.paymentMethodName === paymentFilter;
+    const matchesMinValue = !minValue || sale.total >= parseFloat(minValue);
+    const matchesMaxValue = !maxValue || sale.total <= parseFloat(maxValue);
+    
+    return matchesType && matchesSearch && matchesStatus && 
+           matchesDateFrom && matchesDateTo && matchesPayment && 
+           matchesMinValue && matchesMaxValue;
   }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
 
@@ -253,6 +276,7 @@ const SalesList = ({ type }: SalesListProps) => {
             </Button>
           </CardHeader>
           <CardContent>
+            {/* Linha 1: Busca e Status */}
             <div className="flex items-center gap-4 mb-4">
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -274,6 +298,92 @@ const SalesList = ({ type }: SalesListProps) => {
                   <SelectItem value="cancelado">Cancelado</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Linha 2: Filtros avançados */}
+            <div className="flex flex-wrap items-center gap-4 mb-4">
+              {/* Data De */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {dateFrom ? format(dateFrom, "dd/MM/yyyy", { locale: ptBR }) : "Data De"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={dateFrom}
+                    onSelect={setDateFrom}
+                    locale={ptBR}
+                    initialFocus
+                  />
+                  {dateFrom && (
+                    <div className="p-2 border-t">
+                      <Button variant="ghost" size="sm" className="w-full" onClick={() => setDateFrom(undefined)}>
+                        Limpar
+                      </Button>
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
+
+              {/* Data Até */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {dateTo ? format(dateTo, "dd/MM/yyyy", { locale: ptBR }) : "Data Até"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={dateTo}
+                    onSelect={setDateTo}
+                    locale={ptBR}
+                    initialFocus
+                  />
+                  {dateTo && (
+                    <div className="p-2 border-t">
+                      <Button variant="ghost" size="sm" className="w-full" onClick={() => setDateTo(undefined)}>
+                        Limpar
+                      </Button>
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
+
+              {/* Condição de Pagamento */}
+              <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Pagamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos Pagamentos</SelectItem>
+                  {paymentMethods.map((method) => (
+                    <SelectItem key={method} value={method}>{method}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Valor Mínimo */}
+              <Input
+                type="number"
+                placeholder="Valor Mín"
+                value={minValue}
+                onChange={(e) => setMinValue(e.target.value)}
+                className="w-[120px]"
+              />
+
+              {/* Valor Máximo */}
+              <Input
+                type="number"
+                placeholder="Valor Máx"
+                value={maxValue}
+                onChange={(e) => setMaxValue(e.target.value)}
+                className="w-[120px]"
+              />
             </div>
 
             <div className="rounded-md border">
@@ -314,13 +424,10 @@ const SalesList = ({ type }: SalesListProps) => {
                         <TableCell>{format(new Date(sale.createdAt), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" title="Visualizar">
-                              <Eye className="h-4 w-4" />
-                            </Button>
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              title="Reimprimir"
+                              title="Visualizar/Imprimir"
                               onClick={() => handlePrint(sale)}
                             >
                               <Printer className="h-4 w-4" />

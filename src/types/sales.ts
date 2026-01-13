@@ -44,6 +44,7 @@ export interface Sale {
   notes?: string;
   status: 'pendente' | 'finalizado' | 'cancelado' | 'excluido';
   paymentType?: 'vista' | 'prazo'; // Forma de pagamento
+  sellerName?: string; // Nome do vendedor que realizou a venda
   createdAt: Date;
   updatedAt: Date;
 }

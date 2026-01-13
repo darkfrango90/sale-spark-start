@@ -40,6 +40,7 @@ import { useSales } from "@/contexts/SalesContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useCustomers } from "@/contexts/CustomerContext";
 import { useProducts } from "@/contexts/ProductContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Sale, SaleItem } from "@/types/sales";
 import { Customer } from "@/types/customer";
 import { Product } from "@/types/product";
@@ -57,6 +58,7 @@ const NewSale = () => {
   const { getActivePaymentMethods } = useSettings();
   const { customers } = useCustomers();
   const { searchProductByCode, searchProductsByName } = useProducts();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const [saleType, setSaleType] = useState<'pedido' | 'orcamento'>('pedido');
@@ -378,7 +380,8 @@ const NewSale = () => {
         totalWeight,
         notes: notes || undefined,
         status: isDinheiro ? 'finalizado' : 'pendente',
-      });
+        sellerName: user?.name || undefined,
+      } as any);
 
       // Upload receipt and create accounts receivable for ALL sales (pedidos)
       if (saleType === 'pedido') {
