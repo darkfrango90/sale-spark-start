@@ -38,6 +38,24 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const AppRoutes = () => (
+  <BrowserRouter>
+    <Routes>
+      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+      <Route path="/configuracao/usuarios" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+      <Route path="/configuracao/pagamentos" element={<ProtectedRoute><PaymentMethods /></ProtectedRoute>} />
+      <Route path="/configuracao/empresa" element={<ProtectedRoute><CompanySettingsPage /></ProtectedRoute>} />
+      <Route path="/cadastro/clientes" element={<ProtectedRoute><CustomerManagement /></ProtectedRoute>} />
+      <Route path="/cadastro/produtos" element={<ProtectedRoute><ProductManagement /></ProtectedRoute>} />
+      <Route path="/vendas/nova" element={<ProtectedRoute><NewSale /></ProtectedRoute>} />
+      <Route path="/vendas/pedidos" element={<ProtectedRoute><SalesList type="pedido" /></ProtectedRoute>} />
+      <Route path="/vendas/orcamentos" element={<ProtectedRoute><SalesList type="orcamento" /></ProtectedRoute>} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  </BrowserRouter>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -49,21 +67,7 @@ const App = () => (
                 <TooltipProvider>
                   <Toaster />
                   <Sonner />
-                  <BrowserRouter>
-                    <Routes>
-                      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-                      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-                      <Route path="/configuracao/usuarios" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-                      <Route path="/configuracao/pagamentos" element={<ProtectedRoute><PaymentMethods /></ProtectedRoute>} />
-                      <Route path="/configuracao/empresa" element={<ProtectedRoute><CompanySettingsPage /></ProtectedRoute>} />
-                      <Route path="/cadastro/clientes" element={<ProtectedRoute><CustomerManagement /></ProtectedRoute>} />
-                      <Route path="/cadastro/produtos" element={<ProtectedRoute><ProductManagement /></ProtectedRoute>} />
-                      <Route path="/vendas/nova" element={<ProtectedRoute><NewSale /></ProtectedRoute>} />
-                      <Route path="/vendas/pedidos" element={<ProtectedRoute><SalesList type="pedido" /></ProtectedRoute>} />
-                      <Route path="/vendas/orcamentos" element={<ProtectedRoute><SalesList type="orcamento" /></ProtectedRoute>} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </BrowserRouter>
+                  <AppRoutes />
                 </TooltipProvider>
               </CompanyProvider>
             </SalesProvider>
