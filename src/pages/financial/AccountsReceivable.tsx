@@ -29,7 +29,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Wallet, Eye, Check, CalendarIcon, FileImage } from "lucide-react";
+import { Wallet, Eye, Check, CalendarIcon, FileImage, X } from "lucide-react";
 import { useFinancial } from "@/contexts/FinancialContext";
 import { useToast } from "@/hooks/use-toast";
 import { AccountReceivable } from "@/types/financial";
@@ -43,6 +43,7 @@ const AccountsReceivablePage = () => {
     loadingReceivables, 
     getActiveReceivingAccounts, 
     confirmReceipt,
+    cancelReceipt,
     refreshAccountsReceivable
   } = useFinancial();
   const { toast } = useToast();
@@ -117,6 +118,18 @@ const AccountsReceivablePage = () => {
       toast({
         title: "Erro",
         description: "Falha ao confirmar recebimento.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelReceipt = async (ar: AccountReceivable) => {
+    try {
+      await cancelReceipt(ar.id);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao cancelar baixa.",
         variant: "destructive",
       });
     }
@@ -246,10 +259,23 @@ const AccountsReceivablePage = () => {
                               Dar Baixa
                             </Button>
                           )}
-                          {ar.status === 'recebido' && ar.receivingAccountName && (
-                            <span className="text-sm text-muted-foreground">
-                              {ar.receivingAccountName}
-                            </span>
+                          {ar.status === 'recebido' && (
+                            <div className="flex items-center gap-2">
+                              {ar.receivingAccountName && (
+                                <span className="text-sm text-muted-foreground">
+                                  {ar.receivingAccountName}
+                                </span>
+                              )}
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                onClick={() => handleCancelReceipt(ar)}
+                              >
+                                <X className="h-4 w-4 mr-1" />
+                                Cancelar Baixa
+                              </Button>
+                            </div>
                           )}
                         </div>
                       </TableCell>

@@ -21,6 +21,7 @@ interface FinancialContextType {
     interestPenalty: number;
     receiptDate: Date;
   }) => Promise<void>;
+  cancelReceipt: (id: string) => Promise<void>;
 }
 
 const FinancialContext = createContext<FinancialContextType | undefined>(undefined);
@@ -234,6 +235,44 @@ export const FinancialProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const cancelReceipt = async (id: string) => {
+    try {
+      const ar = accountsReceivable.find(a => a.id === id);
+      if (!ar) throw new Error('Conta a receber não encontrada');
+
+      // Update accounts_receivable to pending status
+      const { error: arError } = await supabase
+        .from('accounts_receivable')
+        .update({
+          status: 'pendente',
+          receiving_account_id: null,
+          interest_penalty: 0,
+          final_amount: ar.originalAmount,
+          receipt_date: null,
+        })
+        .eq('id', id);
+
+      if (arError) throw arError;
+
+      // Update sale status to 'pendente'
+      const { error: saleError } = await supabase
+        .from('sales')
+        .update({ status: 'pendente' })
+        .eq('id', ar.saleId);
+
+      if (saleError) throw saleError;
+
+      await fetchAccountsReceivable();
+      toast({
+        title: "Sucesso",
+        description: "Baixa cancelada com sucesso.",
+      });
+    } catch (error: any) {
+      console.error('Error canceling receipt:', error);
+      throw error;
+    }
+  };
+
   return (
     <FinancialContext.Provider value={{
       receivingAccounts,
@@ -246,6 +285,7 @@ export const FinancialProvider = ({ children }: { children: ReactNode }) => {
       loadingReceivables,
       refreshAccountsReceivable: fetchAccountsReceivable,
       confirmReceipt,
+      cancelReceipt,
     }}>
       {children}
     </FinancialContext.Provider>
