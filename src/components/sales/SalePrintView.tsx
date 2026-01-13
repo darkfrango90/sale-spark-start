@@ -5,6 +5,7 @@ import { Printer, X, FileDown } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useCompany } from "@/contexts/CompanyContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SalePrintViewProps {
   sale: (Sale & { sellerName?: string }) | null;
@@ -14,6 +15,7 @@ interface SalePrintViewProps {
 
 const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
   const { company } = useCompany();
+  const { user } = useAuth();
   
   if (!sale) return null;
 
@@ -229,7 +231,7 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
           <div class="signatures-grid">
             <div class="signature-line">
               <div class="line"></div>
-              <p>Vendedor</p>
+              <p>${sale.sellerName || user?.name || 'Vendedor'}</p>
             </div>
             <div class="signature-line">
               <div class="line"></div>
@@ -237,7 +239,8 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
             </div>
             <div class="signature-line">
               <div class="line"></div>
-              <p>Motorista</p>
+              <p>Motorista Autorizado</p>
+              <p style="font-size: 11px; margin-top: 4px;">CPF: ________________</p>
             </div>
           </div>
         </div>
@@ -421,7 +424,7 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center">
                 <div className="border-b border-black mb-1 h-5"></div>
-                <p className="text-[9px] font-medium">Vendedor</p>
+                <p className="text-[9px] font-medium">{sale.sellerName || user?.name || 'Vendedor'}</p>
               </div>
               <div className="text-center">
                 <div className="border-b border-black mb-1 h-5"></div>
@@ -429,7 +432,8 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
               </div>
               <div className="text-center">
                 <div className="border-b border-black mb-1 h-5"></div>
-                <p className="text-[9px] font-medium">Motorista</p>
+                <p className="text-[9px] font-medium">Motorista Autorizado</p>
+                <p className="text-[8px] mt-0.5">CPF: ________________</p>
               </div>
             </div>
           </div>
@@ -441,15 +445,7 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
             <X className="h-4 w-4 mr-2" />
             Fechar
           </Button>
-          <Button variant="secondary" size="sm" onClick={() => {
-            const printWindow = window.open('', '_blank');
-            if (!printWindow) {
-              alert('Permita pop-ups para salvar PDF');
-              return;
-            }
-            // Reutiliza a mesma lógica de impressão mas com instrução de salvar como PDF
-            handlePrint();
-          }}>
+          <Button variant="secondary" size="sm" onClick={handlePrint}>
             <FileDown className="h-4 w-4 mr-2" />
             Salvar PDF
           </Button>
