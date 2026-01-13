@@ -67,48 +67,48 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
         <title>${sale.type === 'pedido' ? 'Pedido' : 'Orçamento'} ${sale.number}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: Arial, sans-serif; padding: 8px; color: #000; background: #fff; position: relative; font-size: 10px; }
-          .header { text-align: center; border-bottom: 1px solid #000; padding-bottom: 6px; margin-bottom: 6px; }
-          .header h1 { font-size: 18px; margin-bottom: 2px; }
-          .header p { font-size: 10px; line-height: 1.3; }
-          .doc-info { display: flex; justify-content: space-between; margin-bottom: 8px; align-items: flex-start; }
-          .doc-info h2 { font-size: 14px; }
-          .doc-info .number { font-size: 13px; font-family: monospace; font-weight: bold; }
-          .doc-info .date { text-align: right; font-size: 10px; }
-          .customer { border: 1px solid #000; padding: 5px; margin-bottom: 6px; }
-          .customer h3 { font-size: 10px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 4px; }
-          .customer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; font-size: 10px; }
+          body { font-family: Arial, sans-serif; padding: 15px; color: #000; background: #fff; position: relative; font-size: 14px; }
+          .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px; }
+          .header h1 { font-size: 26px; margin-bottom: 4px; }
+          .header p { font-size: 14px; line-height: 1.4; }
+          .doc-info { display: flex; justify-content: space-between; margin-bottom: 12px; align-items: flex-start; }
+          .doc-info h2 { font-size: 20px; }
+          .doc-info .number { font-size: 18px; font-family: monospace; font-weight: bold; }
+          .doc-info .date { text-align: right; font-size: 14px; }
+          .customer { border: 1px solid #000; padding: 8px; margin-bottom: 10px; }
+          .customer h3 { font-size: 14px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 4px; margin-bottom: 6px; }
+          .customer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 14px; }
           .customer-grid .full { grid-column: span 2; }
-          .items h3 { font-size: 10px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 4px; }
-          table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 6px; }
-          th, td { border: 1px solid #ccc; padding: 2px 3px; }
+          .items h3 { font-size: 14px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 4px; margin-bottom: 6px; }
+          table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 10px; }
+          th, td { border: 1px solid #ccc; padding: 4px 6px; }
           th { background: #f0f0f0; text-align: left; font-weight: bold; }
           .text-right { text-align: right; }
           .text-center { text-align: center; }
-          .totals-section { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-          .payment-info { flex: 1; padding-right: 10px; }
-          .payment-info h3 { font-size: 10px; font-weight: bold; margin-bottom: 3px; }
-          .payment-info p { font-size: 10px; }
-          .payment-info .notes { margin-top: 6px; }
-          .totals-box { width: 200px; border: 1px solid #000; padding: 5px; }
-          .totals-row { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 2px; }
+          .totals-section { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+          .payment-info { flex: 1; padding-right: 15px; }
+          .payment-info h3 { font-size: 14px; font-weight: bold; margin-bottom: 5px; }
+          .payment-info p { font-size: 14px; }
+          .payment-info .notes { margin-top: 10px; }
+          .totals-box { width: 240px; border: 1px solid #000; padding: 8px; }
+          .totals-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; }
           .totals-row.discount { color: red; }
-          .totals-row.total { font-size: 13px; font-weight: bold; border-top: 1px solid #000; padding-top: 4px; margin-top: 4px; }
-          .totals-row.weight { font-size: 10px; border-top: 1px solid #000; padding-top: 4px; margin-top: 4px; }
-          .signatures { margin-top: 12px; }
-          .signatures h3 { font-size: 10px; font-weight: bold; text-align: center; margin-bottom: 10px; }
-          .signatures-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+          .totals-row.total { font-size: 18px; font-weight: bold; border-top: 1px solid #000; padding-top: 6px; margin-top: 6px; }
+          .totals-row.weight { font-size: 14px; border-top: 1px solid #000; padding-top: 6px; margin-top: 6px; }
+          .signatures { margin-top: 20px; }
+          .signatures h3 { font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 15px; }
+          .signatures-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
           .signature-line { text-align: center; }
-          .signature-line .line { border-bottom: 1px solid #000; height: 18px; margin-bottom: 2px; }
-          .signature-line p { font-size: 9px; }
+          .signature-line .line { border-bottom: 1px solid #000; height: 25px; margin-bottom: 4px; }
+          .signature-line p { font-size: 13px; }
           .zebra { background: #f9f9f9; }
           ${watermarkStyles}
           @media print {
-            body { padding: 5px; }
-            @page { margin: 5mm; size: A4; }
+            body { padding: 10px; }
+            @page { margin: 8mm; size: A4; }
             .watermark {
               position: fixed;
-              top: 15px;
+              top: 20px;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
             }
@@ -128,10 +128,10 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
           <div>
             <h2>${sale.type === 'pedido' ? 'PEDIDO' : 'ORÇAMENTO'}</h2>
             <p class="number">Nº ${sale.number}</p>
-            ${sale.sellerName ? `<p style="font-size: 9px; margin-top: 2px;"><strong>Vendedor:</strong> ${sale.sellerName}</p>` : ''}
+            ${sale.sellerName ? `<p style="font-size: 13px; margin-top: 4px;"><strong>Vendedor:</strong> ${sale.sellerName}</p>` : ''}
           </div>
-          <div style="text-align: center; flex: 1; padding: 0 10px;">
-            <p style="font-weight: bold; font-size: 8px; border: 1px solid #000; padding: 3px; background: #f5f5f5;">NÃO É DOCUMENTO FISCAL - NÃO COMPROVA PAGAMENTO</p>
+          <div style="text-align: center; flex: 1; padding: 0 15px;">
+            <p style="font-weight: bold; font-size: 11px; border: 1px solid #000; padding: 5px; background: #f5f5f5;">NÃO É DOCUMENTO FISCAL - NÃO COMPROVA PAGAMENTO</p>
           </div>
           <div class="date">
             <p>Data: ${format(sale.createdAt, "dd/MM/yyyy", { locale: ptBR })}</p>
