@@ -1,7 +1,7 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Sale } from "@/types/sales";
-import { Printer, X } from "lucide-react";
+import { Printer, X, FileDown } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -440,6 +440,18 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
           <Button variant="outline" size="sm" onClick={onClose}>
             <X className="h-4 w-4 mr-2" />
             Fechar
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => {
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) {
+              alert('Permita pop-ups para salvar PDF');
+              return;
+            }
+            // Reutiliza a mesma lógica de impressão mas com instrução de salvar como PDF
+            handlePrint();
+          }}>
+            <FileDown className="h-4 w-4 mr-2" />
+            Salvar PDF
           </Button>
           <Button size="sm" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />
