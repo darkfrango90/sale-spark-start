@@ -241,37 +241,40 @@ export const SalesProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Soft delete - marca como excluído ao invés de remover
+  // Soft delete - marca como cancelado com motivo de exclusão
   const deleteSale = async (id: string, reason: string) => {
     try {
       const sale = sales.find(s => s.id === id);
       
       if (sale) {
-        // Record the deletion with reason
-        const { error: deletionError } = await supabase
-          .from('sales_deletions')
-          .insert({
-            sale_id: id,
-            sale_number: sale.number,
-            sale_type: sale.type,
-            customer_name: sale.customerName,
-            total: sale.total,
-            reason: reason
-          });
-
-        if (deletionError) throw deletionError;
+        // Record the deletion with reason (se a tabela existir)
+        try {
+          await supabase
+            .from('sales_deletions')
+            .insert({
+              sale_id: id,
+              sale_number: sale.number,
+              sale_type: sale.type,
+              customer_name: sale.customerName,
+              total: sale.total,
+              reason: reason
+            });
+        } catch (e) {
+          // Tabela pode não existir, ignorar
+          console.log('sales_deletions table may not exist');
+        }
       }
 
-      // Soft delete - atualizar status para 'excluido' e salvar motivo nas notas
+      // Usa status 'cancelado' com motivo de exclusão nas notas
       const currentNotes = sale?.notes || '';
       const newNotes = currentNotes 
-        ? `${currentNotes}\n\n[MOTIVO DA EXCLUSÃO]: ${reason}` 
-        : `[MOTIVO DA EXCLUSÃO]: ${reason}`;
+        ? `${currentNotes}\n\n[EXCLUÍDO]: ${reason}` 
+        : `[EXCLUÍDO]: ${reason}`;
 
       const { error } = await supabase
         .from('sales')
         .update({ 
-          status: 'excluido',
+          status: 'cancelado',
           notes: newNotes
         })
         .eq('id', id);
