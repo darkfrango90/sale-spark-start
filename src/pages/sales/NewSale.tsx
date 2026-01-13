@@ -248,9 +248,28 @@ const NewSale = () => {
     setItems(items.filter(i => i.id !== itemId));
   };
 
-  const subtotal = items.reduce((acc, item) => acc + (item.quantity * item.originalPrice), 0);
+  // Subtotal = soma dos preços cadastrados (originalPrice) para itens normais
+  // Para itens sem preço cadastrado (como frete), usa o preço praticado
+  const subtotal = items.reduce((acc, item) => {
+    if (item.originalPrice > 0) {
+      return acc + (item.quantity * item.originalPrice);
+    }
+    return acc; // Frete não entra no subtotal
+  }, 0);
+  
   const totalDiscount = items.reduce((acc, item) => acc + item.discount, 0);
-  const total = subtotal - totalDiscount;
+  
+  // Total = soma de todos os item.total (inclui frete e descontos)
+  const total = items.reduce((acc, item) => acc + item.total, 0);
+  
+  // Acréscimos (como frete) - itens onde originalPrice = 0
+  const totalAdditions = items.reduce((acc, item) => {
+    if (item.originalPrice === 0 && item.unitPrice > 0) {
+      return acc + item.total;
+    }
+    return acc;
+  }, 0);
+  
   const totalWeight = items.reduce((acc, item) => acc + (item.weight || 0), 0);
 
   const formatCurrency = (value: number) => {
@@ -687,10 +706,18 @@ const NewSale = () => {
                     <span>Subtotal:</span>
                     <span>{formatCurrency(subtotal)}</span>
                   </div>
-                  <div className="flex justify-between text-sm text-red-600">
-                    <span>Desconto:</span>
-                    <span>- {formatCurrency(totalDiscount)}</span>
-                  </div>
+                  {totalDiscount > 0 && (
+                    <div className="flex justify-between text-sm text-red-600">
+                      <span>Desconto:</span>
+                      <span>- {formatCurrency(totalDiscount)}</span>
+                    </div>
+                  )}
+                  {totalAdditions > 0 && (
+                    <div className="flex justify-between text-sm text-blue-600">
+                      <span>Frete/Acréscimos:</span>
+                      <span>+ {formatCurrency(totalAdditions)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>TOTAL:</span>
                     <span>{formatCurrency(total)}</span>
