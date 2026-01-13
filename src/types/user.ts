@@ -26,7 +26,7 @@ export const ROLES = {
 export const MODULES = {
   cadastro: {
     label: 'Cadastro',
-    actions: ['Clientes', 'Produtos', 'Fornecedores', 'Funcionários'],
+    actions: ['Clientes', 'Produtos', 'Fornecedores'],
   },
   vendas: {
     label: 'Vendas',
@@ -38,7 +38,7 @@ export const MODULES = {
   },
   financeiro: {
     label: 'Financeiro',
-    actions: ['Contas a Pagar', 'Contas a Receber', 'Caixa', 'Bancos'],
+    actions: ['Contas a Pagar', 'Contas a Receber'],
   },
   relatorios: {
     label: 'Relatórios',
@@ -46,7 +46,7 @@ export const MODULES = {
   },
   configuracao: {
     label: 'Configuração',
-    actions: ['Empresa', 'Usuários', 'Sistema', 'Contas de Recebimento'],
+    actions: ['Empresa', 'Sistema', 'Contas de Recebimento'],
   },
 } as const;
 

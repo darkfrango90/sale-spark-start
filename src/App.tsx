@@ -11,6 +11,8 @@ import { SalesProvider } from "@/contexts/SalesContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
 import { FinancialProvider } from "@/contexts/FinancialContext";
 import { SupplierProvider } from "@/contexts/SupplierContext";
+import { usePermissions } from "@/hooks/usePermissions";
+import { toast } from "sonner";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import UserManagement from "./pages/settings/UserManagement";
@@ -40,6 +42,30 @@ const ProtectedRoute = ({ isAuthenticated, children }: RouteGateProps) => {
   return <>{children}</>;
 };
 
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user } = useAuth();
+  if (user?.role !== 'admin') {
+    toast.error('Acesso restrito a administradores');
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+};
+
+type PermissionRouteProps = {
+  module: string;
+  action: string;
+  children: React.ReactNode;
+};
+
+const PermissionRoute = ({ module, action, children }: PermissionRouteProps) => {
+  const { hasActionAccess } = usePermissions();
+  if (!hasActionAccess(module, action)) {
+    toast.error('Você não tem permissão para acessar esta página');
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+};
+
 const PublicRoute = ({ isAuthenticated, children }: RouteGateProps) => {
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
@@ -55,18 +81,90 @@ const AppRoutes = () => {
       <Routes>
         <Route path="/login" element={<PublicRoute isAuthenticated={isAuthenticated}><Login /></PublicRoute>} />
         <Route path="/" element={<ProtectedRoute isAuthenticated={isAuthenticated}><Index /></ProtectedRoute>} />
-        <Route path="/configuracao/usuarios" element={<ProtectedRoute isAuthenticated={isAuthenticated}><UserManagement /></ProtectedRoute>} />
-        <Route path="/configuracao/pagamentos" element={<ProtectedRoute isAuthenticated={isAuthenticated}><PaymentMethods /></ProtectedRoute>} />
-        <Route path="/configuracao/empresa" element={<ProtectedRoute isAuthenticated={isAuthenticated}><CompanySettingsPage /></ProtectedRoute>} />
-        <Route path="/configuracao/contas-recebimento" element={<ProtectedRoute isAuthenticated={isAuthenticated}><ReceivingAccounts /></ProtectedRoute>} />
-        <Route path="/cadastro/clientes" element={<ProtectedRoute isAuthenticated={isAuthenticated}><CustomerManagement /></ProtectedRoute>} />
-        <Route path="/cadastro/produtos" element={<ProtectedRoute isAuthenticated={isAuthenticated}><ProductManagement /></ProtectedRoute>} />
-        <Route path="/cadastro/fornecedores" element={<ProtectedRoute isAuthenticated={isAuthenticated}><SupplierManagement /></ProtectedRoute>} />
-        <Route path="/vendas/nova" element={<ProtectedRoute isAuthenticated={isAuthenticated}><NewSale /></ProtectedRoute>} />
-        <Route path="/vendas/pedidos" element={<ProtectedRoute isAuthenticated={isAuthenticated}><SalesList type="pedido" /></ProtectedRoute>} />
-        <Route path="/vendas/orcamentos" element={<ProtectedRoute isAuthenticated={isAuthenticated}><SalesList type="orcamento" /></ProtectedRoute>} />
-        <Route path="/financeiro/contas-a-receber" element={<ProtectedRoute isAuthenticated={isAuthenticated}><AccountsReceivable /></ProtectedRoute>} />
-        <Route path="/financeiro/contas-a-pagar" element={<ProtectedRoute isAuthenticated={isAuthenticated}><AccountsPayable /></ProtectedRoute>} />
+        <Route path="/configuracao/usuarios" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <AdminRoute>
+              <UserManagement />
+            </AdminRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/configuracao/pagamentos" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="configuracao" action="Empresa">
+              <PaymentMethods />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/configuracao/empresa" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="configuracao" action="Empresa">
+              <CompanySettingsPage />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/configuracao/contas-recebimento" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="configuracao" action="Contas de Recebimento">
+              <ReceivingAccounts />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/cadastro/clientes" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="cadastro" action="Clientes">
+              <CustomerManagement />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/cadastro/produtos" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="cadastro" action="Produtos">
+              <ProductManagement />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/cadastro/fornecedores" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="cadastro" action="Fornecedores">
+              <SupplierManagement />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/vendas/nova" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="vendas" action="Nova Venda">
+              <NewSale />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/vendas/pedidos" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="vendas" action="Pedidos">
+              <SalesList type="pedido" />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/vendas/orcamentos" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="vendas" action="Orçamentos">
+              <SalesList type="orcamento" />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/financeiro/contas-a-receber" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="financeiro" action="Contas a Receber">
+              <AccountsReceivable />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/financeiro/contas-a-pagar" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="financeiro" action="Contas a Pagar">
+              <AccountsPayable />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
