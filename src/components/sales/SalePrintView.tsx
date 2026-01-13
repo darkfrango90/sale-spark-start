@@ -42,22 +42,23 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
       return;
     }
 
-    // CSS para marca d'água - ocupando metade superior da página
+    // CSS para marca d'água - centralizada na metade superior da página A4
+    // A4 tem ~297mm de altura, metade = ~148mm, centro da metade = ~74mm (~280px)
     const watermarkStyles = showWatermark ? `
       .watermark {
         position: fixed;
-        top: 80px;
-        left: 50%;
-        transform: translateX(-50%) rotate(-15deg);
-        font-size: 120px;
+        top: 180px;
+        left: 0;
+        right: 0;
+        transform: rotate(-15deg);
+        font-size: 80px;
         font-weight: bold;
-        color: rgba(255, 0, 0, 0.18);
+        color: rgba(255, 0, 0, 0.20);
         text-transform: uppercase;
         z-index: 1000;
         pointer-events: none;
         white-space: nowrap;
-        letter-spacing: 20px;
-        width: 100%;
+        letter-spacing: 12px;
         text-align: center;
       }
     ` : '';
@@ -261,12 +262,12 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-auto">
         {/* Preview Content - Compact */}
         <div className="p-4 bg-white text-black relative text-[11px]">
-          {/* Marca d'água na preview - topo */}
+          {/* Marca d'água na preview - centralizada na metade superior */}
           {showWatermark && (
-            <div className="absolute top-16 left-1/2 -translate-x-1/2 -rotate-[15deg] pointer-events-none z-10 w-full text-center">
+            <div className="absolute top-24 left-0 right-0 -rotate-[15deg] pointer-events-none z-10 text-center">
               <span 
-                className="text-red-500/20 font-bold text-[70px] whitespace-nowrap"
-                style={{ letterSpacing: '15px' }}
+                className="text-red-500/20 font-bold text-[50px] whitespace-nowrap"
+                style={{ letterSpacing: '10px' }}
               >
                 {watermarkText}
               </span>
