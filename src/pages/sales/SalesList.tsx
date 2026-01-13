@@ -29,8 +29,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, Plus, Eye, Trash2, RefreshCw, FileText, ShoppingBag, Printer } from "lucide-react";
+import { Search, Plus, Eye, Trash2, RefreshCw, FileText, ShoppingBag, Printer, Ban } from "lucide-react";
 import { useSales } from "@/contexts/SalesContext";
 import { Sale } from "@/types/sales";
 import { useToast } from "@/hooks/use-toast";
@@ -56,6 +62,11 @@ const SalesList = ({ type }: SalesListProps) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
+  
+  // Cancel dialog
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [saleToCancel, setSaleToCancel] = useState<Sale | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
   
   // Convert dialog
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
@@ -88,7 +99,7 @@ const SalesList = ({ type }: SalesListProps) => {
         await deleteSale(saleToDelete.id, deleteReason.trim());
         toast({
           title: "Excluído",
-          description: `${saleToDelete.type === 'pedido' ? 'Pedido' : 'Orçamento'} ${saleToDelete.number} excluído com sucesso.`,
+          description: `${saleToDelete.type === 'pedido' ? 'Pedido' : 'Orçamento'} ${saleToDelete.number} marcado como excluído.`,
         });
       } catch (error) {
         toast({
@@ -100,6 +111,41 @@ const SalesList = ({ type }: SalesListProps) => {
       setIsDeleteDialogOpen(false);
       setSaleToDelete(null);
       setDeleteReason('');
+    }
+  };
+
+  const handleCancel = (sale: Sale) => {
+    setSaleToCancel(sale);
+    setCancelReason('');
+    setIsCancelDialogOpen(true);
+  };
+
+  const confirmCancel = async () => {
+    if (saleToCancel && cancelReason.trim()) {
+      try {
+        const currentNotes = saleToCancel.notes || '';
+        const newNotes = currentNotes 
+          ? `${currentNotes}\n\n[MOTIVO DO CANCELAMENTO]: ${cancelReason.trim()}` 
+          : `[MOTIVO DO CANCELAMENTO]: ${cancelReason.trim()}`;
+        
+        await updateSale(saleToCancel.id, { 
+          status: 'cancelado',
+          notes: newNotes
+        });
+        toast({
+          title: "Cancelado",
+          description: `${saleToCancel.type === 'pedido' ? 'Pedido' : 'Orçamento'} ${saleToCancel.number} cancelado.`,
+        });
+      } catch (error) {
+        toast({
+          title: "Erro",
+          description: "Falha ao cancelar.",
+          variant: "destructive",
+        });
+      }
+      setIsCancelDialogOpen(false);
+      setSaleToCancel(null);
+      setCancelReason('');
     }
   };
 
@@ -138,14 +184,6 @@ const SalesList = ({ type }: SalesListProps) => {
     });
   };
 
-  const handleCancel = (sale: Sale) => {
-    updateSale(sale.id, { status: 'cancelado' });
-    toast({
-      title: "Cancelado",
-      description: `${sale.type === 'pedido' ? 'Pedido' : 'Orçamento'} ${sale.number} cancelado.`,
-    });
-  };
-
   const handlePrint = (sale: Sale) => {
     setSaleToPrint(sale);
     setPrintModalOpen(true);
@@ -158,22 +196,60 @@ const SalesList = ({ type }: SalesListProps) => {
     }).format(value);
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles = {
+  // Extrai o motivo da exclusão/cancelamento das notas
+  const extractReason = (notes: string | undefined, type: 'exclusao' | 'cancelamento'): string | null => {
+    if (!notes) return null;
+    const prefix = type === 'exclusao' ? '[MOTIVO DA EXCLUSÃO]:' : '[MOTIVO DO CANCELAMENTO]:';
+    const index = notes.indexOf(prefix);
+    if (index === -1) return null;
+    return notes.substring(index + prefix.length).trim();
+  };
+
+  const getStatusBadge = (sale: Sale) => {
+    const styles: Record<string, string> = {
       pendente: 'bg-yellow-100 text-yellow-700',
       finalizado: 'bg-green-100 text-green-700',
       cancelado: 'bg-red-100 text-red-700',
+      excluido: 'bg-gray-100 text-gray-700',
     };
-    const labels = {
+    const labels: Record<string, string> = {
       pendente: 'Pendente',
       finalizado: 'Finalizado',
       cancelado: 'Cancelado',
+      excluido: 'Excluído',
     };
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs ${styles[status as keyof typeof styles]}`}>
-        {labels[status as keyof typeof labels]}
+
+    const badge = (
+      <span className={`px-2 py-1 rounded-full text-xs ${styles[sale.status]}`}>
+        {labels[sale.status]}
       </span>
     );
+
+    // Para cancelados ou excluídos, mostrar tooltip com motivo
+    if (sale.status === 'cancelado' || sale.status === 'excluido') {
+      const reasonType = sale.status === 'excluido' ? 'exclusao' : 'cancelamento';
+      const reason = extractReason(sale.notes, reasonType);
+      
+      if (reason) {
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="cursor-help">{badge}</span>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p className="font-medium mb-1">
+                  {sale.status === 'excluido' ? 'Motivo da Exclusão:' : 'Motivo do Cancelamento:'}
+                </p>
+                <p>{reason}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      }
+    }
+
+    return badge;
   };
 
   const getTypeBadge = (saleType: string) => {
@@ -231,6 +307,7 @@ const SalesList = ({ type }: SalesListProps) => {
                   <SelectItem value="pendente">Pendente</SelectItem>
                   <SelectItem value="finalizado">Finalizado</SelectItem>
                   <SelectItem value="cancelado">Cancelado</SelectItem>
+                  <SelectItem value="excluido">Excluído</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -258,7 +335,7 @@ const SalesList = ({ type }: SalesListProps) => {
                     </TableRow>
                   ) : (
                     filteredSales.map((sale) => (
-                      <TableRow key={sale.id}>
+                      <TableRow key={sale.id} className={sale.status === 'excluido' || sale.status === 'cancelado' ? 'opacity-60' : ''}>
                         <TableCell className="font-mono font-medium">{sale.number}</TableCell>
                         {!filterType && <TableCell>{getTypeBadge(sale.type)}</TableCell>}
                         <TableCell>
@@ -269,7 +346,7 @@ const SalesList = ({ type }: SalesListProps) => {
                         </TableCell>
                         <TableCell className="text-right font-medium">{formatCurrency(sale.total)}</TableCell>
                         <TableCell>{sale.paymentMethodName || '-'}</TableCell>
-                        <TableCell>{getStatusBadge(sale.status)}</TableCell>
+                        <TableCell>{getStatusBadge(sale)}</TableCell>
                         <TableCell>{format(new Date(sale.createdAt), 'dd/MM/yyyy', { locale: ptBR })}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
@@ -302,7 +379,7 @@ const SalesList = ({ type }: SalesListProps) => {
                                   title="Cancelar"
                                   onClick={() => handleCancel(sale)}
                                 >
-                                  <Trash2 className="h-4 w-4 text-orange-500" />
+                                  <Ban className="h-4 w-4 text-orange-500" />
                                 </Button>
                                 <Button 
                                   variant="ghost" 
@@ -355,6 +432,40 @@ const SalesList = ({ type }: SalesListProps) => {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cancel Dialog with Reason */}
+      <AlertDialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Justificar Cancelamento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Para cancelar o {saleToCancel?.type === 'pedido' ? 'pedido' : 'orçamento'} "{saleToCancel?.number}", 
+              informe o motivo do cancelamento:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            placeholder="Digite o motivo do cancelamento..."
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            className="min-h-[80px]"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setCancelReason('');
+              setSaleToCancel(null);
+            }}>
+              Voltar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmCancel} 
+              disabled={!cancelReason.trim()}
+              className="bg-orange-500 text-white hover:bg-orange-600"
+            >
+              Cancelar Pedido
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

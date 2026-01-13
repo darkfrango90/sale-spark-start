@@ -52,6 +52,7 @@ export const SalesProvider = ({ children }: { children: ReactNode }) => {
             productName: i.product_name,
             unit: i.unit,
             quantity: Number(i.quantity),
+            originalPrice: Number(i.unit_price), // Para compatibilidade, usar unit_price como original
             unitPrice: Number(i.unit_price),
             discount: Number(i.discount),
             total: Number(i.total),
@@ -75,13 +76,14 @@ export const SalesProvider = ({ children }: { children: ReactNode }) => {
           customerZipCode: s.customer_zip_code || undefined,
           paymentMethodId: s.payment_method_id || '',
           paymentMethodName: s.payment_method_name || '',
+          paymentType: (s.payment_type as 'vista' | 'prazo') || undefined,
           items: saleItems,
           subtotal: Number(s.subtotal),
           discount: Number(s.discount),
           total: Number(s.total),
           totalWeight: Number(s.total_weight),
           notes: s.notes || undefined,
-          status: s.status as 'pendente' | 'finalizado' | 'cancelado',
+          status: s.status as 'pendente' | 'finalizado' | 'cancelado' | 'excluido',
           createdAt: new Date(s.created_at),
           updatedAt: new Date(s.updated_at)
         };
@@ -145,6 +147,7 @@ export const SalesProvider = ({ children }: { children: ReactNode }) => {
           customer_zip_code: saleData.customerZipCode || null,
           payment_method_id: saleData.paymentMethodId || null,
           payment_method_name: saleData.paymentMethodName || null,
+          payment_type: saleData.paymentType || null,
           subtotal: saleData.subtotal,
           discount: saleData.discount,
           total: saleData.total,
@@ -199,13 +202,14 @@ export const SalesProvider = ({ children }: { children: ReactNode }) => {
         customerZipCode: saleResult.customer_zip_code || undefined,
         paymentMethodId: saleResult.payment_method_id || '',
         paymentMethodName: saleResult.payment_method_name || '',
+        paymentType: (saleResult.payment_type as 'vista' | 'prazo') || undefined,
         items: saleData.items,
         subtotal: Number(saleResult.subtotal),
         discount: Number(saleResult.discount),
         total: Number(saleResult.total),
         totalWeight: Number(saleResult.total_weight),
         notes: saleResult.notes || undefined,
-        status: saleResult.status as 'pendente' | 'finalizado' | 'cancelado',
+        status: saleResult.status as 'pendente' | 'finalizado' | 'cancelado' | 'excluido',
         createdAt: new Date(saleResult.created_at),
         updatedAt: new Date(saleResult.updated_at)
       };
@@ -237,6 +241,7 @@ export const SalesProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Soft delete - marca como excluído ao invés de remover
   const deleteSale = async (id: string, reason: string) => {
     try {
       const sale = sales.find(s => s.id === id);
@@ -257,10 +262,18 @@ export const SalesProvider = ({ children }: { children: ReactNode }) => {
         if (deletionError) throw deletionError;
       }
 
-      // Delete the sale (cascade will handle sale_items)
+      // Soft delete - atualizar status para 'excluido' e salvar motivo nas notas
+      const currentNotes = sale?.notes || '';
+      const newNotes = currentNotes 
+        ? `${currentNotes}\n\n[MOTIVO DA EXCLUSÃO]: ${reason}` 
+        : `[MOTIVO DA EXCLUSÃO]: ${reason}`;
+
       const { error } = await supabase
         .from('sales')
-        .delete()
+        .update({ 
+          status: 'excluido',
+          notes: newNotes
+        })
         .eq('id', id);
 
       if (error) throw error;

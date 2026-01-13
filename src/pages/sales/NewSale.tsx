@@ -47,6 +47,10 @@ import { useToast } from "@/hooks/use-toast";
 import SalePrintView from "@/components/sales/SalePrintView";
 import { supabase } from "@/integrations/supabase/client";
 
+// Condições de pagamento
+const conditionsAVista = ['Dinheiro', 'PIX', 'Deposito'];
+const conditionsAPrazo = ['Boleto', 'Cartão no Crédito', 'Carteira', 'Permuta', 'Cartão de Débito'];
+
 const NewSale = () => {
   const navigate = useNavigate();
   const { addSale, getNextSaleNumber, getNextQuoteNumber } = useSales();
@@ -73,8 +77,9 @@ const NewSale = () => {
   // Items
   const [items, setItems] = useState<SaleItem[]>([]);
   
-  // Payment
-  const [paymentMethodId, setPaymentMethodId] = useState('');
+  // Payment - Nova estrutura
+  const [paymentType, setPaymentType] = useState<'vista' | 'prazo'>('vista');
+  const [paymentCondition, setPaymentCondition] = useState('');
   const [notes, setNotes] = useState('');
 
   // Receipt/Proof
@@ -86,8 +91,6 @@ const NewSale = () => {
   const [savedSale, setSavedSale] = useState<Sale | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const paymentMethods = getActivePaymentMethods();
-
   useEffect(() => {
     if (saleType === 'pedido') {
       setSaleNumber(getNextSaleNumber());
@@ -96,10 +99,18 @@ const NewSale = () => {
     }
   }, [saleType, getNextSaleNumber, getNextQuoteNumber]);
 
-  const filteredCustomers = customers.filter(c => 
-    c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
-    c.code.includes(customerSearch)
-  );
+  // Reset condição de pagamento quando mudar o tipo
+  useEffect(() => {
+    setPaymentCondition('');
+  }, [paymentType]);
+
+  // Filtro de clientes - busca a partir de 1 caractere
+  const filteredCustomers = customerSearch.length >= 1 
+    ? customers.filter(c => 
+        c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+        c.code.includes(customerSearch)
+      )
+    : [];
 
   const handleCustomerCodeSearch = () => {
     const customer = customers.find(c => c.code === customerCode);
@@ -139,10 +150,12 @@ const NewSale = () => {
     }
   };
 
+  // Busca a partir de 1 caractere
   const handleProductSearch = (search: string) => {
     setProductSearch(search);
-    if (search.length >= 2) {
+    if (search.length >= 1) {
       setFilteredProducts(searchProductsByName(search));
+      setProductPopoverOpen(true);
     } else {
       setFilteredProducts([]);
     }
@@ -171,11 +184,13 @@ const NewSale = () => {
       const updatedItems = [...items];
       const item = updatedItems[existingIndex];
       const newQuantity = item.quantity + 1;
-      const newTotal = (newQuantity * item.unitPrice) - item.discount;
+      const newTotal = newQuantity * item.unitPrice;
+      const newDiscount = (item.originalPrice - item.unitPrice) * newQuantity;
       const newWeight = calculateItemWeight(newQuantity, item.unit, item.density);
       updatedItems[existingIndex] = {
         ...item,
         quantity: newQuantity,
+        discount: Math.max(0, newDiscount),
         total: newTotal,
         weight: newWeight
       };
@@ -189,6 +204,7 @@ const NewSale = () => {
         productName: product.name,
         unit: product.unit,
         quantity: 1,
+        originalPrice: product.salePrice,
         unitPrice: product.salePrice,
         discount: 0,
         total: product.salePrice,
@@ -202,19 +218,27 @@ const NewSale = () => {
   const updateItemQuantity = (itemId: string, quantity: number) => {
     setItems(items.map(item => {
       if (item.id === itemId) {
-        const newTotal = (quantity * item.unitPrice) - item.discount;
+        const newTotal = quantity * item.unitPrice;
+        const newDiscount = (item.originalPrice - item.unitPrice) * quantity;
         const newWeight = calculateItemWeight(quantity, item.unit, item.density);
-        return { ...item, quantity, total: newTotal, weight: newWeight };
+        return { ...item, quantity, discount: Math.max(0, newDiscount), total: newTotal, weight: newWeight };
       }
       return item;
     }));
   };
 
-  const updateItemDiscount = (itemId: string, discount: number) => {
+  // Nova função para atualizar o preço praticado
+  const updateItemUnitPrice = (itemId: string, newPrice: number) => {
     setItems(items.map(item => {
       if (item.id === itemId) {
-        const newTotal = (item.quantity * item.unitPrice) - discount;
-        return { ...item, discount, total: Math.max(0, newTotal) };
+        const newTotal = item.quantity * newPrice;
+        const calculatedDiscount = (item.originalPrice - newPrice) * item.quantity;
+        return { 
+          ...item, 
+          unitPrice: newPrice, 
+          discount: Math.max(0, calculatedDiscount),
+          total: newTotal 
+        };
       }
       return item;
     }));
@@ -224,7 +248,7 @@ const NewSale = () => {
     setItems(items.filter(i => i.id !== itemId));
   };
 
-  const subtotal = items.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
+  const subtotal = items.reduce((acc, item) => acc + (item.quantity * item.originalPrice), 0);
   const totalDiscount = items.reduce((acc, item) => acc + item.discount, 0);
   const total = subtotal - totalDiscount;
   const totalWeight = items.reduce((acc, item) => acc + (item.weight || 0), 0);
@@ -276,6 +300,9 @@ const NewSale = () => {
     return urlData.publicUrl;
   };
 
+  // Verifica se deve mostrar campo de comprovante
+  const shouldShowReceiptUpload = paymentCondition === 'PIX' || paymentCondition === 'Deposito';
+
   const handleSubmit = async () => {
     if (!selectedCustomer) {
       toast({
@@ -295,7 +322,7 @@ const NewSale = () => {
       return;
     }
 
-    if (!paymentMethodId) {
+    if (!paymentCondition) {
       toast({
         title: "Erro",
         description: "Selecione uma condição de pagamento.",
@@ -307,8 +334,7 @@ const NewSale = () => {
     setIsSubmitting(true);
 
     try {
-      const selectedPayment = paymentMethods.find(p => p.id === paymentMethodId);
-      const isDinheiro = selectedPayment?.name.toLowerCase() === 'dinheiro';
+      const isDinheiro = paymentCondition === 'Dinheiro';
 
       const newSale = await addSale({
         type: saleType,
@@ -323,8 +349,9 @@ const NewSale = () => {
         customerCity: selectedCustomer.city || undefined,
         customerState: selectedCustomer.state || undefined,
         customerZipCode: selectedCustomer.zipCode || undefined,
-        paymentMethodId,
-        paymentMethodName: selectedPayment?.name || '',
+        paymentMethodId: '',
+        paymentMethodName: paymentCondition,
+        paymentType: paymentType,
         items,
         subtotal,
         discount: totalDiscount,
@@ -338,7 +365,7 @@ const NewSale = () => {
       if (saleType === 'pedido') {
         let receiptUrl: string | null = null;
         
-        if (receiptFile) {
+        if (receiptFile && shouldShowReceiptUpload) {
           receiptUrl = await uploadReceipt(newSale.id);
         }
 
@@ -384,6 +411,7 @@ const NewSale = () => {
     navigate(saleType === 'pedido' ? '/vendas/pedidos' : '/vendas/orcamentos');
   };
 
+  const currentConditions = paymentType === 'vista' ? conditionsAVista : conditionsAPrazo;
 
   return (
     <div className="min-h-screen bg-background">
@@ -458,7 +486,9 @@ const NewSale = () => {
                           value={customerSearch}
                           onChange={(e) => {
                             setCustomerSearch(e.target.value);
-                            setCustomerPopoverOpen(true);
+                            if (e.target.value.length >= 1) {
+                              setCustomerPopoverOpen(true);
+                            }
                           }}
                           className="pl-10"
                         />
@@ -548,10 +578,7 @@ const NewSale = () => {
                         <Input
                           placeholder="Digite o nome do produto..."
                           value={productSearch}
-                          onChange={(e) => {
-                            handleProductSearch(e.target.value);
-                            setProductPopoverOpen(true);
-                          }}
+                          onChange={(e) => handleProductSearch(e.target.value)}
                           className="pl-10"
                         />
                       </div>
@@ -585,7 +612,7 @@ const NewSale = () => {
                 </div>
               </div>
 
-              {/* Items Table */}
+              {/* Items Table com Preço Cadastrado e Preço Praticado */}
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
@@ -594,16 +621,17 @@ const NewSale = () => {
                       <TableHead>Produto</TableHead>
                       <TableHead className="w-16">Un.</TableHead>
                       <TableHead className="w-24 text-right">Qtd</TableHead>
-                      <TableHead className="w-32 text-right">Preço Unit.</TableHead>
-                      <TableHead className="w-28 text-right">Desc. R$</TableHead>
-                      <TableHead className="w-32 text-right">Total</TableHead>
+                      <TableHead className="w-28 text-right">Preço Cad.</TableHead>
+                      <TableHead className="w-28 text-right">Preço Prat.</TableHead>
+                      <TableHead className="w-24 text-right">Desc. R$</TableHead>
+                      <TableHead className="w-28 text-right">Total</TableHead>
                       <TableHead className="w-16"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {items.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                           Nenhum produto adicionado
                         </TableCell>
                       </TableRow>
@@ -623,16 +651,21 @@ const NewSale = () => {
                               className="w-20 text-right"
                             />
                           </TableCell>
-                          <TableCell className="text-right">{formatCurrency(item.unitPrice)}</TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {formatCurrency(item.originalPrice)}
+                          </TableCell>
                           <TableCell>
                             <Input
                               type="number"
                               min="0"
                               step="0.01"
-                              value={item.discount}
-                              onChange={(e) => updateItemDiscount(item.id, parseFloat(e.target.value) || 0)}
+                              value={item.unitPrice}
+                              onChange={(e) => updateItemUnitPrice(item.id, parseFloat(e.target.value) || 0)}
                               className="w-24 text-right"
                             />
+                          </TableCell>
+                          <TableCell className="text-right text-red-600">
+                            {formatCurrency(item.discount)}
                           </TableCell>
                           <TableCell className="text-right font-medium">{formatCurrency(item.total)}</TableCell>
                           <TableCell>
@@ -670,28 +703,49 @@ const NewSale = () => {
               </div>
             </div>
 
-            {/* Payment */}
+            {/* Payment - Nova estrutura */}
             <div className="space-y-4">
               <h3 className="font-medium text-sm text-muted-foreground border-b pb-2">PAGAMENTO</h3>
+              
+              {/* Forma de Pagamento */}
+              <div className="space-y-2">
+                <Label>Forma de Pagamento *</Label>
+                <RadioGroup 
+                  value={paymentType} 
+                  onValueChange={(value) => setPaymentType(value as 'vista' | 'prazo')} 
+                  className="flex gap-6"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="vista" id="vista" />
+                    <Label htmlFor="vista" className="cursor-pointer">À Vista</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="prazo" id="prazo" />
+                    <Label htmlFor="prazo" className="cursor-pointer">À Prazo</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* Condição de Pagamento */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Condição de Pagamento *</Label>
-                  <Select value={paymentMethodId} onValueChange={setPaymentMethodId}>
+                  <Select value={paymentCondition} onValueChange={setPaymentCondition}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {paymentMethods.map(method => (
-                        <SelectItem key={method.id} value={method.id}>
-                          {method.name}
+                      {currentConditions.map(cond => (
+                        <SelectItem key={cond} value={cond}>
+                          {cond}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 
-                {/* Receipt Upload - Only show for non-cash payments */}
-                {paymentMethodId && paymentMethods.find(p => p.id === paymentMethodId)?.name.toLowerCase() !== 'dinheiro' && (
+                {/* Receipt Upload - Apenas para PIX ou Deposito */}
+                {shouldShowReceiptUpload && (
                   <div className="space-y-2">
                     <Label>Comprovante de Pagamento</Label>
                     {receiptPreview ? (
