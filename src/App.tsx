@@ -25,41 +25,48 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
+type RouteGateProps = {
+  isAuthenticated: boolean;
+  children: React.ReactNode;
+};
+
+const ProtectedRoute = ({ isAuthenticated, children }: RouteGateProps) => {
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
   return <>{children}</>;
 };
 
-const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
+const PublicRoute = ({ isAuthenticated, children }: RouteGateProps) => {
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
   return <>{children}</>;
 };
 
-const AppRoutes = () => (
-  <BrowserRouter>
-    <Routes>
-      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-      <Route path="/configuracao/usuarios" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-      <Route path="/configuracao/pagamentos" element={<ProtectedRoute><PaymentMethods /></ProtectedRoute>} />
-      <Route path="/configuracao/empresa" element={<ProtectedRoute><CompanySettingsPage /></ProtectedRoute>} />
-      <Route path="/configuracao/contas-recebimento" element={<ProtectedRoute><ReceivingAccounts /></ProtectedRoute>} />
-      <Route path="/cadastro/clientes" element={<ProtectedRoute><CustomerManagement /></ProtectedRoute>} />
-      <Route path="/cadastro/produtos" element={<ProtectedRoute><ProductManagement /></ProtectedRoute>} />
-      <Route path="/vendas/nova" element={<ProtectedRoute><NewSale /></ProtectedRoute>} />
-      <Route path="/vendas/pedidos" element={<ProtectedRoute><SalesList type="pedido" /></ProtectedRoute>} />
-      <Route path="/vendas/orcamentos" element={<ProtectedRoute><SalesList type="orcamento" /></ProtectedRoute>} />
-      <Route path="/financeiro/contas-a-receber" element={<ProtectedRoute><AccountsReceivable /></ProtectedRoute>} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  </BrowserRouter>
-);
+const AppRoutes = () => {
+  const { isAuthenticated } = useAuth();
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<PublicRoute isAuthenticated={isAuthenticated}><Login /></PublicRoute>} />
+        <Route path="/" element={<ProtectedRoute isAuthenticated={isAuthenticated}><Index /></ProtectedRoute>} />
+        <Route path="/configuracao/usuarios" element={<ProtectedRoute isAuthenticated={isAuthenticated}><UserManagement /></ProtectedRoute>} />
+        <Route path="/configuracao/pagamentos" element={<ProtectedRoute isAuthenticated={isAuthenticated}><PaymentMethods /></ProtectedRoute>} />
+        <Route path="/configuracao/empresa" element={<ProtectedRoute isAuthenticated={isAuthenticated}><CompanySettingsPage /></ProtectedRoute>} />
+        <Route path="/configuracao/contas-recebimento" element={<ProtectedRoute isAuthenticated={isAuthenticated}><ReceivingAccounts /></ProtectedRoute>} />
+        <Route path="/cadastro/clientes" element={<ProtectedRoute isAuthenticated={isAuthenticated}><CustomerManagement /></ProtectedRoute>} />
+        <Route path="/cadastro/produtos" element={<ProtectedRoute isAuthenticated={isAuthenticated}><ProductManagement /></ProtectedRoute>} />
+        <Route path="/vendas/nova" element={<ProtectedRoute isAuthenticated={isAuthenticated}><NewSale /></ProtectedRoute>} />
+        <Route path="/vendas/pedidos" element={<ProtectedRoute isAuthenticated={isAuthenticated}><SalesList type="pedido" /></ProtectedRoute>} />
+        <Route path="/vendas/orcamentos" element={<ProtectedRoute isAuthenticated={isAuthenticated}><SalesList type="orcamento" /></ProtectedRoute>} />
+        <Route path="/financeiro/contas-a-receber" element={<ProtectedRoute isAuthenticated={isAuthenticated}><AccountsReceivable /></ProtectedRoute>} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
