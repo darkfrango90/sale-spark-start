@@ -1,3 +1,4 @@
+// Financial context for managing receiving accounts and accounts receivable
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ReceivingAccount, AccountReceivable } from '@/types/financial';
 import { supabase } from '@/integrations/supabase/client';
