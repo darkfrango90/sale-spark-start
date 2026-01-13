@@ -46,7 +46,7 @@ export const MODULES = {
   },
   configuracao: {
     label: 'Configuração',
-    actions: ['Empresa', 'Usuários', 'Sistema'],
+    actions: ['Empresa', 'Usuários', 'Sistema', 'Contas de Recebimento'],
   },
 } as const;
 
