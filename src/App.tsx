@@ -10,6 +10,7 @@ import { SettingsProvider } from "@/contexts/SettingsContext";
 import { SalesProvider } from "@/contexts/SalesContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
 import { FinancialProvider } from "@/contexts/FinancialContext";
+import { SupplierProvider } from "@/contexts/SupplierContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import UserManagement from "./pages/settings/UserManagement";
@@ -18,9 +19,11 @@ import CompanySettingsPage from "./pages/settings/CompanySettings";
 import ReceivingAccounts from "./pages/settings/ReceivingAccounts";
 import CustomerManagement from "./pages/customers/CustomerManagement";
 import ProductManagement from "./pages/products/ProductManagement";
+import SupplierManagement from "./pages/suppliers/SupplierManagement";
 import NewSale from "./pages/sales/NewSale";
 import SalesList from "./pages/sales/SalesList";
 import AccountsReceivable from "./pages/financial/AccountsReceivable";
+import AccountsPayable from "./pages/financial/AccountsPayable";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,10 +61,12 @@ const AppRoutes = () => {
         <Route path="/configuracao/contas-recebimento" element={<ProtectedRoute isAuthenticated={isAuthenticated}><ReceivingAccounts /></ProtectedRoute>} />
         <Route path="/cadastro/clientes" element={<ProtectedRoute isAuthenticated={isAuthenticated}><CustomerManagement /></ProtectedRoute>} />
         <Route path="/cadastro/produtos" element={<ProtectedRoute isAuthenticated={isAuthenticated}><ProductManagement /></ProtectedRoute>} />
+        <Route path="/cadastro/fornecedores" element={<ProtectedRoute isAuthenticated={isAuthenticated}><SupplierManagement /></ProtectedRoute>} />
         <Route path="/vendas/nova" element={<ProtectedRoute isAuthenticated={isAuthenticated}><NewSale /></ProtectedRoute>} />
         <Route path="/vendas/pedidos" element={<ProtectedRoute isAuthenticated={isAuthenticated}><SalesList type="pedido" /></ProtectedRoute>} />
         <Route path="/vendas/orcamentos" element={<ProtectedRoute isAuthenticated={isAuthenticated}><SalesList type="orcamento" /></ProtectedRoute>} />
         <Route path="/financeiro/contas-a-receber" element={<ProtectedRoute isAuthenticated={isAuthenticated}><AccountsReceivable /></ProtectedRoute>} />
+        <Route path="/financeiro/contas-a-pagar" element={<ProtectedRoute isAuthenticated={isAuthenticated}><AccountsPayable /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
@@ -77,11 +82,13 @@ const App = () => (
             <SalesProvider>
               <CompanyProvider>
                 <FinancialProvider>
-                  <TooltipProvider>
-                    <Toaster />
-                    <Sonner />
-                    <AppRoutes />
-                  </TooltipProvider>
+                  <SupplierProvider>
+                    <TooltipProvider>
+                      <Toaster />
+                      <Sonner />
+                      <AppRoutes />
+                    </TooltipProvider>
+                  </SupplierProvider>
                 </FinancialProvider>
               </CompanyProvider>
             </SalesProvider>

@@ -26,7 +26,7 @@ const menuItems: MenuItem[] = [
   { label: "Cadastro", items: [
     { label: "Clientes", path: "/cadastro/clientes" },
     { label: "Produtos", path: "/cadastro/produtos" },
-    { label: "Fornecedores" },
+    { label: "Fornecedores", path: "/cadastro/fornecedores" },
     { label: "Funcionários" }
   ]},
   { label: "Vendas", items: [
@@ -40,7 +40,7 @@ const menuItems: MenuItem[] = [
     { label: "Transferência" }
   ]},
   { label: "Financeiro", items: [
-    { label: "Contas a Pagar" },
+    { label: "Contas a Pagar", path: "/financeiro/contas-a-pagar" },
     { label: "Contas a Receber", path: "/financeiro/contas-a-receber" },
     { label: "Caixa" },
     { label: "Bancos" }
