@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TopMenu from "@/components/dashboard/TopMenu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +58,11 @@ const AccountsReceivablePage = () => {
   const [receiptDate, setReceiptDate] = useState<Date>(new Date());
 
   const receivingAccounts = getActiveReceivingAccounts();
+
+  // Refresh data when page loads
+  useEffect(() => {
+    refreshAccountsReceivable();
+  }, []);
 
   const filteredReceivables = accountsReceivable.filter(ar => {
     if (statusFilter === 'all') return true;
