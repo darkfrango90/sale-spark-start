@@ -32,10 +32,6 @@ export const MODULES = {
     label: 'Vendas',
     actions: ['Nova Venda', 'Orçamentos', 'Pedidos'],
   },
-  os: {
-    label: 'O.S.',
-    actions: ['Nova O.S.', 'Consultar O.S.'],
-  },
   movimentacao: {
     label: 'Movimentação',
     actions: ['Entrada', 'Saída', 'Transferência'],
