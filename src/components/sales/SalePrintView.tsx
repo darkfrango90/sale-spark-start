@@ -42,21 +42,23 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
       return;
     }
 
-    // CSS para marca d'água - posicionada no topo
+    // CSS para marca d'água - ocupando metade superior da página
     const watermarkStyles = showWatermark ? `
       .watermark {
         position: fixed;
-        top: 15px;
+        top: 80px;
         left: 50%;
-        transform: translateX(-50%) rotate(-12deg);
-        font-size: 48px;
+        transform: translateX(-50%) rotate(-15deg);
+        font-size: 120px;
         font-weight: bold;
-        color: rgba(255, 0, 0, 0.20);
+        color: rgba(255, 0, 0, 0.18);
         text-transform: uppercase;
         z-index: 1000;
         pointer-events: none;
         white-space: nowrap;
-        letter-spacing: 8px;
+        letter-spacing: 20px;
+        width: 100%;
+        text-align: center;
       }
     ` : '';
 
@@ -261,10 +263,10 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
         <div className="p-4 bg-white text-black relative text-[11px]">
           {/* Marca d'água na preview - topo */}
           {showWatermark && (
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 -rotate-12 pointer-events-none z-10">
+            <div className="absolute top-16 left-1/2 -translate-x-1/2 -rotate-[15deg] pointer-events-none z-10 w-full text-center">
               <span 
-                className="text-red-500/25 font-bold text-[40px] whitespace-nowrap"
-                style={{ letterSpacing: '6px' }}
+                className="text-red-500/20 font-bold text-[70px] whitespace-nowrap"
+                style={{ letterSpacing: '15px' }}
               >
                 {watermarkText}
               </span>
