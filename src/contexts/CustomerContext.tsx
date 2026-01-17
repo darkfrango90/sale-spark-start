@@ -53,7 +53,11 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
         birthDate: c.birth_date || undefined,
         notes: c.notes || undefined,
         active: c.active,
-        createdAt: new Date(c.created_at)
+        createdAt: new Date(c.created_at),
+        hasBarter: c.has_barter || false,
+        barterCredit: c.barter_credit || 0,
+        barterLimit: c.barter_limit || 0,
+        barterNotes: c.barter_notes || undefined
       }));
 
       setCustomers(mappedCustomers);
@@ -111,7 +115,11 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
           state: customerData.state || null,
           birth_date: customerData.birthDate || null,
           notes: customerData.notes || null,
-          active: customerData.active
+          active: customerData.active,
+          has_barter: customerData.hasBarter || false,
+          barter_credit: customerData.barterCredit || 0,
+          barter_limit: customerData.barterLimit || 0,
+          barter_notes: customerData.barterNotes || null
         });
 
       if (error) throw error;
@@ -145,6 +153,10 @@ export const CustomerProvider = ({ children }: { children: ReactNode }) => {
       if (customerData.birthDate !== undefined) updateData.birth_date = customerData.birthDate || null;
       if (customerData.notes !== undefined) updateData.notes = customerData.notes || null;
       if (customerData.active !== undefined) updateData.active = customerData.active;
+      if (customerData.hasBarter !== undefined) updateData.has_barter = customerData.hasBarter;
+      if (customerData.barterCredit !== undefined) updateData.barter_credit = customerData.barterCredit;
+      if (customerData.barterLimit !== undefined) updateData.barter_limit = customerData.barterLimit;
+      if (customerData.barterNotes !== undefined) updateData.barter_notes = customerData.barterNotes || null;
 
       const { error } = await supabase
         .from('customers')

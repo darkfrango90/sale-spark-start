@@ -45,7 +45,8 @@ const menuItems: MenuItem[] = [
   { label: "Movimentação", module: "movimentacao", items: [
     { label: "Entrada", module: "movimentacao", action: "Entrada" },
     { label: "Saída", module: "movimentacao", action: "Saída" },
-    { label: "Transferência", module: "movimentacao", action: "Transferência" }
+    { label: "Transferência", module: "movimentacao", action: "Transferência" },
+    { label: "Permuta", path: "/movimentacao/permuta", module: "movimentacao", action: "Permuta" }
   ]},
   { label: "Financeiro", module: "financeiro", items: [
     { label: "Contas a Pagar", path: "/financeiro/contas-a-pagar", module: "financeiro", action: "Contas a Pagar" },
