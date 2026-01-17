@@ -26,6 +26,7 @@ import NewSale from "./pages/sales/NewSale";
 import SalesList from "./pages/sales/SalesList";
 import AccountsReceivable from "./pages/financial/AccountsReceivable";
 import AccountsPayable from "./pages/financial/AccountsPayable";
+import BarterDashboard from "./pages/barter/BarterDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -162,6 +163,13 @@ const AppRoutes = () => {
           <ProtectedRoute isAuthenticated={isAuthenticated}>
             <PermissionRoute module="financeiro" action="Contas a Pagar">
               <AccountsPayable />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/movimentacao/permuta" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="movimentacao" action="Permuta">
+              <BarterDashboard />
             </PermissionRoute>
           </ProtectedRoute>
         } />

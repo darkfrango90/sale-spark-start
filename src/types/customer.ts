@@ -20,4 +20,9 @@ export interface Customer {
   notes?: string;
   active: boolean;
   createdAt: Date;
+  // Barter (Permuta) fields
+  hasBarter?: boolean;
+  barterCredit?: number;
+  barterLimit?: number;
+  barterNotes?: string;
 }

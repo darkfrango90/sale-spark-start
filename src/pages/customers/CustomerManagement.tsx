@@ -107,6 +107,10 @@ interface CustomerFormData {
   birthDate: string;
   notes: string;
   active: boolean;
+  hasBarter: boolean;
+  barterCredit: string;
+  barterLimit: string;
+  barterNotes: string;
 }
 
 const emptyFormData: CustomerFormData = {
@@ -128,7 +132,11 @@ const emptyFormData: CustomerFormData = {
   state: '',
   birthDate: '',
   notes: '',
-  active: true
+  active: true,
+  hasBarter: false,
+  barterCredit: '',
+  barterLimit: '',
+  barterNotes: ''
 };
 
 const CustomerManagement = () => {
@@ -171,7 +179,11 @@ const CustomerManagement = () => {
         state: customer.state || '',
         birthDate: customer.birthDate || '',
         notes: customer.notes || '',
-        active: customer.active
+        active: customer.active,
+        hasBarter: customer.hasBarter || false,
+        barterCredit: customer.barterCredit?.toString() || '',
+        barterLimit: customer.barterLimit?.toString() || '',
+        barterNotes: customer.barterNotes || ''
       });
     } else {
       setEditingCustomer(null);
@@ -251,7 +263,11 @@ const CustomerManagement = () => {
       state: formData.state || undefined,
       birthDate: formData.birthDate || undefined,
       notes: formData.notes || undefined,
-      active: formData.active
+      active: formData.active,
+      hasBarter: formData.hasBarter,
+      barterCredit: formData.hasBarter ? parseFloat(formData.barterCredit) || 0 : 0,
+      barterLimit: formData.hasBarter ? parseFloat(formData.barterLimit) || 0 : 0,
+      barterNotes: formData.hasBarter ? formData.barterNotes || undefined : undefined
     };
 
     if (editingCustomer) {
@@ -620,6 +636,66 @@ const CustomerManagement = () => {
                   </Select>
                 </div>
               </div>
+            </div>
+
+            {/* Permuta */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm text-muted-foreground border-b pb-2">PERMUTA</h3>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hasBarter"
+                  checked={formData.hasBarter}
+                  onCheckedChange={(checked) => setFormData(prev => ({ 
+                    ...prev, 
+                    hasBarter: checked as boolean,
+                    barterCredit: checked ? prev.barterCredit : '',
+                    barterLimit: checked ? prev.barterLimit : '',
+                    barterNotes: checked ? prev.barterNotes : ''
+                  }))}
+                />
+                <Label htmlFor="hasBarter" className="cursor-pointer">Possui Permuta?</Label>
+              </div>
+              
+              {formData.hasBarter && (
+                <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="barterCredit">Valor de Crédito (R$)</Label>
+                      <Input
+                        id="barterCredit"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.barterCredit}
+                        onChange={(e) => setFormData(prev => ({ ...prev, barterCredit: e.target.value }))}
+                        placeholder="0,00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="barterLimit">Limite Negativo (R$)</Label>
+                      <Input
+                        id="barterLimit"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.barterLimit}
+                        onChange={(e) => setFormData(prev => ({ ...prev, barterLimit: e.target.value }))}
+                        placeholder="0,00"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="barterNotes">Observação da Permuta</Label>
+                    <Textarea
+                      id="barterNotes"
+                      value={formData.barterNotes}
+                      onChange={(e) => setFormData(prev => ({ ...prev, barterNotes: e.target.value }))}
+                      placeholder="Detalhes sobre a permuta..."
+                      rows={2}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Observações */}

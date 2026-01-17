@@ -201,6 +201,9 @@ export type Database = {
         Row: {
           active: boolean
           address: string | null
+          barter_credit: number | null
+          barter_limit: number | null
+          barter_notes: string | null
           birth_date: string | null
           cellphone: string | null
           city: string | null
@@ -209,6 +212,7 @@ export type Database = {
           cpf_cnpj: string
           created_at: string
           email: string | null
+          has_barter: boolean | null
           id: string
           name: string
           neighborhood: string | null
@@ -226,6 +230,9 @@ export type Database = {
         Insert: {
           active?: boolean
           address?: string | null
+          barter_credit?: number | null
+          barter_limit?: number | null
+          barter_notes?: string | null
           birth_date?: string | null
           cellphone?: string | null
           city?: string | null
@@ -234,6 +241,7 @@ export type Database = {
           cpf_cnpj: string
           created_at?: string
           email?: string | null
+          has_barter?: boolean | null
           id?: string
           name: string
           neighborhood?: string | null
@@ -251,6 +259,9 @@ export type Database = {
         Update: {
           active?: boolean
           address?: string | null
+          barter_credit?: number | null
+          barter_limit?: number | null
+          barter_notes?: string | null
           birth_date?: string | null
           cellphone?: string | null
           city?: string | null
@@ -259,6 +270,7 @@ export type Database = {
           cpf_cnpj?: string
           created_at?: string
           email?: string | null
+          has_barter?: boolean | null
           id?: string
           name?: string
           neighborhood?: string | null
