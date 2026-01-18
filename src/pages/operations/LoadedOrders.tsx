@@ -3,11 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import TopMenu from "@/components/dashboard/TopMenu";
 import { supabase } from "@/integrations/supabase/client";
 import { useSales } from "@/contexts/SalesContext";
-import { ArrowLeft, Printer, Filter, Truck, Calendar } from "lucide-react";
+import { ArrowLeft, Printer, Filter, Truck, Calendar, Camera, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -21,6 +23,11 @@ interface OrderLoading {
   operator_name: string;
   loaded_at: string;
   created_at: string;
+  ticket_image_url?: string | null;
+  ticket_weight_kg?: number | null;
+  expected_weight_kg?: number | null;
+  weight_difference_percent?: number | null;
+  weight_verified?: boolean | null;
 }
 
 const LoadedOrders = () => {
@@ -31,6 +38,7 @@ const LoadedOrders = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLoadings();
@@ -51,7 +59,7 @@ const LoadedOrders = () => {
         return;
       }
 
-      setLoadings(data || []);
+      setLoadings((data || []) as OrderLoading[]);
     } catch (error) {
       console.error("Error fetching loadings:", error);
     } finally {
@@ -86,6 +94,42 @@ const LoadedOrders = () => {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const formatWeight = (kg: number) => {
+    return new Intl.NumberFormat('pt-BR').format(Math.round(kg)) + ' Kg';
+  };
+
+  const getVerificationBadge = (loading: OrderLoading) => {
+    if (!loading.ticket_image_url) {
+      return <Badge variant="outline" className="text-muted-foreground">Sem ticket</Badge>;
+    }
+    
+    if (loading.weight_verified) {
+      return (
+        <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+          <CheckCircle2 className="h-3 w-3 mr-1" />
+          OK
+        </Badge>
+      );
+    }
+    
+    const diff = Math.abs(loading.weight_difference_percent || 0);
+    if (diff <= 10) {
+      return (
+        <Badge className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+          <AlertTriangle className="h-3 w-3 mr-1" />
+          {loading.weight_difference_percent?.toFixed(1)}%
+        </Badge>
+      );
+    }
+    
+    return (
+      <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+        <AlertTriangle className="h-3 w-3 mr-1" />
+        {loading.weight_difference_percent?.toFixed(1)}%
+      </Badge>
+    );
   };
 
   return (
@@ -192,6 +236,8 @@ const LoadedOrders = () => {
                       <TableHead>Cliente</TableHead>
                       <TableHead>Material</TableHead>
                       <TableHead className="text-right">Qtd M³</TableHead>
+                      <TableHead className="text-center">Ticket</TableHead>
+                      <TableHead className="text-center">Verificação</TableHead>
                       <TableHead>Data Carreg.</TableHead>
                       <TableHead>Operador</TableHead>
                     </TableRow>
@@ -203,6 +249,23 @@ const LoadedOrders = () => {
                         <TableCell className="font-medium">{loading.customer_name}</TableCell>
                         <TableCell className="max-w-[200px] truncate">{loading.products}</TableCell>
                         <TableCell className="text-right font-medium">{loading.totalM3.toFixed(2)}</TableCell>
+                        <TableCell className="text-center">
+                          {loading.ticket_image_url ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setSelectedImage(loading.ticket_image_url!)}
+                              className="h-8 w-8"
+                            >
+                              <Camera className="h-4 w-4 text-primary" />
+                            </Button>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {getVerificationBadge(loading)}
+                        </TableCell>
                         <TableCell>
                           {format(parseISO(loading.loaded_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                         </TableCell>
@@ -216,6 +279,27 @@ const LoadedOrders = () => {
           </Card>
         </div>
       </div>
+
+      {/* Image Preview Dialog */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Camera className="h-5 w-5" />
+              Foto do Ticket
+            </DialogTitle>
+          </DialogHeader>
+          {selectedImage && (
+            <div className="flex justify-center">
+              <img 
+                src={selectedImage} 
+                alt="Ticket de pesagem" 
+                className="max-w-full max-h-[70vh] object-contain rounded-lg"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

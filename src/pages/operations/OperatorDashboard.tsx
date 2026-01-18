@@ -1,30 +1,35 @@
 import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSales } from "@/contexts/SalesContext";
+import { useProducts } from "@/contexts/ProductContext";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Truck, Package, RefreshCw } from "lucide-react";
+import { LogOut, Truck, Camera, RefreshCw, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import CameraCapture from "@/components/operations/CameraCapture";
+import TicketResult from "@/components/operations/TicketResult";
+
+interface TicketData {
+  peso_bruto_kg?: number | null;
+  peso_liquido_kg?: number | null;
+  tara_kg?: number | null;
+  data_hora?: string | null;
+  confianca: number;
+}
+
+type Step = "list" | "confirm" | "camera" | "analyzing" | "result";
 
 const OperatorDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { sales, refreshSales, updateSaleStatus } = useSales();
+  const { products } = useProducts();
 
-  const [selectedSale, setSelectedSale] = useState<string | null>(null);
+  const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
+  const [step, setStep] = useState<Step>("list");
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [ticketData, setTicketData] = useState<TicketData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Filter pending orders (pedidos with status pendente)
@@ -33,27 +38,36 @@ const OperatorDashboard = () => {
       sale.type === 'pedido' && 
       sale.status === 'pendente'
     ).map(sale => {
-      // Calculate total M³ from items
-      const totalM3 = sale.items.reduce((sum, item) => {
+      // Calculate total M³ and expected weight from items
+      let totalM3 = 0;
+      let expectedWeightKg = 0;
+
+      sale.items.forEach(item => {
         if (item.unit === 'M3' || item.unit === 'm³' || item.unit === 'M³') {
-          return sum + item.quantity;
+          totalM3 += item.quantity;
+          // Find product to get density
+          const product = products.find(p => p.id === item.productId);
+          if (product?.density) {
+            expectedWeightKg += item.quantity * product.density * 1000; // M³ * density(ton/m³) * 1000 = kg
+          }
         }
-        return sum;
-      }, 0);
+      });
 
       // Get product names
-      const products = sale.items.map(item => item.productName).join(', ');
+      const productNames = sale.items.map(item => item.productName).join(', ');
 
       return {
         id: sale.id,
         number: sale.number,
         customerName: sale.customerName,
-        products,
+        products: productNames,
         totalM3,
-        createdAt: sale.createdAt
+        expectedWeightKg
       };
     });
-  }, [sales]);
+  }, [sales, products]);
+
+  const selectedOrder = pendingOrders.find(o => o.id === selectedSaleId);
 
   const handleLogout = () => {
     logout();
@@ -61,29 +75,117 @@ const OperatorDashboard = () => {
   };
 
   const handleOrderClick = (saleId: string) => {
-    setSelectedSale(saleId);
+    setSelectedSaleId(saleId);
+    setStep("confirm");
+  };
+
+  const handleStartCamera = () => {
+    setStep("camera");
+  };
+
+  const handleCaptureImage = async (imageBase64: string) => {
+    setCapturedImage(imageBase64);
+    setStep("analyzing");
+    
+    // Analyze ticket with AI
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-ticket`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ imageBase64 }),
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          toast.error("Limite de requisições. Aguarde um momento.");
+        } else if (response.status === 402) {
+          toast.error("Créditos de IA insuficientes.");
+        }
+        setTicketData({ confianca: 0 });
+        setStep("result");
+        return;
+      }
+
+      const data = await response.json();
+      setTicketData(data);
+      setStep("result");
+    } catch (error) {
+      console.error("Error analyzing ticket:", error);
+      toast.error("Erro ao analisar ticket");
+      setTicketData({ confianca: 0 });
+      setStep("result");
+    }
+  };
+
+  const handleCancelCamera = () => {
+    setStep("confirm");
+  };
+
+  const handleRetakePhoto = () => {
+    setCapturedImage(null);
+    setTicketData(null);
+    setStep("camera");
   };
 
   const handleConfirmLoading = async () => {
-    if (!selectedSale || !user) return;
+    if (!selectedSaleId || !user || !capturedImage) return;
 
     setIsLoading(true);
     try {
-      const sale = sales.find(s => s.id === selectedSale);
+      const sale = sales.find(s => s.id === selectedSaleId);
       if (!sale) {
         toast.error("Pedido não encontrado");
         return;
       }
 
+      // Upload image to storage
+      const fileName = `${selectedSaleId}/${Date.now()}.jpg`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('ticket-images')
+        .upload(fileName, decode(capturedImage), {
+          contentType: 'image/jpeg'
+        });
+
+      if (uploadError) {
+        console.error("Error uploading image:", uploadError);
+        // Continue even if upload fails
+      }
+
+      const ticketImageUrl = uploadData 
+        ? supabase.storage.from('ticket-images').getPublicUrl(fileName).data.publicUrl
+        : null;
+
+      const expectedWeightKg = selectedOrder?.expectedWeightKg || 0;
+      const ticketWeightKg = ticketData?.peso_liquido_kg || 0;
+      const differencePercent = expectedWeightKg > 0 
+        ? ((ticketWeightKg - expectedWeightKg) / expectedWeightKg) * 100 
+        : 0;
+
       // Register loading in database
-      const { error } = await supabase.from('order_loadings').insert({
-        sale_id: selectedSale,
+      // Note: Using any cast temporarily until types are regenerated with new columns
+      const insertData = {
+        sale_id: selectedSaleId,
         sale_number: sale.number,
         customer_name: sale.customerName,
         operator_id: user.id,
         operator_name: user.name,
-        loaded_at: new Date().toISOString()
-      });
+        loaded_at: new Date().toISOString(),
+        ticket_image_url: ticketImageUrl,
+        ticket_weight_kg: ticketWeightKg,
+        expected_weight_kg: expectedWeightKg,
+        weight_difference_percent: differencePercent,
+        weight_verified: Math.abs(differencePercent) <= 5,
+        ai_response: ticketData
+      };
+      
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('order_loadings') as any).insert(insertData);
 
       if (error) {
         console.error("Error registering loading:", error);
@@ -92,10 +194,10 @@ const OperatorDashboard = () => {
       }
 
       // Update sale status to 'finalizado'
-      await updateSaleStatus(selectedSale, 'finalizado');
+      await updateSaleStatus(selectedSaleId, 'finalizado');
       
-      toast.success(`Pedido ${sale.number} carregado com sucesso!`);
-      setSelectedSale(null);
+      toast.success(`Pedido ${sale.number} carregado!`);
+      resetState();
       await refreshSales();
     } catch (error) {
       console.error("Error confirming loading:", error);
@@ -105,125 +207,180 @@ const OperatorDashboard = () => {
     }
   };
 
-  const selectedSaleData = pendingOrders.find(o => o.id === selectedSale);
+  const resetState = () => {
+    setSelectedSaleId(null);
+    setCapturedImage(null);
+    setTicketData(null);
+    setStep("list");
+  };
 
+  const handleCancel = () => {
+    resetState();
+  };
+
+  // Decode base64 to Uint8Array for upload
+  const decode = (base64: string): Uint8Array => {
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes;
+  };
+
+  // Camera screen
+  if (step === "camera") {
+    return (
+      <CameraCapture
+        onCapture={handleCaptureImage}
+        onCancel={handleCancelCamera}
+      />
+    );
+  }
+
+  // Result screen (analyzing or showing result)
+  if ((step === "analyzing" || step === "result") && capturedImage && selectedOrder) {
+    return (
+      <TicketResult
+        ticketData={ticketData || { confianca: 0 }}
+        expectedWeightKg={selectedOrder.expectedWeightKg}
+        capturedImage={capturedImage}
+        isLoading={step === "analyzing" || isLoading}
+        onConfirm={handleConfirmLoading}
+        onRetake={handleRetakePhoto}
+        onCancel={handleCancel}
+      />
+    );
+  }
+
+  // Confirm screen (before camera)
+  if (step === "confirm" && selectedOrder) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background flex flex-col">
+        {/* Header */}
+        <div className="bg-slate-800 text-white p-4 flex items-center gap-3">
+          <Truck className="h-7 w-7" />
+          <span className="text-lg font-bold">CONFIRMAR CARREGAMENTO</span>
+        </div>
+
+        {/* Order Details */}
+        <div className="flex-1 flex flex-col items-center justify-center p-6">
+          <div className="text-center mb-8">
+            <p className="text-4xl font-bold text-primary mb-4">{selectedOrder.number}</p>
+            <p className="text-2xl font-semibold text-foreground uppercase mb-2">
+              {selectedOrder.customerName}
+            </p>
+            <p className="text-lg text-muted-foreground mb-4">
+              {selectedOrder.products}
+            </p>
+            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-6 py-3 rounded-full">
+              <span className="text-3xl font-bold">{selectedOrder.totalM3.toFixed(2)}</span>
+              <span className="text-xl">M³</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="p-6 space-y-4 pb-safe">
+          <Button
+            onClick={handleStartCamera}
+            size="lg"
+            className="w-full h-20 text-xl font-bold bg-primary hover:bg-primary/90"
+          >
+            <Camera className="h-8 w-8 mr-4" />
+            TIRAR FOTO DO TICKET
+          </Button>
+          
+          <Button
+            onClick={handleCancel}
+            variant="outline"
+            size="lg"
+            className="w-full h-14 text-lg"
+          >
+            CANCELAR
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Main list screen
   return (
-    <div className="min-h-screen bg-background">
-      {/* Simple Header for Operator */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-slate-800 text-white">
-        <div className="flex items-center justify-between h-14 px-6">
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Compact Header for Mobile */}
+      <div className="bg-slate-800 text-white">
+        <div className="flex items-center justify-between h-16 px-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary rounded-lg">
-              <Truck className="h-5 w-5 text-primary-foreground" />
+              <Truck className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="font-bold text-lg">Painel do Operador</h1>
-              <p className="text-xs text-slate-400">Controle de Carregamento</p>
+              <span className="font-bold text-lg">OPERADOR</span>
+              {user && <span className="ml-2 text-slate-300">{user.name.split(' ')[0]}</span>}
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            {user && (
-              <div className="text-right">
-                <p className="text-sm font-medium">{user.name}</p>
-                <p className="text-xs text-slate-400">Operador</p>
-              </div>
-            )}
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white hover:bg-slate-700">
-              <LogOut className="h-4 w-4 mr-2" />
-              Sair
-            </Button>
-          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={handleLogout} 
+            className="text-white hover:bg-slate-700 h-12 w-12"
+          >
+            <LogOut className="h-6 w-6" />
+          </Button>
         </div>
       </div>
 
-      <div className="pt-20 px-6 pb-8">
-        <div className="max-w-5xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <Package className="h-6 w-6 text-primary" />
-              <h2 className="text-xl font-semibold text-foreground">Pedidos Pendentes</h2>
-              <span className="bg-primary/10 text-primary px-2 py-1 rounded-full text-sm font-medium">
-                {pendingOrders.length}
-              </span>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => refreshSales()}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Atualizar
-            </Button>
-          </div>
-
-          {/* Orders List */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Clique em um pedido para confirmar carregamento</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {pendingOrders.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Truck className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg">Nenhum pedido pendente</p>
-                  <p className="text-sm">Todos os pedidos foram carregados</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[100px]">Nº Pedido</TableHead>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Material</TableHead>
-                      <TableHead className="text-right w-[120px]">Qtd M³</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pendingOrders.map(order => (
-                      <TableRow 
-                        key={order.id} 
-                        className="cursor-pointer hover:bg-primary/5 transition-colors"
-                        onClick={() => handleOrderClick(order.id)}
-                      >
-                        <TableCell className="font-bold text-primary">{order.number}</TableCell>
-                        <TableCell className="font-medium">{order.customerName}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{order.products}</TableCell>
-                        <TableCell className="text-right font-bold text-lg">{order.totalM3.toFixed(2)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+      {/* Refresh button and count */}
+      <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/50">
+        <div className="flex items-center gap-2">
+          <span className="text-lg font-semibold text-foreground">Pendentes</span>
+          <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-lg font-bold">
+            {pendingOrders.length}
+          </span>
         </div>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => refreshSales()}
+          className="h-12 w-12"
+        >
+          <RefreshCw className="h-6 w-6" />
+        </Button>
       </div>
 
-      {/* Confirmation Dialog */}
-      <AlertDialog open={!!selectedSale} onOpenChange={() => setSelectedSale(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Truck className="h-5 w-5 text-primary" />
-              Confirmar Carregamento
-            </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>O pedido foi carregado?</p>
-              {selectedSaleData && (
-                <div className="bg-muted p-4 rounded-lg mt-4 space-y-1">
-                  <p><strong>Pedido:</strong> {selectedSaleData.number}</p>
-                  <p><strong>Cliente:</strong> {selectedSaleData.customerName}</p>
-                  <p><strong>Material:</strong> {selectedSaleData.products}</p>
-                  <p><strong>Quantidade:</strong> {selectedSaleData.totalM3.toFixed(2)} M³</p>
+      {/* Orders List */}
+      <div className="flex-1 overflow-auto">
+        {pendingOrders.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full p-8">
+            <CheckCircle2 className="h-24 w-24 text-green-500 mb-6" />
+            <p className="text-3xl font-bold text-foreground mb-2">TUDO CARREGADO!</p>
+            <p className="text-lg text-muted-foreground">Nenhum pedido pendente</p>
+          </div>
+        ) : (
+          <div className="p-4 space-y-3">
+            {pendingOrders.map(order => (
+              <button
+                key={order.id}
+                onClick={() => handleOrderClick(order.id)}
+                className="w-full bg-card border border-border rounded-xl p-4 text-left transition-all active:scale-[0.98] hover:border-primary/50 hover:shadow-md"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <span className="text-xl font-bold text-primary">{order.number}</span>
+                  <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-3 py-1 rounded-full text-lg font-bold">
+                    {order.totalM3.toFixed(2)} M³
+                  </span>
                 </div>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoading}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmLoading} disabled={isLoading}>
-              {isLoading ? "Registrando..." : "Sim, foi carregado"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+                <p className="text-lg font-semibold text-foreground uppercase truncate">
+                  {order.customerName}
+                </p>
+                <p className="text-base text-muted-foreground truncate mt-1">
+                  {order.products}
+                </p>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -289,34 +289,52 @@ export type Database = {
       }
       order_loadings: {
         Row: {
+          ai_response: Json | null
           created_at: string
           customer_name: string
+          expected_weight_kg: number | null
           id: string
           loaded_at: string
           operator_id: string
           operator_name: string
           sale_id: string
           sale_number: string
+          ticket_image_url: string | null
+          ticket_weight_kg: number | null
+          weight_difference_percent: number | null
+          weight_verified: boolean | null
         }
         Insert: {
+          ai_response?: Json | null
           created_at?: string
           customer_name: string
+          expected_weight_kg?: number | null
           id?: string
           loaded_at?: string
           operator_id: string
           operator_name: string
           sale_id: string
           sale_number: string
+          ticket_image_url?: string | null
+          ticket_weight_kg?: number | null
+          weight_difference_percent?: number | null
+          weight_verified?: boolean | null
         }
         Update: {
+          ai_response?: Json | null
           created_at?: string
           customer_name?: string
+          expected_weight_kg?: number | null
           id?: string
           loaded_at?: string
           operator_id?: string
           operator_name?: string
           sale_id?: string
           sale_number?: string
+          ticket_image_url?: string | null
+          ticket_weight_kg?: number | null
+          weight_difference_percent?: number | null
+          weight_verified?: boolean | null
         }
         Relationships: [
           {

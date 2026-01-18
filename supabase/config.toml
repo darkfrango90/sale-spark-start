@@ -1,1 +1,4 @@
 project_id = "ufsacawxjkeokbfkdgrj"
+
+[functions.analyze-ticket]
+verify_jwt = false
