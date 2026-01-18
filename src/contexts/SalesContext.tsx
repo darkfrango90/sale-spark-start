@@ -8,6 +8,7 @@ interface SalesContextType {
   loading: boolean;
   addSale: (sale: Omit<Sale, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Sale>;
   updateSale: (id: string, sale: Partial<Sale>) => Promise<void>;
+  updateSaleStatus: (id: string, status: 'pendente' | 'finalizado' | 'cancelado' | 'excluido') => Promise<void>;
   deleteSale: (id: string, reason: string) => Promise<void>;
   getNextSaleNumber: () => string;
   getNextQuoteNumber: () => string;
@@ -315,12 +316,29 @@ export const SalesProvider = ({ children }: { children: ReactNode }) => {
     return sales.filter(s => s.type === type);
   };
 
+  const updateSaleStatus = async (id: string, status: 'pendente' | 'finalizado' | 'cancelado' | 'excluido') => {
+    try {
+      const { error } = await supabase
+        .from('sales')
+        .update({ status })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await fetchSales();
+    } catch (error: any) {
+      console.error('Error updating sale status:', error);
+      throw error;
+    }
+  };
+
   return (
     <SalesContext.Provider value={{
       sales,
       loading,
       addSale,
       updateSale,
+      updateSaleStatus,
       deleteSale,
       getNextSaleNumber,
       getNextQuoteNumber,

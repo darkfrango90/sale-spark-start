@@ -287,6 +287,47 @@ export type Database = {
         }
         Relationships: []
       }
+      order_loadings: {
+        Row: {
+          created_at: string
+          customer_name: string
+          id: string
+          loaded_at: string
+          operator_id: string
+          operator_name: string
+          sale_id: string
+          sale_number: string
+        }
+        Insert: {
+          created_at?: string
+          customer_name: string
+          id?: string
+          loaded_at?: string
+          operator_id: string
+          operator_name: string
+          sale_id: string
+          sale_number: string
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string
+          id?: string
+          loaded_at?: string
+          operator_id?: string
+          operator_name?: string
+          sale_id?: string
+          sale_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_loadings_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_methods: {
         Row: {
           active: boolean

@@ -43,9 +43,8 @@ const menuItems: MenuItem[] = [
     { label: "Pedidos", path: "/vendas/pedidos", module: "vendas", action: "Pedidos" }
   ]},
   { label: "Movimentação", module: "movimentacao", items: [
-    { label: "Entrada", module: "movimentacao", action: "Entrada" },
-    { label: "Saída", module: "movimentacao", action: "Saída" },
-    { label: "Transferência", module: "movimentacao", action: "Transferência" }
+    { label: "Operador", path: "/movimentacao/operador", module: "movimentacao", action: "Operador" },
+    { label: "Carregados", path: "/movimentacao/carregados", module: "movimentacao", action: "Carregados" }
   ]},
   { label: "Financeiro", module: "financeiro", items: [
     { label: "Contas a Pagar", path: "/financeiro/contas-a-pagar", module: "financeiro", action: "Contas a Pagar" },
@@ -53,11 +52,12 @@ const menuItems: MenuItem[] = [
   ]},
   { label: "Relatórios", module: "relatorios", items: [
     { label: "Vendas", path: "/relatorios/vendas", module: "relatorios", action: "Vendas" },
-    { label: "Estoque", path: "/relatorios/estoque", module: "relatorios", action: "Estoque" },
+    { label: "Produtos", path: "/relatorios/produtos", module: "relatorios", action: "Produtos" },
     { label: "Financeiro", path: "/relatorios/financeiro", module: "relatorios", action: "Financeiro" },
     { label: "Clientes", path: "/relatorios/clientes", module: "relatorios", action: "Clientes" },
     { label: "Fornecedores", path: "/relatorios/fornecedores", module: "relatorios", action: "Fornecedores" },
-    { label: "Permuta", path: "/relatorios/permuta", module: "relatorios", action: "Permuta" }
+    { label: "Permuta", path: "/relatorios/permuta", module: "relatorios", action: "Permuta" },
+    { label: "Ticagem", path: "/relatorios/ticagem", module: "relatorios", action: "Ticagem" }
   ]},
   { label: "Configuração", module: "configuracao", items: [
     { label: "Empresa", path: "/configuracao/empresa", module: "configuracao", action: "Empresa" },

@@ -33,6 +33,9 @@ import ProductsReport from "./pages/reports/ProductsReport";
 import CustomersReport from "./pages/reports/CustomersReport";
 import FinancialReport from "./pages/reports/FinancialReport";
 import SuppliersReport from "./pages/reports/SuppliersReport";
+import TickingReport from "./pages/reports/TickingReport";
+import OperatorDashboard from "./pages/operations/OperatorDashboard";
+import LoadedOrders from "./pages/operations/LoadedOrders";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -191,9 +194,9 @@ const AppRoutes = () => {
             </PermissionRoute>
           </ProtectedRoute>
         } />
-        <Route path="/relatorios/estoque" element={
+        <Route path="/relatorios/produtos" element={
           <ProtectedRoute isAuthenticated={isAuthenticated}>
-            <PermissionRoute module="relatorios" action="Estoque">
+            <PermissionRoute module="relatorios" action="Produtos">
               <ProductsReport />
             </PermissionRoute>
           </ProtectedRoute>
@@ -216,6 +219,27 @@ const AppRoutes = () => {
           <ProtectedRoute isAuthenticated={isAuthenticated}>
             <PermissionRoute module="relatorios" action="Fornecedores">
               <SuppliersReport />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/relatorios/ticagem" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="relatorios" action="Ticagem">
+              <TickingReport />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/movimentacao/operador" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="movimentacao" action="Operador">
+              <OperatorDashboard />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/movimentacao/carregados" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="movimentacao" action="Carregados">
+              <LoadedOrders />
             </PermissionRoute>
           </ProtectedRoute>
         } />
