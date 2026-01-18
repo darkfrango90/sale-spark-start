@@ -4,7 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSales } from "@/contexts/SalesContext";
 import { useProducts } from "@/contexts/ProductContext";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Truck, Camera, RefreshCw, CheckCircle2 } from "lucide-react";
+import { LogOut, Truck, Camera, RefreshCw, CheckCircle2, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import CameraCapture from "@/components/operations/CameraCapture";
@@ -31,6 +32,7 @@ const OperatorDashboard = () => {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [ticketData, setTicketData] = useState<TicketData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchNumber, setSearchNumber] = useState("");
 
   // Filter pending orders (pedidos with status pendente)
   const pendingOrders = useMemo(() => {
@@ -64,8 +66,10 @@ const OperatorDashboard = () => {
         totalM3,
         expectedWeightKg
       };
-    });
-  }, [sales, products]);
+    }).filter(order => 
+      searchNumber === "" || order.number.toLowerCase().includes(searchNumber.toLowerCase())
+    );
+  }, [sales, products, searchNumber]);
 
   const selectedOrder = pendingOrders.find(o => o.id === selectedSaleId);
 
@@ -332,13 +336,23 @@ const OperatorDashboard = () => {
         </div>
       </div>
 
-      {/* Refresh button and count */}
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/50">
+      {/* Search and count */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b bg-muted/50">
         <div className="flex items-center gap-2">
           <span className="text-lg font-semibold text-foreground">Pendentes</span>
           <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-lg font-bold">
             {pendingOrders.length}
           </span>
+        </div>
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Nº pedido"
+            value={searchNumber}
+            onChange={(e) => setSearchNumber(e.target.value)}
+            className="pl-10 h-12 text-lg"
+          />
         </div>
         <Button 
           variant="ghost" 
