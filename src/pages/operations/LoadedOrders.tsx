@@ -247,8 +247,16 @@ const LoadedOrders = () => {
                       <TableRow key={loading.id}>
                         <TableCell className="font-bold text-primary">{loading.sale_number}</TableCell>
                         <TableCell className="font-medium">{loading.customer_name}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{loading.products}</TableCell>
-                        <TableCell className="text-right font-medium">{loading.totalM3.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="text-sm font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                            {loading.products}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-sm font-bold">
+                            {loading.totalM3.toFixed(2)} M³
+                          </Badge>
+                        </TableCell>
                         <TableCell className="text-center">
                           {loading.ticket_image_url ? (
                             <Button
