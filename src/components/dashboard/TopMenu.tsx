@@ -45,8 +45,7 @@ const menuItems: MenuItem[] = [
   { label: "Movimentação", module: "movimentacao", items: [
     { label: "Entrada", module: "movimentacao", action: "Entrada" },
     { label: "Saída", module: "movimentacao", action: "Saída" },
-    { label: "Transferência", module: "movimentacao", action: "Transferência" },
-    { label: "Permuta", path: "/movimentacao/permuta", module: "movimentacao", action: "Permuta" }
+    { label: "Transferência", module: "movimentacao", action: "Transferência" }
   ]},
   { label: "Financeiro", module: "financeiro", items: [
     { label: "Contas a Pagar", path: "/financeiro/contas-a-pagar", module: "financeiro", action: "Contas a Pagar" },
@@ -57,7 +56,8 @@ const menuItems: MenuItem[] = [
     { label: "Estoque", path: "/relatorios/estoque", module: "relatorios", action: "Estoque" },
     { label: "Financeiro", path: "/relatorios/financeiro", module: "relatorios", action: "Financeiro" },
     { label: "Clientes", path: "/relatorios/clientes", module: "relatorios", action: "Clientes" },
-    { label: "Fornecedores", path: "/relatorios/fornecedores", module: "relatorios", action: "Fornecedores" }
+    { label: "Fornecedores", path: "/relatorios/fornecedores", module: "relatorios", action: "Fornecedores" },
+    { label: "Permuta", path: "/relatorios/permuta", module: "relatorios", action: "Permuta" }
   ]},
   { label: "Configuração", module: "configuracao", items: [
     { label: "Empresa", path: "/configuracao/empresa", module: "configuracao", action: "Empresa" },

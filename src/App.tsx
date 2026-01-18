@@ -172,9 +172,9 @@ const AppRoutes = () => {
             </PermissionRoute>
           </ProtectedRoute>
         } />
-        <Route path="/movimentacao/permuta" element={
+        <Route path="/relatorios/permuta" element={
           <ProtectedRoute isAuthenticated={isAuthenticated}>
-            <PermissionRoute module="movimentacao" action="Permuta">
+            <PermissionRoute module="relatorios" action="Permuta">
               <BarterDashboard />
             </PermissionRoute>
           </ProtectedRoute>
