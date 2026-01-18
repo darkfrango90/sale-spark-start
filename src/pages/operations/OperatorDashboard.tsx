@@ -364,18 +364,18 @@ const OperatorDashboard = () => {
                 onClick={() => handleOrderClick(order.id)}
                 className="w-full bg-card border border-border rounded-xl p-4 text-left transition-all active:scale-[0.98] hover:border-primary/50 hover:shadow-md"
               >
-                <div className="flex items-start justify-between mb-2">
+                <div className="flex items-start justify-between mb-3">
                   <span className="text-xl font-bold text-primary">{order.number}</span>
                   <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-3 py-1 rounded-full text-lg font-bold">
                     {order.totalM3.toFixed(2)} M³
                   </span>
                 </div>
-                <p className="text-lg font-semibold text-foreground uppercase truncate">
+                <p className="text-lg font-semibold text-foreground uppercase truncate mb-2">
                   {order.customerName}
                 </p>
-                <p className="text-base text-muted-foreground truncate mt-1">
+                <span className="inline-block bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-full text-base font-semibold">
                   {order.products}
-                </p>
+                </span>
               </button>
             ))}
           </div>
