@@ -267,15 +267,17 @@ const OperatorDashboard = () => {
         <div className="flex-1 flex flex-col items-center justify-center p-6">
           <div className="text-center mb-8">
             <p className="text-4xl font-bold text-primary mb-4">{selectedOrder.number}</p>
-            <p className="text-2xl font-semibold text-foreground uppercase mb-2">
+            <p className="text-2xl font-semibold text-foreground uppercase mb-4">
               {selectedOrder.customerName}
             </p>
-            <p className="text-lg text-muted-foreground mb-4">
-              {selectedOrder.products}
-            </p>
-            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-6 py-3 rounded-full">
-              <span className="text-3xl font-bold">{selectedOrder.totalM3.toFixed(2)}</span>
-              <span className="text-xl">M³</span>
+            <div className="inline-block bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-6 py-3 rounded-full mb-4">
+              <span className="text-2xl font-bold">{selectedOrder.products}</span>
+            </div>
+            <div className="block">
+              <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-6 py-3 rounded-full">
+                <span className="text-3xl font-bold">{selectedOrder.totalM3.toFixed(2)}</span>
+                <span className="text-xl font-semibold">M³</span>
+              </div>
             </div>
           </div>
         </div>
