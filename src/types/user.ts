@@ -34,7 +34,7 @@ export const MODULES = {
   },
   movimentacao: {
     label: 'Movimentação',
-    actions: ['Entrada', 'Saída', 'Transferência'],
+    actions: ['Operador', 'Carregados'],
   },
   financeiro: {
     label: 'Financeiro',
@@ -42,7 +42,7 @@ export const MODULES = {
   },
   relatorios: {
     label: 'Relatórios',
-    actions: ['Vendas', 'Estoque', 'Financeiro', 'Clientes'],
+    actions: ['Vendas', 'Produtos', 'Financeiro', 'Clientes', 'Fornecedores', 'Permuta', 'Ticagem'],
   },
   configuracao: {
     label: 'Configuração',

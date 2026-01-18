@@ -2,15 +2,18 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TopMenu from "@/components/dashboard/TopMenu";
 import { useProducts } from "@/contexts/ProductContext";
 import { useSales } from "@/contexts/SalesContext";
-import { ArrowLeft, Printer, Filter, Package, AlertTriangle, DollarSign, TrendingUp } from "lucide-react";
+import { useCustomers } from "@/contexts/CustomerContext";
+import { ArrowLeft, Printer, Filter, Package, AlertTriangle, DollarSign, TrendingUp, Truck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
@@ -18,10 +21,17 @@ const ProductsReport = () => {
   const navigate = useNavigate();
   const { products } = useProducts();
   const { sales } = useSales();
+  const { customers } = useCustomers();
 
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [stockFilter, setStockFilter] = useState<string>("all");
+  
+  // Filters for "Saída de Produtos" tab
+  const [outputStartDate, setOutputStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [outputEndDate, setOutputEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [outputProductFilter, setOutputProductFilter] = useState<string>("all");
+  const [outputCustomerFilter, setOutputCustomerFilter] = useState<string>("all");
 
   // Get unique categories
   const categories = useMemo(() => {
@@ -114,10 +124,110 @@ const ProductsReport = () => {
     return Object.values(grouped).sort((a, b) => b.value - a.value);
   }, [products]);
 
+  // Output products analysis (Saída de Produtos)
+  const outputProductsData = useMemo(() => {
+    const filteredSales = sales.filter(sale => {
+      if (sale.status === 'cancelado' || sale.status === 'excluido') return false;
+      if (sale.type !== 'pedido') return false;
+      
+      const saleDate = new Date(sale.createdAt);
+      const start = new Date(outputStartDate);
+      const end = new Date(outputEndDate);
+      end.setHours(23, 59, 59);
+      
+      return saleDate >= start && saleDate <= end;
+    });
+
+    const outputData: Array<{
+      productId: string;
+      productCode: string;
+      productName: string;
+      customerName: string;
+      quantity: number;
+      unit: string;
+      m3: number;
+      tons: number;
+      date: Date;
+    }> = [];
+
+    filteredSales.forEach(sale => {
+      sale.items.forEach(item => {
+        // Apply filters
+        if (outputProductFilter !== "all" && item.productId !== outputProductFilter) return;
+        if (outputCustomerFilter !== "all" && sale.customerId !== outputCustomerFilter) return;
+
+        const product = products.find(p => p.id === item.productId);
+        const density = item.density || product?.density || 0;
+
+        // Calculate M³ and Tons
+        let m3 = 0;
+        let tons = 0;
+
+        if (item.unit === 'M3' || item.unit === 'm³' || item.unit === 'M³') {
+          m3 = item.quantity;
+          // Convert M³ to Tons: M³ * density(kg/m³) / 1000
+          tons = density > 0 ? (item.quantity * density) / 1000 : 0;
+        } else if (item.unit === 'KG' || item.unit === 'kg') {
+          tons = item.quantity / 1000;
+          // Convert Tons to M³: kg / density
+          m3 = density > 0 ? item.quantity / density : 0;
+        } else if (item.unit === 'TON' || item.unit === 'ton' || item.unit === 'T') {
+          tons = item.quantity;
+          // Convert Tons to M³: tons * 1000 / density
+          m3 = density > 0 ? (item.quantity * 1000) / density : 0;
+        }
+
+        outputData.push({
+          productId: item.productId,
+          productCode: item.productCode,
+          productName: item.productName,
+          customerName: sale.customerName,
+          quantity: item.quantity,
+          unit: item.unit,
+          m3,
+          tons,
+          date: sale.createdAt
+        });
+      });
+    });
+
+    return outputData;
+  }, [sales, products, outputStartDate, outputEndDate, outputProductFilter, outputCustomerFilter]);
+
+  // Output totals
+  const outputTotals = useMemo(() => {
+    return outputProductsData.reduce(
+      (acc, item) => ({
+        totalM3: acc.totalM3 + item.m3,
+        totalTons: acc.totalTons + item.tons,
+        count: acc.count + 1
+      }),
+      { totalM3: 0, totalTons: 0, count: 0 }
+    );
+  }, [outputProductsData]);
+
+  // Customers with sales in period
+  const customersWithSales = useMemo(() => {
+    const customerIds = new Set<string>();
+    sales.forEach(sale => {
+      if (sale.type === 'pedido' && sale.status !== 'cancelado' && sale.status !== 'excluido') {
+        customerIds.add(sale.customerId);
+      }
+    });
+    return customers.filter(c => customerIds.has(c.id));
+  }, [sales, customers]);
+
   const clearFilters = () => {
     setCategoryFilter("all");
     setStatusFilter("all");
     setStockFilter("all");
+  };
+
+  const clearOutputFilters = () => {
+    setOutputStartDate(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+    setOutputEndDate(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
+    setOutputProductFilter("all");
+    setOutputCustomerFilter("all");
   };
 
   const handlePrint = () => {
@@ -255,14 +365,174 @@ const ProductsReport = () => {
           </div>
 
           {/* Tabs */}
-          <Tabs defaultValue="stock" className="space-y-4">
-            <TabsList>
+          <Tabs defaultValue="output" className="space-y-4">
+            <TabsList className="flex-wrap">
+              <TabsTrigger value="output">Saída de Produtos</TabsTrigger>
               <TabsTrigger value="stock">Posição de Estoque</TabsTrigger>
               <TabsTrigger value="critical">Estoque Crítico</TabsTrigger>
               <TabsTrigger value="margin">Margem de Lucro</TabsTrigger>
               <TabsTrigger value="abc">Curva ABC</TabsTrigger>
               <TabsTrigger value="category">Por Categoria</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="output">
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Filter className="h-5 w-5" />
+                    Filtros de Saída
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <Label>Data Inicial</Label>
+                      <Input 
+                        type="date" 
+                        value={outputStartDate} 
+                        onChange={(e) => setOutputStartDate(e.target.value)} 
+                      />
+                    </div>
+                    <div>
+                      <Label>Data Final</Label>
+                      <Input 
+                        type="date" 
+                        value={outputEndDate} 
+                        onChange={(e) => setOutputEndDate(e.target.value)} 
+                      />
+                    </div>
+                    <div>
+                      <Label>Produto</Label>
+                      <Select value={outputProductFilter} onValueChange={setOutputProductFilter}>
+                        <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          {products.filter(p => p.active).map(p => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Cliente</Label>
+                      <Select value={outputCustomerFilter} onValueChange={setOutputCustomerFilter}>
+                        <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          {customersWithSales.map(c => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <Button variant="outline" size="sm" onClick={clearOutputFilters}>
+                      <Filter className="h-4 w-4 mr-2" />
+                      Limpar Filtros
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Output Metrics */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <Truck className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total Saídas</p>
+                        <p className="text-xl font-bold text-foreground">{outputTotals.count}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <Package className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total M³</p>
+                        <p className="text-xl font-bold text-green-600">{outputTotals.totalM3.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-orange-100 rounded-lg">
+                        <TrendingUp className="h-5 w-5 text-orange-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total Toneladas</p>
+                        <p className="text-xl font-bold text-orange-600">{outputTotals.totalTons.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Detalhamento de Saídas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {outputProductsData.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Truck className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg">Nenhuma saída no período</p>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Código</TableHead>
+                          <TableHead>Produto</TableHead>
+                          <TableHead>Cliente</TableHead>
+                          <TableHead className="text-right">Quantidade</TableHead>
+                          <TableHead>Unidade</TableHead>
+                          <TableHead className="text-right">M³</TableHead>
+                          <TableHead className="text-right">Toneladas</TableHead>
+                          <TableHead>Data</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {outputProductsData.map((item, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">{item.productCode}</TableCell>
+                            <TableCell>{item.productName}</TableCell>
+                            <TableCell className="max-w-[150px] truncate">{item.customerName}</TableCell>
+                            <TableCell className="text-right">{item.quantity.toFixed(2)}</TableCell>
+                            <TableCell>{item.unit}</TableCell>
+                            <TableCell className="text-right font-medium text-green-600">{item.m3.toFixed(2)}</TableCell>
+                            <TableCell className="text-right font-medium text-orange-600">{item.tons.toFixed(3)}</TableCell>
+                            <TableCell>{format(new Date(item.date), 'dd/MM/yyyy')}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                  {outputProductsData.length > 0 && (
+                    <div className="mt-4 pt-4 border-t flex justify-end gap-8">
+                      <div className="text-right">
+                        <span className="text-muted-foreground mr-4">Total M³:</span>
+                        <span className="text-xl font-bold text-green-600">{outputTotals.totalM3.toFixed(2)}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-muted-foreground mr-4">Total Toneladas:</span>
+                        <span className="text-xl font-bold text-orange-600">{outputTotals.totalTons.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             <TabsContent value="stock">
               <Card>
