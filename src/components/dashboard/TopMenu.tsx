@@ -53,10 +53,11 @@ const menuItems: MenuItem[] = [
     { label: "Contas a Receber", path: "/financeiro/contas-a-receber", module: "financeiro", action: "Contas a Receber" },
   ]},
   { label: "Relatórios", module: "relatorios", items: [
-    { label: "Vendas", module: "relatorios", action: "Vendas" },
-    { label: "Estoque", module: "relatorios", action: "Estoque" },
-    { label: "Financeiro", module: "relatorios", action: "Financeiro" },
-    { label: "Clientes", module: "relatorios", action: "Clientes" }
+    { label: "Vendas", path: "/relatorios/vendas", module: "relatorios", action: "Vendas" },
+    { label: "Estoque", path: "/relatorios/estoque", module: "relatorios", action: "Estoque" },
+    { label: "Financeiro", path: "/relatorios/financeiro", module: "relatorios", action: "Financeiro" },
+    { label: "Clientes", path: "/relatorios/clientes", module: "relatorios", action: "Clientes" },
+    { label: "Fornecedores", path: "/relatorios/fornecedores", module: "relatorios", action: "Fornecedores" }
   ]},
   { label: "Configuração", module: "configuracao", items: [
     { label: "Empresa", path: "/configuracao/empresa", module: "configuracao", action: "Empresa" },

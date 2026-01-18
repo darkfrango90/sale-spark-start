@@ -13,7 +13,7 @@ import { useFinancial } from "@/contexts/FinancialContext";
 import { useSales } from "@/contexts/SalesContext";
 import { ArrowLeft, Printer, Filter, TrendingUp, TrendingDown, AlertTriangle, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6'];
 
@@ -29,15 +29,15 @@ const FinancialReport = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [accountFilter, setAccountFilter] = useState<string>("all");
 
-  // Filter receivables
+  // Filter receivables (using createdAt since AccountReceivable doesn't have dueDate)
   const filteredReceivables = useMemo(() => {
     return accountsReceivable.filter(ar => {
-      const dueDate = new Date(ar.dueDate);
+      const arDate = new Date(ar.createdAt);
       const start = parseISO(startDate);
       const end = parseISO(endDate);
       end.setHours(23, 59, 59, 999);
       
-      if (!isWithinInterval(dueDate, { start, end })) return false;
+      if (!isWithinInterval(arDate, { start, end })) return false;
       if (statusFilter !== "all" && ar.status !== statusFilter) return false;
       if (accountFilter !== "all" && ar.receivingAccountId !== accountFilter) return false;
       
@@ -70,8 +70,10 @@ const FinancialReport = () => {
       .filter(ap => ap.status === 'pendente')
       .reduce((sum, ap) => sum + ap.finalAmount, 0);
     
+    // For receivables, we consider items older than 30 days as overdue
+    const thirtyDaysAgo = addDays(today, -30);
     const overdueReceivable = accountsReceivable
-      .filter(ar => ar.status === 'pendente' && isBefore(new Date(ar.dueDate), today))
+      .filter(ar => ar.status === 'pendente' && isBefore(new Date(ar.createdAt), thirtyDaysAgo))
       .reduce((sum, ar) => sum + ar.finalAmount, 0);
     
     const overduePayable = accountsPayable
@@ -83,19 +85,20 @@ const FinancialReport = () => {
     return { totalReceivable, totalPayable, overdueReceivable, overduePayable, projectedBalance };
   }, [accountsReceivable, accountsPayable]);
 
-  // Overdue receivables
+  // Overdue receivables (older than 30 days)
   const overdueReceivables = useMemo(() => {
+    const thirtyDaysAgo = addDays(today, -30);
     return accountsReceivable
-      .filter(ar => ar.status === 'pendente' && isBefore(new Date(ar.dueDate), today))
+      .filter(ar => ar.status === 'pendente' && isBefore(new Date(ar.createdAt), thirtyDaysAgo))
       .map(ar => {
         const sale = sales.find(s => s.id === ar.saleId);
         return {
           ...ar,
-          customerName: sale?.customerName || 'N/A',
-          saleNumber: sale?.number || 'N/A'
+          customerName: sale?.customerName || ar.customerName || 'N/A',
+          saleNumber: sale?.number || ar.saleNumber || 'N/A'
         };
       })
-      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   }, [accountsReceivable, sales]);
 
   // Overdue payables
@@ -105,25 +108,23 @@ const FinancialReport = () => {
       .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
   }, [accountsPayable]);
 
-  // Upcoming receivables (next 30 days)
+  // Upcoming receivables (created in the last 30 days, still pending)
   const upcomingReceivables = useMemo(() => {
-    const thirtyDaysFromNow = addDays(today, 30);
+    const thirtyDaysAgo = addDays(today, -30);
     return accountsReceivable
       .filter(ar => {
-        const dueDate = new Date(ar.dueDate);
-        return ar.status === 'pendente' && 
-               !isBefore(dueDate, today) && 
-               isBefore(dueDate, thirtyDaysFromNow);
+        const arDate = new Date(ar.createdAt);
+        return ar.status === 'pendente' && !isBefore(arDate, thirtyDaysAgo);
       })
       .map(ar => {
         const sale = sales.find(s => s.id === ar.saleId);
         return {
           ...ar,
-          customerName: sale?.customerName || 'N/A',
-          saleNumber: sale?.number || 'N/A'
+          customerName: sale?.customerName || ar.customerName || 'N/A',
+          saleNumber: sale?.number || ar.saleNumber || 'N/A'
         };
       })
-      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   }, [accountsReceivable, sales]);
 
   // Upcoming payables (next 30 days)
@@ -144,8 +145,8 @@ const FinancialReport = () => {
     const months: Record<string, { month: string; receivables: number; payables: number }> = {};
     
     accountsReceivable.forEach(ar => {
-      const monthKey = format(new Date(ar.dueDate), 'yyyy-MM');
-      const monthLabel = format(new Date(ar.dueDate), 'MMM/yy', { locale: ptBR });
+      const monthKey = format(new Date(ar.createdAt), 'yyyy-MM');
+      const monthLabel = format(new Date(ar.createdAt), 'MMM/yy', { locale: ptBR });
       if (!months[monthKey]) {
         months[monthKey] = { month: monthLabel, receivables: 0, payables: 0 };
       }
@@ -316,7 +317,7 @@ const FinancialReport = () => {
                     <AlertTriangle className="h-5 w-5 text-orange-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Vencido (Rec.)</p>
+                    <p className="text-sm text-muted-foreground">Atrasado (Rec.)</p>
                     <p className="text-lg font-bold text-orange-600">{formatCurrency(metrics.overdueReceivable)}</p>
                   </div>
                 </div>
@@ -343,8 +344,8 @@ const FinancialReport = () => {
               <TabsTrigger value="cashflow">Fluxo de Caixa</TabsTrigger>
               <TabsTrigger value="receivables">Contas a Receber</TabsTrigger>
               <TabsTrigger value="payables">Contas a Pagar</TabsTrigger>
-              <TabsTrigger value="overdue">Vencidos</TabsTrigger>
-              <TabsTrigger value="upcoming">A Vencer</TabsTrigger>
+              <TabsTrigger value="overdue">Atrasados</TabsTrigger>
+              <TabsTrigger value="upcoming">Pendentes</TabsTrigger>
             </TabsList>
 
             <TabsContent value="cashflow">
@@ -405,7 +406,7 @@ const FinancialReport = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Vencimento</TableHead>
+                        <TableHead>Data</TableHead>
                         <TableHead>Venda</TableHead>
                         <TableHead>Cliente</TableHead>
                         <TableHead>Status</TableHead>
@@ -417,9 +418,9 @@ const FinancialReport = () => {
                         const sale = sales.find(s => s.id === ar.saleId);
                         return (
                           <TableRow key={ar.id}>
-                            <TableCell>{format(new Date(ar.dueDate), 'dd/MM/yyyy')}</TableCell>
-                            <TableCell className="font-medium">{sale?.number || '-'}</TableCell>
-                            <TableCell>{sale?.customerName || '-'}</TableCell>
+                            <TableCell>{format(new Date(ar.createdAt), 'dd/MM/yyyy')}</TableCell>
+                            <TableCell className="font-medium">{sale?.number || ar.saleNumber || '-'}</TableCell>
+                            <TableCell>{sale?.customerName || ar.customerName || '-'}</TableCell>
                             <TableCell>
                               <span className={`px-2 py-1 rounded text-xs font-medium ${
                                 ar.status === 'recebido' ? 'bg-green-100 text-green-700' :
@@ -495,16 +496,16 @@ const FinancialReport = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-red-600">Recebimentos Vencidos</CardTitle>
+                    <CardTitle className="text-red-600">Recebimentos Atrasados (+30 dias)</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {overdueReceivables.length === 0 ? (
-                      <p className="text-center text-muted-foreground py-4">Nenhum título vencido</p>
+                      <p className="text-center text-muted-foreground py-4">Nenhum título atrasado</p>
                     ) : (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Vencimento</TableHead>
+                            <TableHead>Data</TableHead>
                             <TableHead>Cliente</TableHead>
                             <TableHead className="text-right">Valor</TableHead>
                           </TableRow>
@@ -512,7 +513,7 @@ const FinancialReport = () => {
                         <TableBody>
                           {overdueReceivables.map(ar => (
                             <TableRow key={ar.id}>
-                              <TableCell className="text-red-600">{format(new Date(ar.dueDate), 'dd/MM/yyyy')}</TableCell>
+                              <TableCell className="text-red-600">{format(new Date(ar.createdAt), 'dd/MM/yyyy')}</TableCell>
                               <TableCell>{ar.customerName}</TableCell>
                               <TableCell className="text-right font-medium">{formatCurrency(ar.finalAmount)}</TableCell>
                             </TableRow>
@@ -558,16 +559,16 @@ const FinancialReport = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-blue-600">A Receber (Próximos 30 dias)</CardTitle>
+                    <CardTitle className="text-blue-600">A Receber (Pendentes Recentes)</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {upcomingReceivables.length === 0 ? (
-                      <p className="text-center text-muted-foreground py-4">Nenhum título a vencer</p>
+                      <p className="text-center text-muted-foreground py-4">Nenhum título pendente</p>
                     ) : (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Vencimento</TableHead>
+                            <TableHead>Data</TableHead>
                             <TableHead>Cliente</TableHead>
                             <TableHead className="text-right">Valor</TableHead>
                           </TableRow>
@@ -575,7 +576,7 @@ const FinancialReport = () => {
                         <TableBody>
                           {upcomingReceivables.map(ar => (
                             <TableRow key={ar.id}>
-                              <TableCell>{format(new Date(ar.dueDate), 'dd/MM/yyyy')}</TableCell>
+                              <TableCell>{format(new Date(ar.createdAt), 'dd/MM/yyyy')}</TableCell>
                               <TableCell>{ar.customerName}</TableCell>
                               <TableCell className="text-right font-medium">{formatCurrency(ar.finalAmount)}</TableCell>
                             </TableRow>
