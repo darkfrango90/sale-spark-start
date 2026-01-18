@@ -27,6 +27,12 @@ import SalesList from "./pages/sales/SalesList";
 import AccountsReceivable from "./pages/financial/AccountsReceivable";
 import AccountsPayable from "./pages/financial/AccountsPayable";
 import BarterDashboard from "./pages/barter/BarterDashboard";
+import ReportsIndex from "./pages/reports/ReportsIndex";
+import SalesReport from "./pages/reports/SalesReport";
+import ProductsReport from "./pages/reports/ProductsReport";
+import CustomersReport from "./pages/reports/CustomersReport";
+import FinancialReport from "./pages/reports/FinancialReport";
+import SuppliersReport from "./pages/reports/SuppliersReport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -170,6 +176,46 @@ const AppRoutes = () => {
           <ProtectedRoute isAuthenticated={isAuthenticated}>
             <PermissionRoute module="movimentacao" action="Permuta">
               <BarterDashboard />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/relatorios" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <ReportsIndex />
+          </ProtectedRoute>
+        } />
+        <Route path="/relatorios/vendas" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="relatorios" action="Vendas">
+              <SalesReport />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/relatorios/estoque" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="relatorios" action="Estoque">
+              <ProductsReport />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/relatorios/clientes" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="relatorios" action="Clientes">
+              <CustomersReport />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/relatorios/financeiro" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="relatorios" action="Financeiro">
+              <FinancialReport />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/relatorios/fornecedores" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="relatorios" action="Fornecedores">
+              <SuppliersReport />
             </PermissionRoute>
           </ProtectedRoute>
         } />

@@ -91,13 +91,14 @@ const CustomersReport = () => {
     return Object.values(salesData).sort((a, b) => b.total - a.total);
   }, [sales]);
 
-  // Customers with overdue accounts
+  // Customers with overdue accounts (older than 30 days)
   const customersOverdue = useMemo(() => {
-    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const overdueMap: Record<string, { name: string; overdueAmount: number; overdueCount: number }> = {};
     
     accountsReceivable
-      .filter(ar => ar.status === 'pendente' && new Date(ar.dueDate) < today)
+      .filter(ar => ar.status === 'pendente' && new Date(ar.createdAt) < thirtyDaysAgo)
       .forEach(ar => {
         const sale = sales.find(s => s.id === ar.saleId);
         if (sale) {
