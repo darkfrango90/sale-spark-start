@@ -129,7 +129,10 @@ const TopMenu = () => {
           <div className="flex items-center justify-between h-12 px-4">
             <div className="flex items-center">
               {/* Logo */}
-              <div className="flex items-center gap-2 mr-8">
+              <div 
+                className="flex items-center gap-2 mr-8 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => navigate('/')}
+              >
                 <div className="h-8 w-8 rounded bg-primary flex items-center justify-center">
                   <span className="text-primary-foreground font-bold text-sm">C</span>
                 </div>
