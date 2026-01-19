@@ -96,7 +96,6 @@ const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
 
   return (
-    <BrowserRouter>
       <Routes>
         <Route path="/login" element={<PublicRoute isAuthenticated={isAuthenticated}><Login /></PublicRoute>} />
         <Route path="/" element={<ProtectedRoute isAuthenticated={isAuthenticated}><Index /></ProtectedRoute>} />
@@ -295,33 +294,34 @@ const AppRoutes = () => {
         } />
         <Route path="*" element={<NotFound />} />
       </Routes>
-    </BrowserRouter>
   );
 };
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <CustomerProvider>
-        <ProductProvider>
-          <SettingsProvider>
-            <SalesProvider>
-              <CompanyProvider>
-                <FinancialProvider>
-                  <SupplierProvider>
-                    <TooltipProvider>
-                      <Toaster />
-                      <Sonner />
-                      <AppRoutes />
-                    </TooltipProvider>
-                  </SupplierProvider>
-                </FinancialProvider>
-              </CompanyProvider>
-            </SalesProvider>
-          </SettingsProvider>
-        </ProductProvider>
-      </CustomerProvider>
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <CustomerProvider>
+          <ProductProvider>
+            <SettingsProvider>
+              <SalesProvider>
+                <CompanyProvider>
+                  <FinancialProvider>
+                    <SupplierProvider>
+                      <TooltipProvider>
+                        <Toaster />
+                        <Sonner />
+                        <AppRoutes />
+                      </TooltipProvider>
+                    </SupplierProvider>
+                  </FinancialProvider>
+                </CompanyProvider>
+              </SalesProvider>
+            </SettingsProvider>
+          </ProductProvider>
+        </CustomerProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 
