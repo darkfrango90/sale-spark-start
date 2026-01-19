@@ -36,6 +36,8 @@ import SuppliersReport from "./pages/reports/SuppliersReport";
 import TickingReport from "./pages/reports/TickingReport";
 import OperatorDashboard from "./pages/operations/OperatorDashboard";
 import LoadedOrders from "./pages/operations/LoadedOrders";
+import FuelEntry from "./pages/operations/FuelEntry";
+import VehicleManagement from "./pages/operations/VehicleManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -229,17 +231,31 @@ const AppRoutes = () => {
             </PermissionRoute>
           </ProtectedRoute>
         } />
-        <Route path="/movimentacao/operador" element={
+        <Route path="/operacao/operador" element={
           <ProtectedRoute isAuthenticated={isAuthenticated}>
-            <PermissionRoute module="movimentacao" action="Operador">
+            <PermissionRoute module="operacao" action="Operador">
               <OperatorDashboard />
             </PermissionRoute>
           </ProtectedRoute>
         } />
-        <Route path="/movimentacao/carregados" element={
+        <Route path="/operacao/carregados" element={
           <ProtectedRoute isAuthenticated={isAuthenticated}>
-            <PermissionRoute module="movimentacao" action="Carregados">
+            <PermissionRoute module="operacao" action="Carregados">
               <LoadedOrders />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/operacao/abastecimento" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="operacao" action="Abastecimento">
+              <FuelEntry />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/operacao/veiculos" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="operacao" action="Veículos">
+              <VehicleManagement />
             </PermissionRoute>
           </ProtectedRoute>
         } />
