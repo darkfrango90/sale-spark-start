@@ -29,6 +29,7 @@ interface MenuItem {
   label: string;
   module?: string;
   items?: SubMenuItem[];
+  driverOnly?: boolean;
 }
 
 const menuItems: MenuItem[] = [
@@ -48,7 +49,7 @@ const menuItems: MenuItem[] = [
     { label: "Abastecimento", path: "/operacao/abastecimento", module: "operacao", action: "Abastecimento" },
     { label: "Veículos", path: "/operacao/veiculos", module: "operacao", action: "Veículos" }
   ]},
-  { label: "Motorista", module: "motorista", items: [
+  { label: "Motorista", module: "motorista", driverOnly: true, items: [
     { label: "Painel", path: "/motorista", module: "motorista" },
     { label: "Parte Diária", path: "/motorista/parte-diaria", module: "motorista", action: "Parte Diária" },
     { label: "CheckList", path: "/motorista/checklist", module: "motorista", action: "CheckList" },
@@ -116,6 +117,10 @@ const TopMenu = () => {
 
   // Filter menu items based on permissions
   const filteredMenuItems = menuItems.filter(item => {
+    // Driver menu only visible for drivers and admins
+    if (item.driverOnly) {
+      return user?.role === 'motorista' || user?.role === 'admin';
+    }
     if (!item.module) return true;
     return hasModuleAccess(item.module);
   }).map(item => ({

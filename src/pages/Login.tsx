@@ -12,7 +12,7 @@ const Login = () => {
   const [accessCode, setAccessCode] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, users } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,7 +24,13 @@ const Login = () => {
       const success = login(accessCode, password);
       if (success) {
         toast.success('Login realizado com sucesso!');
-        navigate('/');
+        // Redirect based on user role
+        const loggedUser = users.find(u => u.accessCode === accessCode);
+        if (loggedUser?.role === 'motorista') {
+          navigate('/motorista');
+        } else {
+          navigate('/');
+        }
       } else {
         toast.error('Código de acesso ou senha inválidos');
       }

@@ -120,12 +120,12 @@ const DailyReport = () => {
       <TopMenu />
       <main className="pt-28 pb-8 px-4 max-w-2xl mx-auto">
         <Button
-          variant="ghost"
-          className="mb-4"
+          variant="outline"
+          className="mb-4 border-2 border-primary text-primary hover:bg-primary hover:text-white"
           onClick={() => navigate('/motorista')}
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar
+          <ArrowLeft className="h-5 w-5 mr-2" />
+          Voltar ao Painel
         </Button>
 
         <Card>
