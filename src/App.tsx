@@ -46,6 +46,7 @@ import DailyReportsAdmin from "./pages/reports/DailyReportsAdmin";
 import ChecklistsAdmin from "./pages/reports/ChecklistsAdmin";
 import MaintenanceAdmin from "./pages/reports/MaintenanceAdmin";
 import NotFound from "./pages/NotFound";
+import Documentation from "./pages/Documentation";
 
 const queryClient = new QueryClient();
 
@@ -292,6 +293,7 @@ const AppRoutes = () => {
             </PermissionRoute>
           </ProtectedRoute>
         } />
+        <Route path="/documentacao" element={<ProtectedRoute isAuthenticated={isAuthenticated}><Documentation /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
   );
