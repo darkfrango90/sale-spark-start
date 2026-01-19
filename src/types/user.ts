@@ -9,7 +9,7 @@ export interface User {
   name: string;
   cpf: string;
   password: string;
-  role: 'admin' | 'gerente' | 'vendedor' | 'caixa' | 'estoquista';
+  role: 'admin' | 'gerente' | 'vendedor' | 'caixa' | 'estoquista' | 'motorista';
   permissions: Permission[];
   active: boolean;
   createdAt: Date;
@@ -21,6 +21,7 @@ export const ROLES = {
   vendedor: 'Vendedor',
   caixa: 'Caixa',
   estoquista: 'Estoquista',
+  motorista: 'Motorista',
 } as const;
 
 export const MODULES = {
@@ -32,9 +33,13 @@ export const MODULES = {
     label: 'Vendas',
     actions: ['Nova Venda', 'Orçamentos', 'Pedidos'],
   },
-  movimentacao: {
-    label: 'Movimentação',
-    actions: ['Operador', 'Carregados'],
+  operacao: {
+    label: 'Operação',
+    actions: ['Operador', 'Carregados', 'Abastecimento', 'Veículos'],
+  },
+  motorista: {
+    label: 'Motorista',
+    actions: ['Parte Diária', 'CheckList', 'Manutenção'],
   },
   financeiro: {
     label: 'Financeiro',
@@ -42,7 +47,7 @@ export const MODULES = {
   },
   relatorios: {
     label: 'Relatórios',
-    actions: ['Vendas', 'Produtos', 'Financeiro', 'Clientes', 'Fornecedores', 'Permuta', 'Ticagem'],
+    actions: ['Vendas', 'Produtos', 'Financeiro', 'Clientes', 'Fornecedores', 'Permuta', 'Ticagem', 'Partes Diárias', 'Checklists', 'Manutenções'],
   },
   configuracao: {
     label: 'Configuração',

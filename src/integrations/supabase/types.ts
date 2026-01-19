@@ -287,6 +287,51 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_reports: {
+        Row: {
+          created_at: string
+          customer_name: string
+          freight_value: number
+          id: string
+          km_final: number
+          km_initial: number
+          observation: string | null
+          order_number: string
+          signature: string
+          user_id: string
+          user_name: string
+          vehicle_plate: string
+        }
+        Insert: {
+          created_at?: string
+          customer_name: string
+          freight_value?: number
+          id?: string
+          km_final: number
+          km_initial: number
+          observation?: string | null
+          order_number: string
+          signature: string
+          user_id: string
+          user_name: string
+          vehicle_plate: string
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string
+          freight_value?: number
+          id?: string
+          km_final?: number
+          km_initial?: number
+          observation?: string | null
+          order_number?: string
+          signature?: string
+          user_id?: string
+          user_name?: string
+          vehicle_plate?: string
+        }
+        Relationships: []
+      }
       fuel_entries: {
         Row: {
           created_at: string
@@ -336,6 +381,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      maintenance_reports: {
+        Row: {
+          created_at: string
+          id: string
+          problem_description: string
+          resolution_date: string | null
+          resolved_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          user_name: string
+          vehicle_plate: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          problem_description: string
+          resolution_date?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          user_name: string
+          vehicle_plate: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          problem_description?: string
+          resolution_date?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          user_name?: string
+          vehicle_plate?: string
+        }
+        Relationships: []
       }
       order_loadings: {
         Row: {
@@ -486,6 +570,96 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      safety_checklists: {
+        Row: {
+          agua_radiador: string
+          buzina: string
+          cinto_seguranca: string
+          created_at: string
+          documentos_veiculo: string
+          espelhos_retrovisores: string
+          estepe_estado: string
+          extintor_incendio: string
+          farois_funcionando: string
+          fluido_freio: string
+          freio_estacionamento: string
+          freio_servico: string
+          has_repairs_needed: boolean | null
+          id: string
+          lanternas_funcionando: string
+          limpador_parabrisa: string
+          limpeza_geral: string
+          macaco_chave_roda: string
+          oleo_hidraulico: string
+          oleo_motor: string
+          pneus_calibrados: string
+          pneus_estado: string
+          setas_funcionando: string
+          triangulo_sinalizacao: string
+          user_id: string
+          user_name: string
+          vehicle_plate: string
+        }
+        Insert: {
+          agua_radiador?: string
+          buzina?: string
+          cinto_seguranca?: string
+          created_at?: string
+          documentos_veiculo?: string
+          espelhos_retrovisores?: string
+          estepe_estado?: string
+          extintor_incendio?: string
+          farois_funcionando?: string
+          fluido_freio?: string
+          freio_estacionamento?: string
+          freio_servico?: string
+          has_repairs_needed?: boolean | null
+          id?: string
+          lanternas_funcionando?: string
+          limpador_parabrisa?: string
+          limpeza_geral?: string
+          macaco_chave_roda?: string
+          oleo_hidraulico?: string
+          oleo_motor?: string
+          pneus_calibrados?: string
+          pneus_estado?: string
+          setas_funcionando?: string
+          triangulo_sinalizacao?: string
+          user_id: string
+          user_name: string
+          vehicle_plate: string
+        }
+        Update: {
+          agua_radiador?: string
+          buzina?: string
+          cinto_seguranca?: string
+          created_at?: string
+          documentos_veiculo?: string
+          espelhos_retrovisores?: string
+          estepe_estado?: string
+          extintor_incendio?: string
+          farois_funcionando?: string
+          fluido_freio?: string
+          freio_estacionamento?: string
+          freio_servico?: string
+          has_repairs_needed?: boolean | null
+          id?: string
+          lanternas_funcionando?: string
+          limpador_parabrisa?: string
+          limpeza_geral?: string
+          macaco_chave_roda?: string
+          oleo_hidraulico?: string
+          oleo_motor?: string
+          pneus_calibrados?: string
+          pneus_estado?: string
+          setas_funcionando?: string
+          triangulo_sinalizacao?: string
+          user_id?: string
+          user_name?: string
+          vehicle_plate?: string
         }
         Relationships: []
       }

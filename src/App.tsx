@@ -38,6 +38,13 @@ import OperatorDashboard from "./pages/operations/OperatorDashboard";
 import LoadedOrders from "./pages/operations/LoadedOrders";
 import FuelEntry from "./pages/operations/FuelEntry";
 import VehicleManagement from "./pages/operations/VehicleManagement";
+import DriverDashboard from "./pages/driver/DriverDashboard";
+import DailyReport from "./pages/driver/DailyReport";
+import SafetyChecklist from "./pages/driver/SafetyChecklist";
+import MaintenanceReport from "./pages/driver/MaintenanceReport";
+import DailyReportsAdmin from "./pages/reports/DailyReportsAdmin";
+import ChecklistsAdmin from "./pages/reports/ChecklistsAdmin";
+import MaintenanceAdmin from "./pages/reports/MaintenanceAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -256,6 +263,33 @@ const AppRoutes = () => {
           <ProtectedRoute isAuthenticated={isAuthenticated}>
             <PermissionRoute module="operacao" action="Veículos">
               <VehicleManagement />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        {/* Driver Routes */}
+        <Route path="/motorista" element={<ProtectedRoute isAuthenticated={isAuthenticated}><DriverDashboard /></ProtectedRoute>} />
+        <Route path="/motorista/parte-diaria" element={<ProtectedRoute isAuthenticated={isAuthenticated}><DailyReport /></ProtectedRoute>} />
+        <Route path="/motorista/checklist" element={<ProtectedRoute isAuthenticated={isAuthenticated}><SafetyChecklist /></ProtectedRoute>} />
+        <Route path="/motorista/manutencao" element={<ProtectedRoute isAuthenticated={isAuthenticated}><MaintenanceReport /></ProtectedRoute>} />
+        {/* Admin Reports for Driver Module */}
+        <Route path="/relatorios/partes-diarias" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="relatorios" action="Partes Diárias">
+              <DailyReportsAdmin />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/relatorios/checklists" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="relatorios" action="Checklists">
+              <ChecklistsAdmin />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/relatorios/manutencoes" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <PermissionRoute module="relatorios" action="Manutenções">
+              <MaintenanceAdmin />
             </PermissionRoute>
           </ProtectedRoute>
         } />
