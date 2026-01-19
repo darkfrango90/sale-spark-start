@@ -48,6 +48,12 @@ const menuItems: MenuItem[] = [
     { label: "Abastecimento", path: "/operacao/abastecimento", module: "operacao", action: "Abastecimento" },
     { label: "Veículos", path: "/operacao/veiculos", module: "operacao", action: "Veículos" }
   ]},
+  { label: "Motorista", module: "motorista", items: [
+    { label: "Painel", path: "/motorista", module: "motorista" },
+    { label: "Parte Diária", path: "/motorista/parte-diaria", module: "motorista", action: "Parte Diária" },
+    { label: "CheckList", path: "/motorista/checklist", module: "motorista", action: "CheckList" },
+    { label: "Manutenção", path: "/motorista/manutencao", module: "motorista", action: "Manutenção" }
+  ]},
   { label: "Financeiro", module: "financeiro", items: [
     { label: "Contas a Pagar", path: "/financeiro/contas-a-pagar", module: "financeiro", action: "Contas a Pagar" },
     { label: "Contas a Receber", path: "/financeiro/contas-a-receber", module: "financeiro", action: "Contas a Receber" },
@@ -59,7 +65,10 @@ const menuItems: MenuItem[] = [
     { label: "Clientes", path: "/relatorios/clientes", module: "relatorios", action: "Clientes" },
     { label: "Fornecedores", path: "/relatorios/fornecedores", module: "relatorios", action: "Fornecedores" },
     { label: "Permuta", path: "/relatorios/permuta", module: "relatorios", action: "Permuta" },
-    { label: "Ticagem", path: "/relatorios/ticagem", module: "relatorios", action: "Ticagem" }
+    { label: "Ticagem", path: "/relatorios/ticagem", module: "relatorios", action: "Ticagem" },
+    { label: "Partes Diárias", path: "/relatorios/partes-diarias", module: "relatorios", action: "Partes Diárias" },
+    { label: "Checklists", path: "/relatorios/checklists", module: "relatorios", action: "Checklists" },
+    { label: "Manutenções", path: "/relatorios/manutencoes", module: "relatorios", action: "Manutenções" }
   ]},
   { label: "Configuração", module: "configuracao", items: [
     { label: "Empresa", path: "/configuracao/empresa", module: "configuracao", action: "Empresa" },
