@@ -5,6 +5,7 @@ interface AuthContextType {
   user: User | null;
   users: User[];
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (accessCode: string, password: string) => boolean;
   logout: () => void;
   addUser: (user: Omit<User, 'id' | 'accessCode' | 'createdAt'>) => User;
@@ -21,6 +22,7 @@ const SESSION_KEY = 'cezar_session';
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Load users from localStorage
@@ -46,6 +48,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         createdAt: new Date(sessionUser.createdAt),
       });
     }
+
+    setIsLoading(false);
   }, []);
 
   const login = (accessCode: string, password: string): boolean => {
@@ -109,6 +113,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user,
         users,
         isAuthenticated: !!user,
+        isLoading,
         login,
         logout,
         addUser,
