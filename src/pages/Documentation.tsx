@@ -7,6 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import pptxgen from "pptxgenjs";
 import { 
   ArrowLeft, 
   Printer, 
@@ -31,7 +32,8 @@ import {
   CircleDollarSign,
   Scale,
   Camera,
-  Sparkles
+  Sparkles,
+  Download
 } from 'lucide-react';
 
 const Documentation = () => {
@@ -40,6 +42,901 @@ const Documentation = () => {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadPPTX = () => {
+    const pres = new pptxgen();
+    
+    // Configurações padrão
+    pres.layout = 'LAYOUT_16x9';
+    pres.title = 'Manual do Sistema CEZAR';
+    pres.author = 'Sistema CEZAR';
+    pres.subject = 'Manual Completo de Funcionalidades';
+    
+    const primaryColor = '3B82F6';
+    const darkText = '1F2937';
+    const grayText = '6B7280';
+    const lightBg = 'F3F4F6';
+
+    // =============== SLIDE 1: CAPA ===============
+    const slideCapa = pres.addSlide();
+    slideCapa.addText("SISTEMA CEZAR", {
+      x: 0, y: 2.5, w: '100%', h: 1,
+      fontSize: 54, color: primaryColor, bold: true, align: 'center',
+      fontFace: 'Arial'
+    });
+    slideCapa.addText("Manual Completo de Funcionalidades", {
+      x: 0, y: 3.6, w: '100%', h: 0.6,
+      fontSize: 28, color: grayText, align: 'center',
+      fontFace: 'Arial'
+    });
+    slideCapa.addText(`Documento gerado em ${new Date().toLocaleDateString('pt-BR')}`, {
+      x: 0, y: 4.8, w: '100%', h: 0.4,
+      fontSize: 14, color: grayText, align: 'center',
+      fontFace: 'Arial'
+    });
+
+    // =============== SLIDE 2: VISÃO GERAL ===============
+    const slideVisao = pres.addSlide();
+    slideVisao.addText("Visão Geral do Sistema", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    slideVisao.addText("O Sistema CEZAR é uma solução completa para gestão de vendas, operações logísticas e controle financeiro. Desenvolvido para otimizar processos e aumentar a produtividade.", {
+      x: 0.5, y: 1, w: 9, h: 0.8,
+      fontSize: 16, color: darkText,
+      fontFace: 'Arial'
+    });
+    
+    const modulosVisao = [
+      { title: 'Gestão de Vendas', desc: 'Pedidos, orçamentos e controle de recebimentos' },
+      { title: 'Operação Logística', desc: 'Carregamentos com verificação por IA' },
+      { title: 'Controle de Frota', desc: 'Abastecimento, manutenção e checklist' },
+      { title: 'Financeiro', desc: 'Contas a pagar e receber integradas' },
+      { title: 'Sistema de Permuta', desc: 'Créditos e débitos de clientes' },
+      { title: 'Relatórios Gerenciais', desc: 'Análises detalhadas por módulo' },
+    ];
+    
+    modulosVisao.forEach((mod, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      slideVisao.addShape('rect', {
+        x: 0.5 + col * 4.7, y: 2 + row * 1.2, w: 4.5, h: 1,
+        fill: { color: lightBg }, line: { color: 'D1D5DB', pt: 1 }
+      });
+      slideVisao.addText(mod.title, {
+        x: 0.6 + col * 4.7, y: 2.1 + row * 1.2, w: 4.3, h: 0.4,
+        fontSize: 14, color: darkText, bold: true,
+        fontFace: 'Arial'
+      });
+      slideVisao.addText(mod.desc, {
+        x: 0.6 + col * 4.7, y: 2.5 + row * 1.2, w: 4.3, h: 0.4,
+        fontSize: 12, color: grayText,
+        fontFace: 'Arial'
+      });
+    });
+
+    // =============== SLIDE 3: LOGIN ===============
+    const slideLogin = pres.addSlide();
+    slideLogin.addText("Tela de Login", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    slideLogin.addText("Acesso seguro ao sistema através de código de usuário e senha.", {
+      x: 0.5, y: 1, w: 9, h: 0.5,
+      fontSize: 16, color: darkText,
+      fontFace: 'Arial'
+    });
+    slideLogin.addText("Campos de Acesso:", {
+      x: 0.5, y: 1.7, w: 9, h: 0.4,
+      fontSize: 18, color: darkText, bold: true,
+      fontFace: 'Arial'
+    });
+    slideLogin.addText("• Código de Acesso: Identificador único do usuário (ex: 001, 002)\n• Senha: Senha pessoal de acesso", {
+      x: 0.5, y: 2.2, w: 9, h: 0.8,
+      fontSize: 14, color: grayText,
+      fontFace: 'Arial'
+    });
+    slideLogin.addShape('rect', {
+      x: 0.5, y: 3.2, w: 9, h: 0.8,
+      fill: { color: 'FEF3C7' }, line: { color: 'F59E0B', pt: 1 }
+    });
+    slideLogin.addText("⚠️ Comportamento Especial: Usuários com perfil \"Motorista\" são automaticamente redirecionados para o painel do motorista após o login.", {
+      x: 0.6, y: 3.3, w: 8.8, h: 0.6,
+      fontSize: 12, color: '92400E',
+      fontFace: 'Arial'
+    });
+
+    // =============== SLIDE 4: DASHBOARD ===============
+    const slideDash = pres.addSlide();
+    slideDash.addText("Dashboard Principal", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    slideDash.addText("Visão geral do negócio com indicadores-chave de desempenho.", {
+      x: 0.5, y: 1, w: 9, h: 0.5,
+      fontSize: 16, color: darkText,
+      fontFace: 'Arial'
+    });
+    
+    const cardsDash = ['Receita Total', 'Total de Vendas', 'Clientes Ativos', 'Taxa de Conversão'];
+    cardsDash.forEach((card, i) => {
+      slideDash.addShape('rect', {
+        x: 0.5 + i * 2.3, y: 1.8, w: 2.1, h: 0.7,
+        fill: { color: lightBg }, line: { color: 'D1D5DB', pt: 1 }
+      });
+      slideDash.addText(card, {
+        x: 0.5 + i * 2.3, y: 1.9, w: 2.1, h: 0.5,
+        fontSize: 11, color: darkText, align: 'center',
+        fontFace: 'Arial'
+      });
+    });
+    
+    slideDash.addText("Funcionalidades:", {
+      x: 0.5, y: 2.8, w: 9, h: 0.4,
+      fontSize: 18, color: darkText, bold: true,
+      fontFace: 'Arial'
+    });
+    slideDash.addText("• Vendas Recentes: Lista das últimas vendas com cliente, valor e status\n• Ações Rápidas: Botões de acesso rápido filtrados por permissões do usuário", {
+      x: 0.5, y: 3.3, w: 9, h: 0.8,
+      fontSize: 14, color: grayText,
+      fontFace: 'Arial'
+    });
+
+    // =============== SLIDE 5: CADASTRO - CLIENTES ===============
+    const slideCadastro1 = pres.addSlide();
+    slideCadastro1.addText("Módulo de Cadastro - Clientes", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    slideCadastro1.addText("Cadastro completo de clientes pessoa física e jurídica.", {
+      x: 0.5, y: 1, w: 9, h: 0.5,
+      fontSize: 16, color: darkText,
+      fontFace: 'Arial'
+    });
+    
+    const camposCliente = ['Código automático', 'CPF/CNPJ com validação', 'Endereço completo', 'Telefone e celular', 'E-mail de contato', 'Status ativo/inativo'];
+    camposCliente.forEach((campo, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      slideCadastro1.addShape('rect', {
+        x: 0.5 + col * 4.7, y: 1.7 + row * 0.6, w: 4.5, h: 0.5,
+        fill: { color: lightBg }
+      });
+      slideCadastro1.addText(campo, {
+        x: 0.6 + col * 4.7, y: 1.8 + row * 0.6, w: 4.3, h: 0.3,
+        fontSize: 12, color: darkText,
+        fontFace: 'Arial'
+      });
+    });
+
+    slideCadastro1.addShape('rect', {
+      x: 0.5, y: 3.7, w: 9, h: 0.8,
+      fill: { color: 'DBEAFE' }, line: { color: '3B82F6', pt: 1 }
+    });
+    slideCadastro1.addText("💡 Permuta: Clientes podem ter crédito de permuta habilitado, com limite configurável e controle de saldo.", {
+      x: 0.6, y: 3.8, w: 8.8, h: 0.6,
+      fontSize: 12, color: '1E40AF',
+      fontFace: 'Arial'
+    });
+
+    // =============== SLIDE 6: CADASTRO - PRODUTOS ===============
+    const slideCadastro2 = pres.addSlide();
+    slideCadastro2.addText("Módulo de Cadastro - Produtos", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    slideCadastro2.addText("Gestão de produtos com controle de estoque e precificação.", {
+      x: 0.5, y: 1, w: 9, h: 0.5,
+      fontSize: 16, color: darkText,
+      fontFace: 'Arial'
+    });
+    
+    const camposProduto = ['Código do produto', 'Nome e descrição', 'Unidade (M³ ou KG)', 'Densidade (ton/m³)', 'Preço de custo', 'Preço de venda', 'Estoque atual', 'Estoque mínimo'];
+    camposProduto.forEach((campo, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      slideCadastro2.addShape('rect', {
+        x: 0.5 + col * 4.7, y: 1.6 + row * 0.55, w: 4.5, h: 0.45,
+        fill: { color: lightBg }
+      });
+      slideCadastro2.addText(campo, {
+        x: 0.6 + col * 4.7, y: 1.68 + row * 0.55, w: 4.3, h: 0.3,
+        fontSize: 11, color: darkText,
+        fontFace: 'Arial'
+      });
+    });
+
+    slideCadastro2.addShape('rect', {
+      x: 0.5, y: 3.9, w: 9, h: 0.8,
+      fill: { color: 'DCFCE7' }, line: { color: '22C55E', pt: 1 }
+    });
+    slideCadastro2.addText("✅ Cálculo Automático: O peso em toneladas é calculado automaticamente: M³ × Densidade = Toneladas", {
+      x: 0.6, y: 4, w: 8.8, h: 0.6,
+      fontSize: 12, color: '166534',
+      fontFace: 'Arial'
+    });
+
+    // =============== SLIDE 7: CADASTRO - FORNECEDORES ===============
+    const slideCadastro3 = pres.addSlide();
+    slideCadastro3.addText("Módulo de Cadastro - Fornecedores", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    slideCadastro3.addText("Cadastro de fornecedores para gestão de contas a pagar.", {
+      x: 0.5, y: 1, w: 9, h: 0.5,
+      fontSize: 16, color: darkText,
+      fontFace: 'Arial'
+    });
+    
+    const camposFornecedor = ['Código automático', 'Razão Social / Nome', 'CPF/CNPJ', 'Endereço completo', 'Contatos', 'Observações'];
+    camposFornecedor.forEach((campo, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      slideCadastro3.addShape('rect', {
+        x: 0.5 + col * 4.7, y: 1.7 + row * 0.6, w: 4.5, h: 0.5,
+        fill: { color: lightBg }
+      });
+      slideCadastro3.addText(campo, {
+        x: 0.6 + col * 4.7, y: 1.8 + row * 0.6, w: 4.3, h: 0.3,
+        fontSize: 12, color: darkText,
+        fontFace: 'Arial'
+      });
+    });
+
+    // =============== SLIDE 8: VENDAS - NOVA VENDA ===============
+    const slideVendas1 = pres.addSlide();
+    slideVendas1.addText("Módulo de Vendas - Nova Venda", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    slideVendas1.addText("Criação de pedidos e orçamentos com fluxo intuitivo.", {
+      x: 0.5, y: 0.9, w: 9, h: 0.4,
+      fontSize: 16, color: darkText,
+      fontFace: 'Arial'
+    });
+    slideVendas1.addText("Fluxo de Venda:", {
+      x: 0.5, y: 1.4, w: 9, h: 0.4,
+      fontSize: 18, color: darkText, bold: true,
+      fontFace: 'Arial'
+    });
+    
+    const fluxoVenda = [
+      '1. Selecionar tipo: Pedido ou Orçamento',
+      '2. Buscar cliente por código ou nome',
+      '3. Adicionar produtos com quantidade em M³',
+      '4. Definir "Preço Praticado" (desconto automático)',
+      '5. Selecionar condição: À Vista ou A Prazo',
+      '6. Escolher forma de pagamento',
+      '7. Anexar comprovante (PIX/Depósito)',
+      '8. Adicionar observações',
+      '9. Finalizar e imprimir pedido'
+    ];
+    fluxoVenda.forEach((item, i) => {
+      slideVendas1.addText(item, {
+        x: 0.5, y: 1.9 + i * 0.35, w: 9, h: 0.3,
+        fontSize: 12, color: darkText,
+        fontFace: 'Arial'
+      });
+    });
+
+    // =============== SLIDE 9: VENDAS - FUNCIONALIDADES ===============
+    const slideVendas2 = pres.addSlide();
+    slideVendas2.addText("Módulo de Vendas - Funcionalidades Especiais", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    
+    const funcVendas = [
+      { title: 'Autocomplete Inteligente', desc: 'Ativado após 1 caractere digitado' },
+      { title: 'Desconto Automático', desc: '(Preço Cadastrado - Preço Praticado) / Preço Cadastrado × 100' },
+      { title: 'Peso Calculado', desc: 'M³ × Densidade do produto' },
+      { title: 'Frete Editável', desc: 'Adicionado como produto/serviço' },
+    ];
+    funcVendas.forEach((func, i) => {
+      slideVendas2.addShape('rect', {
+        x: 0.5, y: 1.1 + i * 0.9, w: 9, h: 0.8,
+        fill: { color: lightBg }, line: { color: 'D1D5DB', pt: 1 }
+      });
+      slideVendas2.addText(func.title, {
+        x: 0.6, y: 1.2 + i * 0.9, w: 8.8, h: 0.35,
+        fontSize: 14, color: darkText, bold: true,
+        fontFace: 'Arial'
+      });
+      slideVendas2.addText(func.desc, {
+        x: 0.6, y: 1.5 + i * 0.9, w: 8.8, h: 0.3,
+        fontSize: 12, color: grayText,
+        fontFace: 'Arial'
+      });
+    });
+
+    // =============== SLIDE 10: VENDAS - LISTA E IMPRESSÃO ===============
+    const slideVendas3 = pres.addSlide();
+    slideVendas3.addText("Módulo de Vendas - Lista e Impressão", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    
+    slideVendas3.addText("Lista de Pedidos:", {
+      x: 0.5, y: 1, w: 9, h: 0.4,
+      fontSize: 18, color: darkText, bold: true,
+      fontFace: 'Arial'
+    });
+    slideVendas3.addText("• Filtro por período e busca por cliente/número\n• Status do pedido (pendente, carregado, cancelado)\n• Impressão individual e cancelamento com motivo\n• Pedidos cancelados exibem marca d'água", {
+      x: 0.5, y: 1.5, w: 9, h: 1,
+      fontSize: 13, color: grayText,
+      fontFace: 'Arial'
+    });
+    
+    slideVendas3.addText("Impressão de Pedidos:", {
+      x: 0.5, y: 2.7, w: 9, h: 0.4,
+      fontSize: 18, color: darkText, bold: true,
+      fontFace: 'Arial'
+    });
+    slideVendas3.addText("• Layout otimizado para meia folha A4\n• Dados da empresa no cabeçalho\n• Aviso \"NÃO É DOCUMENTO FISCAL\"\n• Assinatura do Vendedor (nome automático do usuário)\n• Assinatura do Motorista Autorizado com campo CPF", {
+      x: 0.5, y: 3.2, w: 9, h: 1.3,
+      fontSize: 13, color: grayText,
+      fontFace: 'Arial'
+    });
+
+    // =============== SLIDE 11: OPERAÇÃO - OPERADOR ===============
+    const slideOp1 = pres.addSlide();
+    slideOp1.addText("Módulo de Operação - Operador", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    slideOp1.addText("Tela mobile-first para operadores confirmarem carregamentos.", {
+      x: 0.5, y: 0.9, w: 9, h: 0.4,
+      fontSize: 16, color: darkText,
+      fontFace: 'Arial'
+    });
+    slideOp1.addText("Fluxo de Carregamento:", {
+      x: 0.5, y: 1.4, w: 9, h: 0.4,
+      fontSize: 18, color: darkText, bold: true,
+      fontFace: 'Arial'
+    });
+    slideOp1.addText("1. Buscar pedido por número\n2. Visualizar detalhes: cliente, produtos, peso esperado\n3. Fotografar ticket de pesagem da balança\n4. Sistema processa imagem com IA\n5. Comparar peso real vs esperado\n6. Confirmar carregamento", {
+      x: 0.5, y: 1.9, w: 9, h: 1.5,
+      fontSize: 13, color: grayText,
+      fontFace: 'Arial'
+    });
+
+    slideOp1.addShape('rect', {
+      x: 0.5, y: 3.6, w: 9, h: 1.2,
+      fill: { color: 'F3E8FF' }, line: { color: '9333EA', pt: 1 }
+    });
+    slideOp1.addText("🤖 Verificação com Inteligência Artificial", {
+      x: 0.6, y: 3.7, w: 8.8, h: 0.35,
+      fontSize: 14, color: '6B21A8', bold: true,
+      fontFace: 'Arial'
+    });
+    slideOp1.addText("• A IA analisa a foto do ticket e extrai peso bruto, tara e líquido\n• Compara com peso esperado (M³ × Densidade)\n• Alerta visual se divergência > 5%", {
+      x: 0.6, y: 4.1, w: 8.8, h: 0.6,
+      fontSize: 11, color: '7C3AED',
+      fontFace: 'Arial'
+    });
+
+    // =============== SLIDE 12: OPERAÇÃO - OUTROS ===============
+    const slideOp2 = pres.addSlide();
+    slideOp2.addText("Módulo de Operação - Carregados e Frota", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    
+    slideOp2.addText("Pedidos Carregados:", {
+      x: 0.5, y: 1, w: 9, h: 0.4,
+      fontSize: 18, color: darkText, bold: true,
+      fontFace: 'Arial'
+    });
+    slideOp2.addText("Histórico de carregamentos com data/hora, operador, peso verificado, % divergência, foto do ticket e resposta da IA.", {
+      x: 0.5, y: 1.5, w: 9, h: 0.5,
+      fontSize: 13, color: grayText,
+      fontFace: 'Arial'
+    });
+    
+    slideOp2.addText("Abastecimento:", {
+      x: 0.5, y: 2.2, w: 9, h: 0.4,
+      fontSize: 18, color: darkText, bold: true,
+      fontFace: 'Arial'
+    });
+    slideOp2.addText("Registro de abastecimentos: veículo, tipo de combustível (Gasolina/Diesel), litros, valor por litro, KM ou Horímetro.", {
+      x: 0.5, y: 2.7, w: 9, h: 0.5,
+      fontSize: 13, color: grayText,
+      fontFace: 'Arial'
+    });
+    
+    slideOp2.addText("Veículos:", {
+      x: 0.5, y: 3.4, w: 9, h: 0.4,
+      fontSize: 18, color: darkText, bold: true,
+      fontFace: 'Arial'
+    });
+    slideOp2.addText("Cadastro da frota: nome, placa, tipo (Caminhão, Carreta), combustível, capacidade do tanque, odômetro ou horímetro.", {
+      x: 0.5, y: 3.9, w: 9, h: 0.5,
+      fontSize: 13, color: grayText,
+      fontFace: 'Arial'
+    });
+
+    // =============== SLIDE 13: MOTORISTA - PAINEL ===============
+    const slideMot1 = pres.addSlide();
+    slideMot1.addText("Módulo do Motorista - Painel", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    slideMot1.addText("Acesso exclusivo para usuários com perfil \"motorista\" ou \"admin\"", {
+      x: 0.5, y: 0.9, w: 9, h: 0.4,
+      fontSize: 14, color: grayText, italic: true,
+      fontFace: 'Arial'
+    });
+    
+    slideOp2.addText("Dashboard Pessoal:", {
+      x: 0.5, y: 1.5, w: 9, h: 0.4,
+      fontSize: 18, color: darkText, bold: true,
+      fontFace: 'Arial'
+    });
+    
+    const cardsMot = ['Viagens no mês', 'KM total', 'Status checklist', 'Manutenções pendentes'];
+    cardsMot.forEach((card, i) => {
+      slideMot1.addShape('rect', {
+        x: 0.5 + i * 2.3, y: 1.6, w: 2.1, h: 0.7,
+        fill: { color: lightBg }, line: { color: 'D1D5DB', pt: 1 }
+      });
+      slideMot1.addText(card, {
+        x: 0.5 + i * 2.3, y: 1.75, w: 2.1, h: 0.4,
+        fontSize: 10, color: darkText, align: 'center',
+        fontFace: 'Arial'
+      });
+    });
+
+    slideMot1.addShape('rect', {
+      x: 0.5, y: 2.6, w: 9, h: 0.7,
+      fill: { color: 'DBEAFE' }, line: { color: '3B82F6', pt: 1 }
+    });
+    slideMot1.addText("📅 Lembrete: Toda segunda-feira o sistema solicita a realização do checklist semanal do veículo.", {
+      x: 0.6, y: 2.75, w: 8.8, h: 0.4,
+      fontSize: 12, color: '1E40AF',
+      fontFace: 'Arial'
+    });
+
+    // =============== SLIDE 14: MOTORISTA - PARTE DIÁRIA ===============
+    const slideMot2 = pres.addSlide();
+    slideMot2.addText("Módulo do Motorista - Parte Diária", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    slideMot2.addText("Registro diário de viagens com controle de quilometragem e frete.", {
+      x: 0.5, y: 1, w: 9, h: 0.4,
+      fontSize: 16, color: darkText,
+      fontFace: 'Arial'
+    });
+    
+    const camposParte = ['Veículo utilizado', 'Número do pedido', 'Cliente atendido', 'KM inicial (auto)', 'KM final', 'Valor do frete', 'Assinatura digital', 'Observações'];
+    camposParte.forEach((campo, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      slideMot2.addShape('rect', {
+        x: 0.5 + col * 4.7, y: 1.6 + row * 0.55, w: 4.5, h: 0.45,
+        fill: { color: lightBg }
+      });
+      slideMot2.addText(campo, {
+        x: 0.6 + col * 4.7, y: 1.68 + row * 0.55, w: 4.3, h: 0.3,
+        fontSize: 11, color: darkText,
+        fontFace: 'Arial'
+      });
+    });
+
+    slideMot2.addShape('rect', {
+      x: 0.5, y: 4, w: 9, h: 0.7,
+      fill: { color: 'DCFCE7' }, line: { color: '22C55E', pt: 1 }
+    });
+    slideMot2.addText("✅ KM Inteligente: O KM inicial é preenchido automaticamente com o KM final do último relatório do motorista.", {
+      x: 0.6, y: 4.15, w: 8.8, h: 0.4,
+      fontSize: 12, color: '166534',
+      fontFace: 'Arial'
+    });
+
+    // =============== SLIDE 15: MOTORISTA - CHECKLIST ===============
+    const slideMot3 = pres.addSlide();
+    slideMot3.addText("Módulo do Motorista - CheckList Semanal", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    slideMot3.addText("Inspeção de segurança com 21 itens obrigatórios.", {
+      x: 0.5, y: 0.9, w: 9, h: 0.4,
+      fontSize: 16, color: darkText,
+      fontFace: 'Arial'
+    });
+    
+    const itensChecklist = [
+      'Óleo do motor', 'Água do radiador', 'Fluido de freio', 'Óleo hidráulico',
+      'Freio de serviço', 'Freio estacionamento', 'Pneus (estado)', 'Pneus (calibragem)',
+      'Estepe', 'Faróis', 'Lanternas', 'Setas',
+      'Retrovisores', 'Limpador parabrisa', 'Buzina', 'Cinto segurança',
+      'Extintor', 'Triângulo', 'Macaco/chave', 'Documentos', 'Limpeza geral'
+    ];
+    
+    itensChecklist.forEach((item, i) => {
+      const col = i % 3;
+      const row = Math.floor(i / 3);
+      slideMot3.addShape('rect', {
+        x: 0.5 + col * 3.1, y: 1.5 + row * 0.38, w: 2.9, h: 0.32,
+        fill: { color: lightBg }
+      });
+      slideMot3.addText(item, {
+        x: 0.55 + col * 3.1, y: 1.54 + row * 0.38, w: 2.8, h: 0.25,
+        fontSize: 9, color: darkText,
+        fontFace: 'Arial'
+      });
+    });
+
+    slideMot3.addText("Cada item pode ser: OK | Precisa Reparo | Crítico", {
+      x: 0.5, y: 4.3, w: 9, h: 0.3,
+      fontSize: 12, color: grayText,
+      fontFace: 'Arial'
+    });
+
+    // =============== SLIDE 16: MOTORISTA - MANUTENÇÃO ===============
+    const slideMot4 = pres.addSlide();
+    slideMot4.addText("Módulo do Motorista - Manutenção", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    slideMot4.addText("Solicitação de reparos e acompanhamento.", {
+      x: 0.5, y: 1, w: 9, h: 0.4,
+      fontSize: 16, color: darkText,
+      fontFace: 'Arial'
+    });
+    
+    const camposManut = ['Veículo com problema', 'Descrição detalhada do problema', 'Data da solicitação', 'Status (Pendente/Resolvido)', 'Data de resolução', 'Responsável pelo reparo'];
+    camposManut.forEach((campo, i) => {
+      slideMot4.addShape('rect', {
+        x: 0.5, y: 1.6 + i * 0.55, w: 9, h: 0.45,
+        fill: { color: lightBg }
+      });
+      slideMot4.addText(campo, {
+        x: 0.6, y: 1.68 + i * 0.55, w: 8.8, h: 0.3,
+        fontSize: 12, color: darkText,
+        fontFace: 'Arial'
+      });
+    });
+
+    // =============== SLIDE 17: FINANCEIRO ===============
+    const slideFin = pres.addSlide();
+    slideFin.addText("Módulo Financeiro", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    
+    slideFin.addText("Contas a Pagar:", {
+      x: 0.5, y: 1, w: 9, h: 0.4,
+      fontSize: 18, color: darkText, bold: true,
+      fontFace: 'Arial'
+    });
+    slideFin.addText("Gestão de pagamentos a fornecedores com: fornecedor, valor original, juros/multa, valor final, vencimento, competência, status, conta de pagamento, parcelamento.", {
+      x: 0.5, y: 1.45, w: 9, h: 0.7,
+      fontSize: 13, color: grayText,
+      fontFace: 'Arial'
+    });
+    
+    slideFin.addText("Contas a Receber:", {
+      x: 0.5, y: 2.3, w: 9, h: 0.4,
+      fontSize: 18, color: darkText, bold: true,
+      fontFace: 'Arial'
+    });
+    slideFin.addText("Controle de recebimentos de clientes com: venda associada, valor original, juros/multa, valor final, status, data de recebimento, conta, comprovante anexo.", {
+      x: 0.5, y: 2.75, w: 9, h: 0.7,
+      fontSize: 13, color: grayText,
+      fontFace: 'Arial'
+    });
+
+    // =============== SLIDE 18: PERMUTA ===============
+    const slidePerm = pres.addSlide();
+    slidePerm.addText("Sistema de Permuta", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    slidePerm.addText("Sistema exclusivo para clientes com crédito de permuta habilitado.", {
+      x: 0.5, y: 0.9, w: 9, h: 0.4,
+      fontSize: 16, color: darkText,
+      fontFace: 'Arial'
+    });
+    
+    const funcPerm = [
+      { title: 'Dashboard de Permuta', desc: 'Visão geral de clientes com permuta ativa' },
+      { title: 'Extrato por Cliente', desc: 'Histórico detalhado de créditos e débitos' },
+      { title: 'Controle de Saldo', desc: 'Saldo atual, limite negativo e crédito disponível' },
+      { title: 'Integração com Vendas', desc: 'Pagamento "Permuta" deduz automaticamente' },
+    ];
+    funcPerm.forEach((func, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      slidePerm.addShape('rect', {
+        x: 0.5 + col * 4.7, y: 1.5 + row * 1, w: 4.5, h: 0.9,
+        fill: { color: lightBg }, line: { color: 'D1D5DB', pt: 1 }
+      });
+      slidePerm.addText(func.title, {
+        x: 0.6 + col * 4.7, y: 1.6 + row * 1, w: 4.3, h: 0.35,
+        fontSize: 13, color: darkText, bold: true,
+        fontFace: 'Arial'
+      });
+      slidePerm.addText(func.desc, {
+        x: 0.6 + col * 4.7, y: 1.95 + row * 1, w: 4.3, h: 0.35,
+        fontSize: 11, color: grayText,
+        fontFace: 'Arial'
+      });
+    });
+
+    slidePerm.addShape('rect', {
+      x: 0.5, y: 3.7, w: 9, h: 1,
+      fill: { color: 'DBEAFE' }, line: { color: '3B82F6', pt: 1 }
+    });
+    slidePerm.addText("💡 Como Funciona: Cliente recebe crédito → Usa \"Permuta\" como pagamento → Saldo descontado automaticamente → Pode ter limite negativo configurável (débito).", {
+      x: 0.6, y: 3.85, w: 8.8, h: 0.7,
+      fontSize: 11, color: '1E40AF',
+      fontFace: 'Arial'
+    });
+
+    // =============== SLIDE 19: RELATÓRIOS ===============
+    const slideRel = pres.addSlide();
+    slideRel.addText("Relatórios Gerenciais", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    slideRel.addText("Análises detalhadas para tomada de decisão.", {
+      x: 0.5, y: 0.9, w: 9, h: 0.4,
+      fontSize: 16, color: darkText,
+      fontFace: 'Arial'
+    });
+    
+    const relatorios = [
+      { title: 'Vendas', desc: 'Por período, cliente, produto' },
+      { title: 'Produtos', desc: 'M³ e Toneladas' },
+      { title: 'Clientes', desc: 'Análise da carteira' },
+      { title: 'Financeiro', desc: 'Fluxo de caixa' },
+      { title: 'Fornecedores', desc: 'Compras por fornecedor' },
+      { title: 'Permuta', desc: 'Saldos e movimentações' },
+      { title: 'Ticagem', desc: 'Carregados vs Pendentes' },
+      { title: 'Partes Diárias', desc: 'Viagens dos motoristas' },
+      { title: 'Checklists', desc: 'Inspeções veiculares' },
+      { title: 'Manutenções', desc: 'Solicitações da frota' },
+    ];
+    
+    relatorios.forEach((rel, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      slideRel.addShape('rect', {
+        x: 0.5 + col * 4.7, y: 1.4 + row * 0.6, w: 4.5, h: 0.5,
+        fill: { color: lightBg }
+      });
+      slideRel.addText(`${rel.title}: ${rel.desc}`, {
+        x: 0.6 + col * 4.7, y: 1.48 + row * 0.6, w: 4.3, h: 0.35,
+        fontSize: 11, color: darkText,
+        fontFace: 'Arial'
+      });
+    });
+
+    // =============== SLIDE 20: CONFIGURAÇÕES ===============
+    const slideConf = pres.addSlide();
+    slideConf.addText("Configurações", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    
+    const configItems = [
+      { title: 'Dados da Empresa', desc: 'Nome, CNPJ, endereço, telefone, e-mail (aparecem nos documentos)' },
+      { title: 'Usuários (Admin)', desc: 'Criar usuários, definir perfil, configurar permissões, ativar/desativar' },
+      { title: 'Condições de Pagamento', desc: 'Dinheiro, PIX, Cartão Débito/Crédito, Depósito, Permuta, Boleto, Cheque' },
+      { title: 'Contas de Recebimento', desc: 'Cadastro de contas bancárias para recebimentos' },
+    ];
+    
+    configItems.forEach((item, i) => {
+      slideConf.addShape('rect', {
+        x: 0.5, y: 1 + i * 1, w: 9, h: 0.9,
+        fill: { color: lightBg }, line: { color: 'D1D5DB', pt: 1 }
+      });
+      slideConf.addText(item.title, {
+        x: 0.6, y: 1.1 + i * 1, w: 8.8, h: 0.35,
+        fontSize: 14, color: darkText, bold: true,
+        fontFace: 'Arial'
+      });
+      slideConf.addText(item.desc, {
+        x: 0.6, y: 1.45 + i * 1, w: 8.8, h: 0.35,
+        fontSize: 12, color: grayText,
+        fontFace: 'Arial'
+      });
+    });
+
+    // =============== SLIDE 21: PERMISSÕES ===============
+    const slidePerms = pres.addSlide();
+    slidePerms.addText("Sistema de Permissões", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    slidePerms.addText("Controle granular de acesso por perfil e módulo.", {
+      x: 0.5, y: 0.9, w: 9, h: 0.4,
+      fontSize: 16, color: darkText,
+      fontFace: 'Arial'
+    });
+    
+    const perfis = [
+      { title: 'Admin', desc: 'Acesso total, incluindo gestão de usuários e configurações', color: '3B82F6' },
+      { title: 'Vendedor', desc: 'Vendas, cadastro de clientes/produtos e financeiro', color: '6B7280' },
+      { title: 'Operador', desc: 'Módulo de operação: carregamentos e abastecimentos', color: '9CA3AF' },
+      { title: 'Motorista', desc: 'Exclusivo: parte diária, checklist, manutenção', color: '9CA3AF' },
+    ];
+    
+    perfis.forEach((perfil, i) => {
+      slidePerms.addShape('rect', {
+        x: 0.5, y: 1.4 + i * 0.85, w: 9, h: 0.75,
+        fill: { color: 'FFFFFF' }, line: { color: perfil.color, pt: 2 }
+      });
+      slidePerms.addText(perfil.title, {
+        x: 0.6, y: 1.5 + i * 0.85, w: 8.8, h: 0.3,
+        fontSize: 14, color: perfil.color, bold: true,
+        fontFace: 'Arial'
+      });
+      slidePerms.addText(perfil.desc, {
+        x: 0.6, y: 1.8 + i * 0.85, w: 8.8, h: 0.3,
+        fontSize: 12, color: grayText,
+        fontFace: 'Arial'
+      });
+    });
+
+    // =============== SLIDE 22: DESTAQUES TÉCNICOS 1 ===============
+    const slideTec1 = pres.addSlide();
+    slideTec1.addText("Destaques Técnicos - Cálculos", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    
+    slideTec1.addShape('rect', {
+      x: 0.5, y: 1, w: 9, h: 1.3,
+      fill: { color: lightBg }, line: { color: 'D1D5DB', pt: 1 }
+    });
+    slideTec1.addText("📊 Cálculo Automático de Desconto", {
+      x: 0.6, y: 1.1, w: 8.8, h: 0.35,
+      fontSize: 14, color: darkText, bold: true,
+      fontFace: 'Arial'
+    });
+    slideTec1.addText("O desconto é calculado automaticamente quando o vendedor informa o \"Preço Praticado\" diferente do preço cadastrado.", {
+      x: 0.6, y: 1.5, w: 8.8, h: 0.4,
+      fontSize: 12, color: grayText,
+      fontFace: 'Arial'
+    });
+    slideTec1.addText("Fórmula: (Preço Cadastrado - Preço Praticado) / Preço Cadastrado × 100", {
+      x: 0.6, y: 1.95, w: 8.8, h: 0.3,
+      fontSize: 11, color: '6B7280', italic: true,
+      fontFace: 'Courier New'
+    });
+
+    slideTec1.addShape('rect', {
+      x: 0.5, y: 2.5, w: 9, h: 1.3,
+      fill: { color: lightBg }, line: { color: 'D1D5DB', pt: 1 }
+    });
+    slideTec1.addText("⚖️ Cálculo Automático de Peso", {
+      x: 0.6, y: 2.6, w: 8.8, h: 0.35,
+      fontSize: 14, color: darkText, bold: true,
+      fontFace: 'Arial'
+    });
+    slideTec1.addText("O peso em toneladas é calculado automaticamente usando a densidade configurada no cadastro do produto.", {
+      x: 0.6, y: 3, w: 8.8, h: 0.4,
+      fontSize: 12, color: grayText,
+      fontFace: 'Arial'
+    });
+    slideTec1.addText("Fórmula: Peso (ton) = Quantidade (M³) × Densidade (ton/m³)", {
+      x: 0.6, y: 3.45, w: 8.8, h: 0.3,
+      fontSize: 11, color: '6B7280', italic: true,
+      fontFace: 'Courier New'
+    });
+
+    // =============== SLIDE 23: DESTAQUES TÉCNICOS 2 ===============
+    const slideTec2 = pres.addSlide();
+    slideTec2.addText("Destaques Técnicos - IA e Automações", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+    
+    slideTec2.addShape('rect', {
+      x: 0.5, y: 1, w: 9, h: 1.5,
+      fill: { color: 'F3E8FF' }, line: { color: '9333EA', pt: 2 }
+    });
+    slideTec2.addText("🤖 Verificação de Pesagem com IA", {
+      x: 0.6, y: 1.1, w: 8.8, h: 0.35,
+      fontSize: 14, color: '6B21A8', bold: true,
+      fontFace: 'Arial'
+    });
+    slideTec2.addText("O operador fotografa o ticket de pesagem e a Inteligência Artificial extrai automaticamente os dados (peso bruto, tara, líquido) e compara com o peso esperado. Sistema alerta divergências maiores que 5%.", {
+      x: 0.6, y: 1.55, w: 8.8, h: 0.6,
+      fontSize: 12, color: '7C3AED',
+      fontFace: 'Arial'
+    });
+    slideTec2.addText("Tecnologia: Edge Function + Modelo de Visão Computacional (Gemini)", {
+      x: 0.6, y: 2.2, w: 8.8, h: 0.25,
+      fontSize: 10, color: '9333EA', italic: true,
+      fontFace: 'Arial'
+    });
+
+    slideTec2.addShape('rect', {
+      x: 0.5, y: 2.7, w: 4.4, h: 1.1,
+      fill: { color: lightBg }, line: { color: 'D1D5DB', pt: 1 }
+    });
+    slideTec2.addText("🖨️ Impressão Otimizada", {
+      x: 0.6, y: 2.8, w: 4.2, h: 0.3,
+      fontSize: 12, color: darkText, bold: true,
+      fontFace: 'Arial'
+    });
+    slideTec2.addText("Layout meia folha A4, assinatura do vendedor automática, campo CPF motorista.", {
+      x: 0.6, y: 3.15, w: 4.2, h: 0.55,
+      fontSize: 10, color: grayText,
+      fontFace: 'Arial'
+    });
+
+    slideTec2.addShape('rect', {
+      x: 5.1, y: 2.7, w: 4.4, h: 1.1,
+      fill: { color: lightBg }, line: { color: 'D1D5DB', pt: 1 }
+    });
+    slideTec2.addText("📊 KM Inicial Inteligente", {
+      x: 5.2, y: 2.8, w: 4.2, h: 0.3,
+      fontSize: 12, color: darkText, bold: true,
+      fontFace: 'Arial'
+    });
+    slideTec2.addText("Campo preenchido automaticamente com KM final do relatório anterior.", {
+      x: 5.2, y: 3.15, w: 4.2, h: 0.55,
+      fontSize: 10, color: grayText,
+      fontFace: 'Arial'
+    });
+
+    slideTec2.addShape('rect', {
+      x: 0.5, y: 4, w: 9, h: 0.7,
+      fill: { color: 'DBEAFE' }, line: { color: '3B82F6', pt: 1 }
+    });
+    slideTec2.addText("📅 Lembrete de CheckList: Toda segunda-feira o sistema exibe um lembrete para o motorista realizar a inspeção semanal.", {
+      x: 0.6, y: 4.15, w: 8.8, h: 0.4,
+      fontSize: 11, color: '1E40AF',
+      fontFace: 'Arial'
+    });
+
+    // =============== SLIDE 24: ENCERRAMENTO ===============
+    const slideFinal = pres.addSlide();
+    slideFinal.addText("SISTEMA CEZAR", {
+      x: 0, y: 2.2, w: '100%', h: 0.8,
+      fontSize: 44, color: primaryColor, bold: true, align: 'center',
+      fontFace: 'Arial'
+    });
+    slideFinal.addText("Obrigado!", {
+      x: 0, y: 3.1, w: '100%', h: 0.6,
+      fontSize: 28, color: darkText, align: 'center',
+      fontFace: 'Arial'
+    });
+    slideFinal.addText(`© ${new Date().getFullYear()} - Todos os direitos reservados`, {
+      x: 0, y: 4, w: '100%', h: 0.4,
+      fontSize: 14, color: grayText, align: 'center',
+      fontFace: 'Arial'
+    });
+
+    // Salvar arquivo
+    pres.writeFile({ fileName: "Manual-Sistema-CEZAR.pptx" });
   };
 
   return (
@@ -56,10 +953,16 @@ const Documentation = () => {
               <p className="text-sm text-muted-foreground">Manual do Sistema</p>
             </div>
           </div>
-          <Button onClick={handlePrint} className="gap-2">
-            <Printer className="h-4 w-4" />
-            Imprimir / Salvar PDF
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={handleDownloadPPTX} className="gap-2">
+              <Download className="h-4 w-4" />
+              Baixar PowerPoint
+            </Button>
+            <Button onClick={handlePrint} variant="outline" className="gap-2">
+              <Printer className="h-4 w-4" />
+              Imprimir PDF
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -653,13 +1556,15 @@ const Documentation = () => {
                       </AccordionTrigger>
                       <AccordionContent className="space-y-3 pt-2">
                         <p className="text-muted-foreground">
-                          Registro de problemas mecânicos e solicitações de manutenção.
+                          Solicitação de reparos e acompanhamento de manutenções.
                         </p>
                         <div className="grid sm:grid-cols-2 gap-2 text-sm">
-                          <div className="p-2 bg-slate-50 rounded">Veículo afetado</div>
-                          <div className="p-2 bg-slate-50 rounded">Descrição do problema</div>
+                          <div className="p-2 bg-slate-50 rounded">Veículo com problema</div>
+                          <div className="p-2 bg-slate-50 rounded">Descrição detalhada</div>
+                          <div className="p-2 bg-slate-50 rounded">Data da solicitação</div>
                           <div className="p-2 bg-slate-50 rounded">Status (Pendente/Resolvido)</div>
-                          <div className="p-2 bg-slate-50 rounded">Data da resolução</div>
+                          <div className="p-2 bg-slate-50 rounded">Data de resolução</div>
+                          <div className="p-2 bg-slate-50 rounded">Responsável pelo reparo</div>
                         </div>
                       </AccordionContent>
                     </AccordionItem>
@@ -692,7 +1597,6 @@ const Documentation = () => {
                         </p>
                         <div className="grid sm:grid-cols-2 gap-2 text-sm">
                           <div className="p-2 bg-slate-50 rounded">Fornecedor</div>
-                          <div className="p-2 bg-slate-50 rounded">Número da nota</div>
                           <div className="p-2 bg-slate-50 rounded">Valor original</div>
                           <div className="p-2 bg-slate-50 rounded">Juros/multa</div>
                           <div className="p-2 bg-slate-50 rounded">Valor final</div>
@@ -1032,21 +1936,11 @@ const Documentation = () => {
                   <div className="space-y-4">
                     <div className="p-4 border rounded-lg">
                       <h4 className="font-semibold flex items-center gap-2">
-                        🔍 Autocomplete Inteligente
+                        📊 Cálculo Automático de Desconto
                       </h4>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Busca de clientes e produtos ativada após digitar apenas 1 caractere. 
-                        Resultados em tempo real com destaque do termo buscado.
-                      </p>
-                    </div>
-
-                    <div className="p-4 border rounded-lg">
-                      <h4 className="font-semibold flex items-center gap-2">
-                        💰 Cálculo Automático de Desconto
-                      </h4>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Ao informar o "Preço Praticado", o sistema calcula automaticamente 
-                        o percentual de desconto baseado no preço cadastrado do produto.
+                        O desconto é calculado automaticamente quando o vendedor informa 
+                        o "Preço Praticado" diferente do preço cadastrado.
                       </p>
                       <code className="text-xs bg-slate-100 px-2 py-1 rounded mt-2 block">
                         Desconto = (Preço Cadastrado - Preço Praticado) / Preço Cadastrado × 100
