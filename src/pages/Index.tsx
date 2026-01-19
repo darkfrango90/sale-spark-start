@@ -10,7 +10,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <TopMenu />
       
-      <div className="pt-[104px]">
+      <div className="pt-14">
         <Header />
         
         <main className="p-6 space-y-6">

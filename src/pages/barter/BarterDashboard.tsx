@@ -163,7 +163,7 @@ const BarterDashboard = () => {
         <TopMenu />
       </div>
       
-      <main className="pt-28 px-6 pb-6 print:pt-4">
+      <main className="pt-16 px-6 pb-6 print:pt-4">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-6 print:mb-4">

@@ -147,7 +147,7 @@ const AccountsReceivablePage = () => {
     <div className="min-h-screen bg-background">
       <TopMenu />
       
-      <main className="pt-28 px-6 pb-6 space-y-6">
+      <main className="pt-16 px-6 pb-6 space-y-6">
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>

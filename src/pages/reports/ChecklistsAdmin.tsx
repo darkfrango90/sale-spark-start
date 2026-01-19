@@ -121,7 +121,7 @@ Assinatura Digital: ${checklist.user_name}
   return (
     <div className="min-h-screen bg-background">
       <TopMenu />
-      <main className="pt-28 pb-8 px-4 max-w-5xl mx-auto">
+      <main className="pt-16 pb-8 px-4 max-w-5xl mx-auto">
         <Button
           variant="ghost"
           className="mb-4"
