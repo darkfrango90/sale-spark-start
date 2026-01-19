@@ -79,12 +79,6 @@ const Login = () => {
               {isLoading ? 'Entrando...' : 'Entrar'}
             </Button>
           </form>
-          <div className="mt-6 p-4 bg-slate-50 rounded-lg">
-            <p className="text-sm text-muted-foreground text-center">
-              <strong>Acesso inicial:</strong><br />
-              Código: 001 | Senha: admin123
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
