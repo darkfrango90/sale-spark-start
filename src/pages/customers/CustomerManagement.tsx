@@ -308,7 +308,7 @@ const CustomerManagement = () => {
     <div className="min-h-screen bg-background">
       <TopMenu />
       
-      <main className="pt-28 px-6 pb-6">
+      <main className="pt-16 px-6 pb-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">

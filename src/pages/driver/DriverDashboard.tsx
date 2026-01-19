@@ -111,7 +111,7 @@ const DriverDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <TopMenu />
-      <main className="pt-28 pb-8 px-4 max-w-4xl mx-auto">
+      <main className="pt-16 pb-8 px-4 max-w-4xl mx-auto">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-foreground">
             Bem-vindo, {user?.name || 'Motorista'}!

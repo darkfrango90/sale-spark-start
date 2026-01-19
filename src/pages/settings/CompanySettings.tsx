@@ -69,7 +69,7 @@ const CompanySettingsPage = () => {
     return (
       <div className="min-h-screen bg-background">
         <TopMenu />
-        <main className="pt-28 px-6 pb-6">
+        <main className="pt-16 px-6 pb-6">
           <Card>
             <CardContent className="py-8">
               <p className="text-center text-muted-foreground">Carregando...</p>
@@ -84,7 +84,7 @@ const CompanySettingsPage = () => {
     <div className="min-h-screen bg-background">
       <TopMenu />
       
-      <main className="pt-28 px-6 pb-6">
+      <main className="pt-16 px-6 pb-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

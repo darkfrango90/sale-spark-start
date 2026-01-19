@@ -1,9 +1,5 @@
+import { useState } from 'react';
 import { 
-  Users, 
-  Package, 
-  ShoppingCart, 
-  BarChart3, 
-  Settings,
   LogOut,
   ChevronDown
 } from "lucide-react";
@@ -16,6 +12,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 
 interface SubMenuItem {
   label: string;
@@ -80,34 +87,16 @@ const menuItems: MenuItem[] = [
   ]},
 ];
 
-interface ShortcutItem {
-  icon: React.ElementType;
-  label: string;
-  color: string;
-  action?: () => void;
-  module?: string;
-  actionName?: string;
-  adminOnly?: boolean;
-}
-
 const TopMenu = () => {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   const { hasModuleAccess, hasActionAccess, isAdmin } = usePermissions();
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
-
-  const shortcutItems: ShortcutItem[] = [
-    { icon: Users, label: "Clientes", color: "text-blue-600", action: () => navigate('/cadastro/clientes'), module: "cadastro", actionName: "Clientes" },
-    { icon: Package, label: "Produtos", color: "text-green-600", action: () => navigate('/cadastro/produtos'), module: "cadastro", actionName: "Produtos" },
-    { icon: ShoppingCart, label: "Vendas", color: "text-orange-600", action: () => navigate('/vendas/nova'), module: "vendas", actionName: "Nova Venda" },
-    { icon: BarChart3, label: "Relatórios", color: "text-indigo-600", module: "relatorios" },
-    { icon: Settings, label: "Config.", color: "text-slate-600", action: () => navigate('/configuracao/empresa'), module: "configuracao" },
-    { icon: LogOut, label: "Sair", color: "text-rose-600", action: handleLogout },
-  ];
 
   const handleMenuItemClick = (path?: string) => {
     if (path) {
@@ -132,82 +121,90 @@ const TopMenu = () => {
     })
   })).filter(item => !item.items || item.items.length > 0);
 
-  // Filter shortcuts based on permissions
-  const filteredShortcuts = shortcutItems.filter(item => {
-    if (item.adminOnly) return isAdmin;
-    if (!item.module) return true;
-    if (item.actionName) {
-      return hasActionAccess(item.module, item.actionName);
-    }
-    return hasModuleAccess(item.module);
-  });
-
   return (
-    <div className="fixed top-0 left-0 right-0 z-50">
-      {/* Main Menu Bar */}
-      <div className="bg-slate-800 text-white">
-        <div className="flex items-center justify-between h-12 px-4">
-          <div className="flex items-center">
-            {/* Logo */}
-            <div className="flex items-center gap-2 mr-8">
-              <div className="h-8 w-8 rounded bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">C</span>
+    <>
+      <div className="fixed top-0 left-0 right-0 z-50">
+        {/* Main Menu Bar */}
+        <div className="bg-slate-800 text-white">
+          <div className="flex items-center justify-between h-12 px-4">
+            <div className="flex items-center">
+              {/* Logo */}
+              <div className="flex items-center gap-2 mr-8">
+                <div className="h-8 w-8 rounded bg-primary flex items-center justify-center">
+                  <span className="text-primary-foreground font-bold text-sm">C</span>
+                </div>
+                <span className="font-bold text-lg tracking-wide">CEZAR</span>
               </div>
-              <span className="font-bold text-lg tracking-wide">CEZAR</span>
+
+              {/* Menu Items */}
+              <nav className="flex items-center gap-1">
+                {filteredMenuItems.map((item) => (
+                  <DropdownMenu key={item.label}>
+                    <DropdownMenuTrigger className="flex items-center gap-1 px-4 py-2 text-sm font-medium hover:bg-slate-700 rounded transition-colors">
+                      {item.label}
+                      <ChevronDown className="h-4 w-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="bg-white border shadow-lg">
+                      {item.items?.map((subItem) => (
+                        <DropdownMenuItem 
+                          key={subItem.label} 
+                          className="cursor-pointer"
+                          onClick={() => handleMenuItemClick(subItem.path)}
+                        >
+                          {subItem.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ))}
+              </nav>
             </div>
 
-            {/* Menu Items */}
-            <nav className="flex items-center gap-1">
-              {filteredMenuItems.map((item) => (
-                <DropdownMenu key={item.label}>
-                  <DropdownMenuTrigger className="flex items-center gap-1 px-4 py-2 text-sm font-medium hover:bg-slate-700 rounded transition-colors">
-                    {item.label}
-                    <ChevronDown className="h-4 w-4" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-white border shadow-lg">
-                    {item.items?.map((subItem) => (
-                      <DropdownMenuItem 
-                        key={subItem.label} 
-                        className="cursor-pointer"
-                        onClick={() => handleMenuItemClick(subItem.path)}
-                      >
-                        {subItem.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ))}
-            </nav>
+            {/* Right side: User Info + Logout Button */}
+            <div className="flex items-center gap-4">
+              {user && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-slate-400">Usuário:</span>
+                  <span className="font-medium">{user.name}</span>
+                  <span className="text-slate-500">({user.accessCode})</span>
+                </div>
+              )}
+              
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowLogoutDialog(true)}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sair
+              </Button>
+            </div>
           </div>
-
-          {/* User Info */}
-          {user && (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-slate-400">Usuário:</span>
-              <span className="font-medium">{user.name}</span>
-              <span className="text-slate-500">({user.accessCode})</span>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Shortcuts Bar */}
-      <div className="bg-slate-100 border-b border-slate-300">
-        <div className="flex items-center h-14 px-4 gap-1">
-          {filteredShortcuts.map((item) => (
-            <button
-              key={item.label}
-              className="flex flex-col items-center justify-center px-3 py-1 hover:bg-slate-200 rounded transition-colors min-w-[60px]"
-              title={item.label}
-              onClick={item.action}
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deseja realmente sair?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você será desconectado do sistema e redirecionado para a tela de login.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleLogout}
+              className="bg-red-600 hover:bg-red-700"
             >
-              <item.icon className={`h-5 w-5 ${item.color}`} />
-              <span className="text-xs text-slate-600 mt-0.5">{item.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
+              Sair
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 

@@ -196,7 +196,7 @@ const UserManagement = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       <TopMenu />
-      <main className="pt-[104px] p-6">
+      <main className="pt-16 p-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div className="flex items-center gap-2">

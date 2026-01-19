@@ -128,7 +128,7 @@ const ReceivingAccounts = () => {
     <div className="min-h-screen bg-background">
       <TopMenu />
       
-      <main className="pt-28 px-6 pb-6">
+      <main className="pt-16 px-6 pb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">

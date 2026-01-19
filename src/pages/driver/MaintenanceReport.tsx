@@ -62,7 +62,7 @@ const MaintenanceReport = () => {
   return (
     <div className="min-h-screen bg-background">
       <TopMenu />
-      <main className="pt-28 pb-8 px-4 max-w-2xl mx-auto">
+      <main className="pt-16 pb-8 px-4 max-w-2xl mx-auto">
         <Button
           variant="outline"
           className="mb-4 border-2 border-primary text-primary hover:bg-primary hover:text-white"
