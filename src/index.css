@@ -155,12 +155,20 @@
 
 /* Print Styles */
 @media print {
-  /* Hide everything by default */
-  body > * {
+  /* Base print settings */
+  html, body {
+    background: white !important;
+    background-color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  /* Only hide body children when printing dialogs/portals */
+  body:has([data-radix-portal]) > *:not([data-radix-portal]) {
     visibility: hidden !important;
   }
 
-  /* Show only the portal content */
+  /* Show portal content when portal exists */
   [data-radix-portal] {
     visibility: visible !important;
     position: absolute !important;

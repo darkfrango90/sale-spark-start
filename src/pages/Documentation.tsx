@@ -43,7 +43,7 @@ const Documentation = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background print:bg-white print:min-h-0">
       {/* Header - Hidden when printing */}
       <header className="print:hidden sticky top-0 z-50 bg-background border-b px-6 py-4">
         <div className="flex items-center justify-between max-w-6xl mx-auto">
@@ -63,14 +63,14 @@ const Documentation = () => {
         </div>
       </header>
 
-      {/* Print Header */}
-      <div className="hidden print:block text-center py-8 border-b">
-        <h1 className="text-4xl font-bold text-primary mb-2">SISTEMA CEZAR</h1>
-        <p className="text-xl text-muted-foreground">Manual Completo de Funcionalidades</p>
-        <p className="text-sm text-muted-foreground mt-2">Documento gerado em {new Date().toLocaleDateString('pt-BR')}</p>
+      {/* Print Header - Only visible when printing */}
+      <div className="hidden print:block text-center py-8 border-b border-gray-300 bg-white">
+        <h1 className="text-4xl font-bold text-blue-600 mb-2">SISTEMA CEZAR</h1>
+        <p className="text-xl text-gray-600">Manual Completo de Funcionalidades</p>
+        <p className="text-sm text-gray-500 mt-2">Documento gerado em {new Date().toLocaleDateString('pt-BR')}</p>
       </div>
 
-      <div className="flex max-w-6xl mx-auto">
+      <div className="flex max-w-6xl mx-auto print:max-w-none print:block">
         {/* Sidebar Navigation - Hidden when printing */}
         <aside className="print:hidden hidden lg:block w-64 sticky top-20 h-[calc(100vh-5rem)] border-r p-4">
           <ScrollArea className="h-full">
@@ -105,8 +105,8 @@ const Documentation = () => {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-6 lg:p-8">
-          <div className="max-w-4xl mx-auto space-y-8">
+        <main className="flex-1 p-6 lg:p-8 print:p-0 print:w-full">
+          <div className="max-w-4xl mx-auto space-y-8 print:max-w-none print:space-y-4">
             
             {/* Visão Geral */}
             <section id="visao-geral" className="print:break-before-page">
@@ -1129,93 +1129,154 @@ const Documentation = () => {
         </main>
       </div>
 
-      {/* Print Styles */}
+      {/* Print Styles - Comprehensive print CSS */}
       <style>{`
         @media print {
+          /* Reset everything for print */
+          *, *::before, *::after {
+            color-adjust: exact !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          
+          /* Root and body */
           html, body {
-            background: white !important;
-            color: black !important;
-            print-color-adjust: exact;
-            -webkit-print-color-adjust: exact;
-          }
-          
-          /* Ensure main container is visible */
-          .min-h-screen {
-            min-height: auto !important;
-            background: white !important;
-          }
-          
-          /* Show print header */
-          .print\\:block {
-            display: block !important;
-          }
-          
-          /* Hide non-print elements */
-          .print\\:hidden {
-            display: none !important;
-          }
-          
-          /* Page breaks */
-          .print\\:break-before-page {
-            break-before: page;
-          }
-          
-          /* Fix card styles for print */
-          [class*="Card"], [class*="card"] {
-            background: white !important;
-            border: 1px solid #e5e7eb !important;
-            box-shadow: none !important;
-            page-break-inside: avoid;
-          }
-          
-          /* Fix text colors */
-          h1, h2, h3, h4, h5, h6, p, span, div, li {
-            color: black !important;
-          }
-          
-          .text-muted-foreground {
-            color: #6b7280 !important;
-          }
-          
-          .text-primary {
-            color: #2563eb !important;
-          }
-          
-          /* Fix backgrounds */
-          .bg-slate-50, .bg-blue-50, .bg-green-50, .bg-amber-50, .bg-red-50 {
-            background: #f9fafb !important;
-          }
-          
-          .bg-background, .bg-card {
-            background: white !important;
-          }
-          
-          /* Badge styles */
-          [class*="Badge"], [class*="badge"] {
-            border: 1px solid #d1d5db !important;
-            background: #f3f4f6 !important;
-            color: black !important;
-          }
-          
-          /* Accordion content */
-          [data-state="open"] > [class*="AccordionContent"],
-          [data-state] [class*="content"] {
-            display: block !important;
-            height: auto !important;
-            overflow: visible !important;
-          }
-          
-          /* Main content full width */
-          main {
-            width: 100% !important;
-            max-width: 100% !important;
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            font-size: 12pt !important;
+            line-height: 1.4 !important;
+            margin: 0 !important;
             padding: 0 !important;
           }
           
-          /* Page margins */
+          /* Main container */
+          .min-h-screen {
+            min-height: auto !important;
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+          }
+          
+          /* Flex container fix */
+          .flex {
+            display: block !important;
+          }
+          
+          /* Max-width fixes */
+          .max-w-6xl, .max-w-4xl {
+            max-width: 100% !important;
+          }
+          
+          /* Hide screen-only elements */
+          header, aside, .print\\:hidden, [class*="print:hidden"] {
+            display: none !important;
+            visibility: hidden !important;
+          }
+          
+          /* Show print elements */
+          .hidden.print\\:block, [class*="print:block"] {
+            display: block !important;
+            visibility: visible !important;
+          }
+          
+          /* Main content area */
+          main, main > div {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 10px !important;
+            margin: 0 !important;
+            display: block !important;
+          }
+          
+          /* Sections */
+          section {
+            display: block !important;
+            visibility: visible !important;
+            background: #ffffff !important;
+            margin-bottom: 20px !important;
+            page-break-inside: avoid !important;
+          }
+          
+          /* Cards */
+          [class*="rounded-lg"], [class*="border"], .p-4, .p-6, .space-y-4 > div {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            border: 1px solid #d1d5db !important;
+            box-shadow: none !important;
+            margin-bottom: 10px !important;
+            padding: 10px !important;
+            display: block !important;
+            visibility: visible !important;
+          }
+          
+          /* All text elements */
+          h1, h2, h3, h4, h5, h6 {
+            color: #111827 !important;
+            page-break-after: avoid !important;
+          }
+          
+          p, span, li, div, strong, em, a {
+            color: #374151 !important;
+          }
+          
+          /* Muted text */
+          .text-muted-foreground, [class*="muted"] {
+            color: #6b7280 !important;
+          }
+          
+          /* Primary color text */
+          .text-primary, [class*="primary"] {
+            color: #2563eb !important;
+          }
+          
+          /* Background colors to white */
+          .bg-background, .bg-card, .bg-white, 
+          [class*="bg-slate"], [class*="bg-blue"], 
+          [class*="bg-green"], [class*="bg-amber"], 
+          [class*="bg-red"], [class*="bg-gray"] {
+            background: #f9fafb !important;
+            background-color: #f9fafb !important;
+          }
+          
+          /* Accordion - force all content visible */
+          [data-state], [data-state] > * {
+            display: block !important;
+            visibility: visible !important;
+            height: auto !important;
+            overflow: visible !important;
+            opacity: 1 !important;
+          }
+          
+          /* AccordionContent specifically */
+          [data-state="closed"] {
+            display: block !important;
+            height: auto !important;
+          }
+          
+          /* Grid to block for print */
+          .grid {
+            display: block !important;
+          }
+          
+          .grid > * {
+            margin-bottom: 8px !important;
+          }
+          
+          /* Page breaks */
+          .print\\:break-before-page, [class*="print:break-before-page"] {
+            page-break-before: always !important;
+            break-before: page !important;
+          }
+          
+          /* Page settings */
           @page {
+            size: A4 portrait;
             margin: 1.5cm;
-            size: A4;
+          }
+          
+          /* First page no break */
+          section:first-of-type {
+            page-break-before: avoid !important;
           }
         }
       `}</style>
