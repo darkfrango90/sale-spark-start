@@ -42,9 +42,11 @@ const menuItems: MenuItem[] = [
     { label: "Orçamentos", path: "/vendas/orcamentos", module: "vendas", action: "Orçamentos" },
     { label: "Pedidos", path: "/vendas/pedidos", module: "vendas", action: "Pedidos" }
   ]},
-  { label: "Movimentação", module: "movimentacao", items: [
-    { label: "Operador", path: "/movimentacao/operador", module: "movimentacao", action: "Operador" },
-    { label: "Carregados", path: "/movimentacao/carregados", module: "movimentacao", action: "Carregados" }
+  { label: "Operação", module: "operacao", items: [
+    { label: "Operador", path: "/operacao/operador", module: "operacao", action: "Operador" },
+    { label: "Carregados", path: "/operacao/carregados", module: "operacao", action: "Carregados" },
+    { label: "Abastecimento", path: "/operacao/abastecimento", module: "operacao", action: "Abastecimento" },
+    { label: "Veículos", path: "/operacao/veiculos", module: "operacao", action: "Veículos" }
   ]},
   { label: "Financeiro", module: "financeiro", items: [
     { label: "Contas a Pagar", path: "/financeiro/contas-a-pagar", module: "financeiro", action: "Contas a Pagar" },

@@ -287,6 +287,56 @@ export type Database = {
         }
         Relationships: []
       }
+      fuel_entries: {
+        Row: {
+          created_at: string
+          date: string
+          fuel_type: string
+          id: string
+          liters: number
+          notes: string | null
+          odometer_value: number
+          operator_name: string | null
+          price_per_liter: number | null
+          total_cost: number | null
+          vehicle_id: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          fuel_type: string
+          id?: string
+          liters: number
+          notes?: string | null
+          odometer_value: number
+          operator_name?: string | null
+          price_per_liter?: number | null
+          total_cost?: number | null
+          vehicle_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          fuel_type?: string
+          id?: string
+          liters?: number
+          notes?: string | null
+          odometer_value?: number
+          operator_name?: string | null
+          price_per_liter?: number | null
+          total_cost?: number | null
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fuel_entries_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_loadings: {
         Row: {
           ai_response: Json | null
@@ -709,6 +759,42 @@ export type Database = {
           type?: string
           updated_at?: string | null
           zip_code?: string | null
+        }
+        Relationships: []
+      }
+      vehicles: {
+        Row: {
+          active: boolean
+          created_at: string
+          fuel_type: string
+          id: string
+          name: string
+          plate: string | null
+          tank_capacity: number | null
+          type: string
+          uses_odometer: boolean
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          fuel_type?: string
+          id?: string
+          name: string
+          plate?: string | null
+          tank_capacity?: number | null
+          type: string
+          uses_odometer?: boolean
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          fuel_type?: string
+          id?: string
+          name?: string
+          plate?: string | null
+          tank_capacity?: number | null
+          type?: string
+          uses_odometer?: boolean
         }
         Relationships: []
       }
