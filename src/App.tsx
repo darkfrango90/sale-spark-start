@@ -52,10 +52,18 @@ const queryClient = new QueryClient();
 
 type RouteGateProps = {
   isAuthenticated: boolean;
+  isLoading?: boolean;
   children: React.ReactNode;
 };
 
-const ProtectedRoute = ({ isAuthenticated, children }: RouteGateProps) => {
+const ProtectedRoute = ({ isAuthenticated, isLoading, children }: RouteGateProps) => {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground text-sm">Carregando…</div>
+      </div>
+    );
+  }
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
@@ -86,7 +94,14 @@ const PermissionRoute = ({ module, action, children }: PermissionRouteProps) => 
   return <>{children}</>;
 };
 
-const PublicRoute = ({ isAuthenticated, children }: RouteGateProps) => {
+const PublicRoute = ({ isAuthenticated, isLoading, children }: RouteGateProps) => {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground text-sm">Carregando…</div>
+      </div>
+    );
+  }
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
@@ -94,206 +109,206 @@ const PublicRoute = ({ isAuthenticated, children }: RouteGateProps) => {
 };
 
 const AppRoutes = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   return (
       <Routes>
-        <Route path="/login" element={<PublicRoute isAuthenticated={isAuthenticated}><Login /></PublicRoute>} />
-        <Route path="/" element={<ProtectedRoute isAuthenticated={isAuthenticated}><Index /></ProtectedRoute>} />
+        <Route path="/login" element={<PublicRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><Login /></PublicRoute>} />
+        <Route path="/" element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><Index /></ProtectedRoute>} />
         <Route path="/configuracao/usuarios" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <AdminRoute>
               <UserManagement />
             </AdminRoute>
           </ProtectedRoute>
         } />
         <Route path="/configuracao/pagamentos" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="configuracao" action="Empresa">
               <PaymentMethods />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/configuracao/empresa" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="configuracao" action="Empresa">
               <CompanySettingsPage />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/configuracao/contas-recebimento" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="configuracao" action="Contas de Recebimento">
               <ReceivingAccounts />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/cadastro/clientes" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="cadastro" action="Clientes">
               <CustomerManagement />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/cadastro/produtos" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="cadastro" action="Produtos">
               <ProductManagement />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/cadastro/fornecedores" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="cadastro" action="Fornecedores">
               <SupplierManagement />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/vendas/nova" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="vendas" action="Nova Venda">
               <NewSale />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/vendas/pedidos" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="vendas" action="Pedidos">
               <SalesList type="pedido" />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/vendas/orcamentos" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="vendas" action="Orçamentos">
               <SalesList type="orcamento" />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/financeiro/contas-a-receber" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="financeiro" action="Contas a Receber">
               <AccountsReceivable />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/financeiro/contas-a-pagar" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="financeiro" action="Contas a Pagar">
               <AccountsPayable />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/relatorios/permuta" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="relatorios" action="Permuta">
               <BarterDashboard />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/relatorios" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <ReportsIndex />
           </ProtectedRoute>
         } />
         <Route path="/relatorios/vendas" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="relatorios" action="Vendas">
               <SalesReport />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/relatorios/produtos" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="relatorios" action="Produtos">
               <ProductsReport />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/relatorios/clientes" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="relatorios" action="Clientes">
               <CustomersReport />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/relatorios/financeiro" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="relatorios" action="Financeiro">
               <FinancialReport />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/relatorios/fornecedores" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="relatorios" action="Fornecedores">
               <SuppliersReport />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/relatorios/ticagem" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="relatorios" action="Ticagem">
               <TickingReport />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/operacao/operador" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="operacao" action="Operador">
               <OperatorDashboard />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/operacao/carregados" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="operacao" action="Carregados">
               <LoadedOrders />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/operacao/abastecimento" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="operacao" action="Abastecimento">
               <FuelEntry />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/operacao/veiculos" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="operacao" action="Veículos">
               <VehicleManagement />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         {/* Driver Routes */}
-        <Route path="/motorista" element={<ProtectedRoute isAuthenticated={isAuthenticated}><DriverDashboard /></ProtectedRoute>} />
-        <Route path="/motorista/parte-diaria" element={<ProtectedRoute isAuthenticated={isAuthenticated}><DailyReport /></ProtectedRoute>} />
-        <Route path="/motorista/checklist" element={<ProtectedRoute isAuthenticated={isAuthenticated}><SafetyChecklist /></ProtectedRoute>} />
-        <Route path="/motorista/manutencao" element={<ProtectedRoute isAuthenticated={isAuthenticated}><MaintenanceReport /></ProtectedRoute>} />
+        <Route path="/motorista" element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><DriverDashboard /></ProtectedRoute>} />
+        <Route path="/motorista/parte-diaria" element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><DailyReport /></ProtectedRoute>} />
+        <Route path="/motorista/checklist" element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><SafetyChecklist /></ProtectedRoute>} />
+        <Route path="/motorista/manutencao" element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><MaintenanceReport /></ProtectedRoute>} />
         {/* Admin Reports for Driver Module */}
         <Route path="/relatorios/partes-diarias" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="relatorios" action="Partes Diárias">
               <DailyReportsAdmin />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/relatorios/checklists" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="relatorios" action="Checklists">
               <ChecklistsAdmin />
             </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/relatorios/manutencoes" element={
-          <ProtectedRoute isAuthenticated={isAuthenticated}>
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="relatorios" action="Manutenções">
               <MaintenanceAdmin />
             </PermissionRoute>
           </ProtectedRoute>
         } />
-        <Route path="/documentacao" element={<ProtectedRoute isAuthenticated={isAuthenticated}><Documentation /></ProtectedRoute>} />
+        <Route path="/documentacao" element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><Documentation /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
   );
