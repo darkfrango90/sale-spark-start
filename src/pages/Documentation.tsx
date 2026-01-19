@@ -1132,21 +1132,90 @@ const Documentation = () => {
       {/* Print Styles */}
       <style>{`
         @media print {
-          body {
+          html, body {
+            background: white !important;
+            color: black !important;
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
           }
-          .print\\:hidden {
-            display: none !important;
+          
+          /* Ensure main container is visible */
+          .min-h-screen {
+            min-height: auto !important;
+            background: white !important;
           }
+          
+          /* Show print header */
           .print\\:block {
             display: block !important;
           }
+          
+          /* Hide non-print elements */
+          .print\\:hidden {
+            display: none !important;
+          }
+          
+          /* Page breaks */
           .print\\:break-before-page {
             break-before: page;
           }
+          
+          /* Fix card styles for print */
+          [class*="Card"], [class*="card"] {
+            background: white !important;
+            border: 1px solid #e5e7eb !important;
+            box-shadow: none !important;
+            page-break-inside: avoid;
+          }
+          
+          /* Fix text colors */
+          h1, h2, h3, h4, h5, h6, p, span, div, li {
+            color: black !important;
+          }
+          
+          .text-muted-foreground {
+            color: #6b7280 !important;
+          }
+          
+          .text-primary {
+            color: #2563eb !important;
+          }
+          
+          /* Fix backgrounds */
+          .bg-slate-50, .bg-blue-50, .bg-green-50, .bg-amber-50, .bg-red-50 {
+            background: #f9fafb !important;
+          }
+          
+          .bg-background, .bg-card {
+            background: white !important;
+          }
+          
+          /* Badge styles */
+          [class*="Badge"], [class*="badge"] {
+            border: 1px solid #d1d5db !important;
+            background: #f3f4f6 !important;
+            color: black !important;
+          }
+          
+          /* Accordion content */
+          [data-state="open"] > [class*="AccordionContent"],
+          [data-state] [class*="content"] {
+            display: block !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          
+          /* Main content full width */
+          main {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 0 !important;
+          }
+          
+          /* Page margins */
           @page {
             margin: 1.5cm;
+            size: A4;
           }
         }
       `}</style>
