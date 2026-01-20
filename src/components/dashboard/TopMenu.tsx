@@ -68,6 +68,7 @@ const menuItems: MenuItem[] = [
   ]},
   { label: "Relatórios", module: "relatorios", items: [
     { label: "Vendas", path: "/relatorios/vendas", module: "relatorios", action: "Vendas" },
+    { label: "Caixa", path: "/relatorios/caixa", module: "relatorios", action: "Caixa" },
     { label: "Produtos", path: "/relatorios/produtos", module: "relatorios", action: "Produtos" },
     { label: "Financeiro", path: "/relatorios/financeiro", module: "relatorios", action: "Financeiro" },
     { label: "Clientes", path: "/relatorios/clientes", module: "relatorios", action: "Clientes" },
