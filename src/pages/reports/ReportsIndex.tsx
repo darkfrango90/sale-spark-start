@@ -10,7 +10,8 @@ import {
   Truck,
   ArrowRight,
   TrendingUp,
-  AlertTriangle
+  AlertTriangle,
+  Bot
 } from "lucide-react";
 import { useSales } from "@/contexts/SalesContext";
 import { useProducts } from "@/contexts/ProductContext";
@@ -133,6 +134,18 @@ const ReportsIndex = () => {
       stats: [
         { label: "Fornecedores Ativos", value: stats.activeSuppliers.toString() },
         { label: "Total", value: suppliers.length.toString() }
+      ]
+    },
+    {
+      title: "Assistente IA",
+      description: "Pergunte sobre dados do sistema e receba respostas inteligentes com localização",
+      icon: Bot,
+      path: "/relatorios/assistente",
+      color: "text-violet-600",
+      bgColor: "bg-violet-100",
+      stats: [
+        { label: "Consultas", value: "∞" },
+        { label: "Tempo Real", value: "✓" }
       ]
     }
   ];

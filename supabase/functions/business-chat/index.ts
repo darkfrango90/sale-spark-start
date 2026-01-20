@@ -1,0 +1,386 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const SYSTEM_PROMPT = `Você é um assistente inteligente do sistema de gestão. Seu objetivo é ajudar os usuários a encontrar informações sobre o negócio.
+
+REGRA IMPORTANTE: Para TODA pergunta, você DEVE:
+1. PRIMEIRO informar ONDE encontrar essa informação no sistema (menu/caminho)
+2. DEPOIS apresentar o RESULTADO da consulta com os dados
+
+Formato de resposta OBRIGATÓRIO:
+**📍 Onde encontrar:**
+[Informe o caminho no sistema, ex: Menu: Cadastro → Clientes → Buscar pelo nome]
+
+**📊 Resultado:**
+[Apresente os dados encontrados de forma clara e organizada]
+
+Tabelas disponíveis para consulta:
+- customers: clientes (nome, código, cpf_cnpj, permuta: has_barter, barter_credit, barter_limit)
+- products: produtos (nome, código, estoque, preço)
+- sales: vendas (número, cliente, total, data, status, tipo: venda/orcamento/pedido)
+- sale_items: itens de vendas (produto, quantidade, valor)
+- suppliers: fornecedores
+- accounts_receivable: contas a receber
+- accounts_payable: contas a pagar
+- vehicles: veículos
+
+Mapeamento de caminhos no sistema:
+- Clientes: Menu: Cadastro → Clientes
+- Permuta de cliente: Menu: Cadastro → Clientes → [buscar cliente] → Ver permuta
+- Produtos/Estoque: Menu: Cadastro → Produtos
+- Vendas: Menu: Vendas → Lista de Vendas ou Menu: Relatórios → Vendas
+- Financeiro: Menu: Financeiro → Contas a Receber / Contas a Pagar
+- Fornecedores: Menu: Cadastro → Fornecedores
+- Veículos: Menu: Operação → Veículos
+
+Seja preciso, objetivo e sempre forneça dados numéricos quando disponíveis.
+Use formatação em Real brasileiro (R$) para valores monetários.`;
+
+const tools = [
+  {
+    type: "function",
+    function: {
+      name: "query_customers",
+      description: "Busca informações de clientes, incluindo dados de permuta",
+      parameters: {
+        type: "object",
+        properties: {
+          search_term: { type: "string", description: "Nome, código ou CPF/CNPJ do cliente" },
+          filter_barter: { type: "boolean", description: "Filtrar apenas clientes com permuta" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "query_products",
+      description: "Busca informações de produtos e estoque",
+      parameters: {
+        type: "object",
+        properties: {
+          search_term: { type: "string", description: "Nome ou código do produto" },
+          filter_critical: { type: "boolean", description: "Filtrar produtos com estoque crítico" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "query_sales",
+      description: "Busca vendas por período, cliente ou produto",
+      parameters: {
+        type: "object",
+        properties: {
+          customer_name: { type: "string", description: "Nome do cliente" },
+          product_name: { type: "string", description: "Nome do produto" },
+          period: { type: "string", enum: ["today", "week", "month", "year"], description: "Período de busca" },
+          type: { type: "string", enum: ["venda", "orcamento", "pedido"], description: "Tipo de venda" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "query_financial",
+      description: "Busca informações financeiras: contas a receber e a pagar",
+      parameters: {
+        type: "object",
+        properties: {
+          type: { type: "string", enum: ["receivable", "payable"], description: "Tipo: a receber ou a pagar" },
+          status: { type: "string", enum: ["pendente", "pago", "vencido"], description: "Status da conta" }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "query_suppliers",
+      description: "Busca informações de fornecedores",
+      parameters: {
+        type: "object",
+        properties: {
+          search_term: { type: "string", description: "Nome ou código do fornecedor" }
+        }
+      }
+    }
+  }
+];
+
+async function executeQuery(supabase: any, toolName: string, args: any) {
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfWeek = new Date(startOfDay);
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+  switch (toolName) {
+    case "query_customers": {
+      let query = supabase.from("customers").select("*");
+      if (args.search_term) {
+        query = query.or(`name.ilike.%${args.search_term}%,code.ilike.%${args.search_term}%,cpf_cnpj.ilike.%${args.search_term}%`);
+      }
+      if (args.filter_barter) {
+        query = query.eq("has_barter", true);
+      }
+      const { data, error } = await query.limit(20);
+      if (error) throw error;
+      return data;
+    }
+
+    case "query_products": {
+      let query = supabase.from("products").select("*");
+      if (args.search_term) {
+        query = query.or(`name.ilike.%${args.search_term}%,code.ilike.%${args.search_term}%`);
+      }
+      if (args.filter_critical) {
+        query = query.lt("stock", supabase.raw("min_stock"));
+      }
+      const { data, error } = await query.limit(20);
+      if (error) throw error;
+      return data;
+    }
+
+    case "query_sales": {
+      let query = supabase.from("sales").select(`
+        *,
+        sale_items (*)
+      `);
+      
+      if (args.customer_name) {
+        query = query.ilike("customer_name", `%${args.customer_name}%`);
+      }
+      if (args.type) {
+        query = query.eq("type", args.type);
+      }
+      if (args.period) {
+        let startDate: Date;
+        switch (args.period) {
+          case "today": startDate = startOfDay; break;
+          case "week": startDate = startOfWeek; break;
+          case "month": startDate = startOfMonth; break;
+          case "year": startDate = startOfYear; break;
+          default: startDate = startOfMonth;
+        }
+        query = query.gte("created_at", startDate.toISOString());
+      }
+      
+      query = query.not("status", "in", "(excluido,cancelado)");
+      const { data, error } = await query.order("created_at", { ascending: false }).limit(50);
+      if (error) throw error;
+
+      // If searching for product, filter and aggregate
+      if (args.product_name && data) {
+        const productSearch = args.product_name.toLowerCase();
+        let totalQty = 0;
+        let totalValue = 0;
+        let matchingSales: any[] = [];
+
+        data.forEach((sale: any) => {
+          const matchingItems = sale.sale_items?.filter((item: any) => 
+            item.product_name.toLowerCase().includes(productSearch)
+          ) || [];
+          
+          if (matchingItems.length > 0) {
+            matchingItems.forEach((item: any) => {
+              totalQty += item.quantity;
+              totalValue += item.total;
+            });
+            matchingSales.push({
+              ...sale,
+              matching_items: matchingItems
+            });
+          }
+        });
+
+        return {
+          sales: matchingSales,
+          summary: {
+            total_quantity: totalQty,
+            total_value: totalValue,
+            sales_count: matchingSales.length
+          }
+        };
+      }
+
+      return data;
+    }
+
+    case "query_financial": {
+      const table = args.type === "payable" ? "accounts_payable" : "accounts_receivable";
+      let query = supabase.from(table).select("*");
+      
+      if (args.status === "vencido") {
+        query = query.eq("status", "pendente").lt("due_date", now.toISOString().split("T")[0]);
+      } else if (args.status) {
+        query = query.eq("status", args.status);
+      }
+      
+      const { data, error } = await query.order("due_date", { ascending: true }).limit(50);
+      if (error) throw error;
+
+      const total = data?.reduce((sum: number, item: any) => sum + (item.final_amount || 0), 0) || 0;
+      return { items: data, total, count: data?.length || 0 };
+    }
+
+    case "query_suppliers": {
+      let query = supabase.from("suppliers").select("*");
+      if (args.search_term) {
+        query = query.or(`name.ilike.%${args.search_term}%,code.ilike.%${args.search_term}%`);
+      }
+      const { data, error } = await query.limit(20);
+      if (error) throw error;
+      return data;
+    }
+
+    default:
+      return null;
+  }
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { messages } = await req.json();
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    console.log("Sending request to Lovable AI with tools...");
+
+    // First request with tools
+    const toolResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          ...messages
+        ],
+        tools,
+        tool_choice: "auto"
+      }),
+    });
+
+    if (!toolResponse.ok) {
+      if (toolResponse.status === 429) {
+        return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns segundos." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (toolResponse.status === 402) {
+        return new Response(JSON.stringify({ error: "Créditos insuficientes. Entre em contato com o suporte." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const errorText = await toolResponse.text();
+      console.error("AI gateway error:", toolResponse.status, errorText);
+      throw new Error("Erro ao processar sua pergunta");
+    }
+
+    const toolResult = await toolResponse.json();
+    const assistantMessage = toolResult.choices[0].message;
+
+    console.log("AI response:", JSON.stringify(assistantMessage, null, 2));
+
+    // Check if AI wants to call tools
+    if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
+      const toolResults: any[] = [];
+
+      for (const toolCall of assistantMessage.tool_calls) {
+        const functionName = toolCall.function.name;
+        const args = JSON.parse(toolCall.function.arguments);
+        
+        console.log(`Executing tool: ${functionName}`, args);
+        
+        const result = await executeQuery(supabase, functionName, args);
+        toolResults.push({
+          tool_call_id: toolCall.id,
+          role: "tool",
+          content: JSON.stringify(result)
+        });
+      }
+
+      // Second request with tool results - now with streaming
+      const finalResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            ...messages,
+            assistantMessage,
+            ...toolResults
+          ],
+          stream: true
+        }),
+      });
+
+      if (!finalResponse.ok) {
+        const errorText = await finalResponse.text();
+        console.error("Final response error:", errorText);
+        throw new Error("Erro ao gerar resposta final");
+      }
+
+      return new Response(finalResponse.body, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    }
+
+    // No tool calls, stream the direct response
+    const streamResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          ...messages
+        ],
+        stream: true
+      }),
+    });
+
+    return new Response(streamResponse.body, {
+      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    });
+
+  } catch (error) {
+    console.error("business-chat error:", error);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : "Erro desconhecido" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
