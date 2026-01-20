@@ -332,6 +332,42 @@ export type Database = {
         }
         Relationships: []
       }
+      driver_expenses: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          location_equipment: string
+          receipt_image_url: string | null
+          user_id: string
+          user_name: string
+          vehicle_plate: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          location_equipment: string
+          receipt_image_url?: string | null
+          user_id: string
+          user_name: string
+          vehicle_plate: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          location_equipment?: string
+          receipt_image_url?: string | null
+          user_id?: string
+          user_name?: string
+          vehicle_plate?: string
+        }
+        Relationships: []
+      }
       fuel_entries: {
         Row: {
           created_at: string

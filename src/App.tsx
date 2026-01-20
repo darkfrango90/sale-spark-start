@@ -42,6 +42,7 @@ import DriverDashboard from "./pages/driver/DriverDashboard";
 import DailyReport from "./pages/driver/DailyReport";
 import SafetyChecklist from "./pages/driver/SafetyChecklist";
 import MaintenanceReport from "./pages/driver/MaintenanceReport";
+import ExpenseEntry from "./pages/driver/ExpenseEntry";
 import DailyReportsAdmin from "./pages/reports/DailyReportsAdmin";
 import ChecklistsAdmin from "./pages/reports/ChecklistsAdmin";
 import MaintenanceAdmin from "./pages/reports/MaintenanceAdmin";
@@ -286,6 +287,7 @@ const AppRoutes = () => {
         <Route path="/motorista/parte-diaria" element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><DailyReport /></ProtectedRoute>} />
         <Route path="/motorista/checklist" element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><SafetyChecklist /></ProtectedRoute>} />
         <Route path="/motorista/manutencao" element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><MaintenanceReport /></ProtectedRoute>} />
+        <Route path="/motorista/despesas" element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><ExpenseEntry /></ProtectedRoute>} />
         {/* Admin Reports for Driver Module */}
         <Route path="/relatorios/partes-diarias" element={
           <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>

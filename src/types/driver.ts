@@ -58,6 +58,18 @@ export interface MaintenanceReport {
 
 export type ChecklistAnswer = 'sim' | 'não' | 'não se aplica';
 
+export interface DriverExpense {
+  id: string;
+  user_id: string;
+  user_name: string;
+  amount: number;
+  vehicle_plate: string;
+  location_equipment: string;
+  description?: string;
+  receipt_image_url?: string;
+  created_at: string;
+}
+
 export const VEHICLE_PLATES = [
   { plate: 'RSC7D05', multiplier: 6 },
   { plate: 'RSC5I45', multiplier: 6 },
