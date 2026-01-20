@@ -76,7 +76,8 @@ const menuItems: MenuItem[] = [
     { label: "Ticagem", path: "/relatorios/ticagem", module: "relatorios", action: "Ticagem" },
     { label: "Partes Diárias", path: "/relatorios/partes-diarias", module: "relatorios", action: "Partes Diárias" },
     { label: "Checklists", path: "/relatorios/checklists", module: "relatorios", action: "Checklists" },
-    { label: "Manutenções", path: "/relatorios/manutencoes", module: "relatorios", action: "Manutenções" }
+    { label: "Manutenções", path: "/relatorios/manutencoes", module: "relatorios", action: "Manutenções" },
+    { label: "Assistente IA", path: "/relatorios/assistente", module: "relatorios" }
   ]},
   { label: "Configuração", module: "configuracao", items: [
     { label: "Empresa", path: "/configuracao/empresa", module: "configuracao", action: "Empresa" },
