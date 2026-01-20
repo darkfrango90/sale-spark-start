@@ -95,7 +95,7 @@ const Documentation = () => {
       { title: 'Controle de Frota', desc: 'Abastecimento, manutenção e checklist' },
       { title: 'Financeiro', desc: 'Contas a pagar e receber integradas' },
       { title: 'Sistema de Permuta', desc: 'Créditos e débitos de clientes' },
-      { title: 'Relatórios Gerenciais', desc: 'Análises detalhadas por módulo' },
+      { title: 'Relatórios e IA', desc: 'Dashboard analítico e assistente inteligente' },
     ];
     
     modulosVisao.forEach((mod, i) => {
@@ -156,33 +156,43 @@ const Documentation = () => {
       fontSize: 32, color: primaryColor, bold: true,
       fontFace: 'Arial'
     });
-    slideDash.addText("Visão geral do negócio com indicadores-chave de desempenho.", {
-      x: 0.5, y: 1, w: 9, h: 0.5,
+    slideDash.addText("Painel executivo com indicadores em tempo real e gráficos analíticos.", {
+      x: 0.5, y: 0.9, w: 9, h: 0.4,
       fontSize: 16, color: darkText,
       fontFace: 'Arial'
     });
     
-    const cardsDash = ['Receita Total', 'Total de Vendas', 'Clientes Ativos', 'Taxa de Conversão'];
+    const cardsDash = ['Receita do Mês', 'Total de Vendas', 'Clientes Ativos', 'Contas a Receber'];
     cardsDash.forEach((card, i) => {
       slideDash.addShape('rect', {
-        x: 0.5 + i * 2.3, y: 1.8, w: 2.1, h: 0.7,
+        x: 0.5 + i * 2.3, y: 1.4, w: 2.1, h: 0.6,
         fill: { color: lightBg }, line: { color: 'D1D5DB', pt: 1 }
       });
       slideDash.addText(card, {
-        x: 0.5 + i * 2.3, y: 1.9, w: 2.1, h: 0.5,
-        fontSize: 11, color: darkText, align: 'center',
+        x: 0.5 + i * 2.3, y: 1.5, w: 2.1, h: 0.4,
+        fontSize: 10, color: darkText, align: 'center',
         fontFace: 'Arial'
       });
     });
     
-    slideDash.addText("Funcionalidades:", {
-      x: 0.5, y: 2.8, w: 9, h: 0.4,
-      fontSize: 18, color: darkText, bold: true,
+    slideDash.addText("Gráficos e Visualizações:", {
+      x: 0.5, y: 2.2, w: 9, h: 0.4,
+      fontSize: 16, color: darkText, bold: true,
       fontFace: 'Arial'
     });
-    slideDash.addText("• Vendas Recentes: Lista das últimas vendas com cliente, valor e status\n• Ações Rápidas: Botões de acesso rápido filtrados por permissões do usuário", {
-      x: 0.5, y: 3.3, w: 9, h: 0.8,
-      fontSize: 14, color: grayText,
+    slideDash.addText("• Tendência de Vendas: Gráfico de área com evolução dos últimos 6 meses\n• Fluxo de Caixa: Gráfico de barras comparando Recebíveis vs Pagáveis (15 dias)\n• Top 5 Produtos: Ranking horizontal dos produtos mais vendidos\n• Ranking de Vendedores: Leaderboard mensal com receita e qtd de vendas\n• Alertas do Sistema: Estoque crítico, contas vencidas, manutenções pendentes\n• Vendas Recentes: Lista com últimas vendas e status", {
+      x: 0.5, y: 2.6, w: 9, h: 1.6,
+      fontSize: 12, color: grayText,
+      fontFace: 'Arial'
+    });
+
+    slideDash.addShape('rect', {
+      x: 0.5, y: 4.4, w: 9, h: 0.6,
+      fill: { color: 'DBEAFE' }, line: { color: '3B82F6', pt: 1 }
+    });
+    slideDash.addText("💡 Comparações: Cada indicador mostra variação % em relação ao mês anterior.", {
+      x: 0.6, y: 4.5, w: 8.8, h: 0.4,
+      fontSize: 11, color: '1E40AF',
       fontFace: 'Arial'
     });
 
@@ -694,12 +704,12 @@ const Documentation = () => {
 
     // =============== SLIDE 19: RELATÓRIOS ===============
     const slideRel = pres.addSlide();
-    slideRel.addText("Relatórios Gerenciais", {
+    slideRel.addText("Relatórios e Assistente IA", {
       x: 0.5, y: 0.3, w: 9, h: 0.6,
       fontSize: 32, color: primaryColor, bold: true,
       fontFace: 'Arial'
     });
-    slideRel.addText("Análises detalhadas para tomada de decisão.", {
+    slideRel.addText("Análises detalhadas e consultas inteligentes via linguagem natural.", {
       x: 0.5, y: 0.9, w: 9, h: 0.4,
       fontSize: 16, color: darkText,
       fontFace: 'Arial'
@@ -707,7 +717,7 @@ const Documentation = () => {
     
     const relatorios = [
       { title: 'Vendas', desc: 'Por período, cliente, produto' },
-      { title: 'Produtos', desc: 'M³ e Toneladas' },
+      { title: 'Produtos', desc: 'Saída em M³ e Toneladas' },
       { title: 'Clientes', desc: 'Análise da carteira' },
       { title: 'Financeiro', desc: 'Fluxo de caixa' },
       { title: 'Fornecedores', desc: 'Compras por fornecedor' },
@@ -715,21 +725,31 @@ const Documentation = () => {
       { title: 'Ticagem', desc: 'Carregados vs Pendentes' },
       { title: 'Partes Diárias', desc: 'Viagens dos motoristas' },
       { title: 'Checklists', desc: 'Inspeções veiculares' },
-      { title: 'Manutenções', desc: 'Solicitações da frota' },
+      { title: 'Assistente IA', desc: 'Consultas em linguagem natural' },
     ];
     
     relatorios.forEach((rel, i) => {
       const col = i % 2;
       const row = Math.floor(i / 2);
       slideRel.addShape('rect', {
-        x: 0.5 + col * 4.7, y: 1.4 + row * 0.6, w: 4.5, h: 0.5,
+        x: 0.5 + col * 4.7, y: 1.4 + row * 0.55, w: 4.5, h: 0.45,
         fill: { color: lightBg }
       });
       slideRel.addText(`${rel.title}: ${rel.desc}`, {
-        x: 0.6 + col * 4.7, y: 1.48 + row * 0.6, w: 4.3, h: 0.35,
+        x: 0.6 + col * 4.7, y: 1.48 + row * 0.55, w: 4.3, h: 0.32,
         fontSize: 11, color: darkText,
         fontFace: 'Arial'
       });
+    });
+
+    slideRel.addShape('rect', {
+      x: 0.5, y: 4.2, w: 9, h: 0.7,
+      fill: { color: 'F3E8FF' }, line: { color: '9333EA', pt: 1 }
+    });
+    slideRel.addText("🤖 Assistente IA: Pergunte em português \"vendas do mês\", \"clientes com saldo\", \"produtos mais vendidos\" e receba respostas instantâneas.", {
+      x: 0.6, y: 4.3, w: 8.8, h: 0.5,
+      fontSize: 11, color: '6B21A8',
+      fontFace: 'Arial'
     });
 
     // =============== SLIDE 20: CONFIGURAÇÕES ===============
@@ -849,75 +869,131 @@ const Documentation = () => {
       fontFace: 'Courier New'
     });
 
-    // =============== SLIDE 23: DESTAQUES TÉCNICOS 2 ===============
+    // =============== SLIDE 23: DESTAQUES TÉCNICOS 2 - IA ===============
     const slideTec2 = pres.addSlide();
-    slideTec2.addText("Destaques Técnicos - IA e Automações", {
+    slideTec2.addText("Destaques Técnicos - Inteligência Artificial", {
       x: 0.5, y: 0.3, w: 9, h: 0.6,
       fontSize: 32, color: primaryColor, bold: true,
       fontFace: 'Arial'
     });
     
     slideTec2.addShape('rect', {
-      x: 0.5, y: 1, w: 9, h: 1.5,
+      x: 0.5, y: 0.95, w: 9, h: 1.3,
       fill: { color: 'F3E8FF' }, line: { color: '9333EA', pt: 2 }
     });
     slideTec2.addText("🤖 Verificação de Pesagem com IA", {
-      x: 0.6, y: 1.1, w: 8.8, h: 0.35,
-      fontSize: 14, color: '6B21A8', bold: true,
+      x: 0.6, y: 1.05, w: 8.8, h: 0.3,
+      fontSize: 13, color: '6B21A8', bold: true,
       fontFace: 'Arial'
     });
-    slideTec2.addText("O operador fotografa o ticket de pesagem e a Inteligência Artificial extrai automaticamente os dados (peso bruto, tara, líquido) e compara com o peso esperado. Sistema alerta divergências maiores que 5%.", {
-      x: 0.6, y: 1.55, w: 8.8, h: 0.6,
-      fontSize: 12, color: '7C3AED',
+    slideTec2.addText("O operador fotografa o ticket de pesagem e a IA extrai peso bruto, tara e líquido automaticamente, comparando com peso esperado. Alerta divergências > 5%.", {
+      x: 0.6, y: 1.4, w: 8.8, h: 0.5,
+      fontSize: 11, color: '7C3AED',
       fontFace: 'Arial'
     });
-    slideTec2.addText("Tecnologia: Edge Function + Modelo de Visão Computacional (Gemini)", {
-      x: 0.6, y: 2.2, w: 8.8, h: 0.25,
-      fontSize: 10, color: '9333EA', italic: true,
+    slideTec2.addText("Tecnologia: Edge Function + Gemini Vision", {
+      x: 0.6, y: 1.95, w: 8.8, h: 0.25,
+      fontSize: 9, color: '9333EA', italic: true,
       fontFace: 'Arial'
     });
 
     slideTec2.addShape('rect', {
-      x: 0.5, y: 2.7, w: 4.4, h: 1.1,
+      x: 0.5, y: 2.4, w: 9, h: 1.3,
+      fill: { color: 'F3E8FF' }, line: { color: '9333EA', pt: 2 }
+    });
+    slideTec2.addText("💬 Assistente de Negócios com IA", {
+      x: 0.6, y: 2.5, w: 8.8, h: 0.3,
+      fontSize: 13, color: '6B21A8', bold: true,
+      fontFace: 'Arial'
+    });
+    slideTec2.addText("Consulte dados do sistema em linguagem natural: \"vendas do mês\", \"clientes com saldo devedor\", \"produtos mais vendidos\". Respostas instantâneas com dados reais.", {
+      x: 0.6, y: 2.85, w: 8.8, h: 0.5,
+      fontSize: 11, color: '7C3AED',
+      fontFace: 'Arial'
+    });
+    slideTec2.addText("Acesso: Relatórios → Assistente IA", {
+      x: 0.6, y: 3.4, w: 8.8, h: 0.25,
+      fontSize: 9, color: '9333EA', italic: true,
+      fontFace: 'Arial'
+    });
+
+    slideTec2.addShape('rect', {
+      x: 0.5, y: 3.85, w: 4.4, h: 0.95,
       fill: { color: lightBg }, line: { color: 'D1D5DB', pt: 1 }
     });
     slideTec2.addText("🖨️ Impressão Otimizada", {
-      x: 0.6, y: 2.8, w: 4.2, h: 0.3,
-      fontSize: 12, color: darkText, bold: true,
+      x: 0.6, y: 3.95, w: 4.2, h: 0.25,
+      fontSize: 11, color: darkText, bold: true,
       fontFace: 'Arial'
     });
-    slideTec2.addText("Layout meia folha A4, assinatura do vendedor automática, campo CPF motorista.", {
-      x: 0.6, y: 3.15, w: 4.2, h: 0.55,
-      fontSize: 10, color: grayText,
+    slideTec2.addText("Layout meia folha A4, assinatura vendedor automática, campo CPF motorista.", {
+      x: 0.6, y: 4.25, w: 4.2, h: 0.45,
+      fontSize: 9, color: grayText,
       fontFace: 'Arial'
     });
 
     slideTec2.addShape('rect', {
-      x: 5.1, y: 2.7, w: 4.4, h: 1.1,
+      x: 5.1, y: 3.85, w: 4.4, h: 0.95,
       fill: { color: lightBg }, line: { color: 'D1D5DB', pt: 1 }
     });
     slideTec2.addText("📊 KM Inicial Inteligente", {
-      x: 5.2, y: 2.8, w: 4.2, h: 0.3,
-      fontSize: 12, color: darkText, bold: true,
+      x: 5.2, y: 3.95, w: 4.2, h: 0.25,
+      fontSize: 11, color: darkText, bold: true,
       fontFace: 'Arial'
     });
     slideTec2.addText("Campo preenchido automaticamente com KM final do relatório anterior.", {
-      x: 5.2, y: 3.15, w: 4.2, h: 0.55,
-      fontSize: 10, color: grayText,
+      x: 5.2, y: 4.25, w: 4.2, h: 0.45,
+      fontSize: 9, color: grayText,
       fontFace: 'Arial'
     });
 
-    slideTec2.addShape('rect', {
-      x: 0.5, y: 4, w: 9, h: 0.7,
+    // =============== SLIDE 24: DESTAQUES TÉCNICOS 3 - DASHBOARD ===============
+    const slideTec3 = pres.addSlide();
+    slideTec3.addText("Destaques Técnicos - Dashboard Executivo", {
+      x: 0.5, y: 0.3, w: 9, h: 0.6,
+      fontSize: 32, color: primaryColor, bold: true,
+      fontFace: 'Arial'
+    });
+
+    const dashFeatures = [
+      { title: '📈 Tendência de Vendas', desc: 'Gráfico de área com evolução dos últimos 6 meses e comparação MoM' },
+      { title: '💰 Fluxo de Caixa', desc: 'Gráfico de barras comparando Recebíveis vs Pagáveis nos próximos 15 dias' },
+      { title: '🏆 Top 5 Produtos', desc: 'Ranking horizontal dos produtos mais vendidos do mês' },
+      { title: '👥 Ranking de Vendedores', desc: 'Leaderboard mensal com receita, quantidade de vendas e progress bar' },
+      { title: '🚨 Alertas do Sistema', desc: 'Estoque crítico, contas vencidas, manutenções pendentes, checklists atrasados' },
+      { title: '🔄 Dados em Tempo Real', desc: 'Todas as informações são atualizadas automaticamente do banco de dados' },
+    ];
+
+    dashFeatures.forEach((feat, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      slideTec3.addShape('rect', {
+        x: 0.5 + col * 4.7, y: 1 + row * 1.1, w: 4.5, h: 1,
+        fill: { color: lightBg }, line: { color: 'D1D5DB', pt: 1 }
+      });
+      slideTec3.addText(feat.title, {
+        x: 0.6 + col * 4.7, y: 1.1 + row * 1.1, w: 4.3, h: 0.3,
+        fontSize: 12, color: darkText, bold: true,
+        fontFace: 'Arial'
+      });
+      slideTec3.addText(feat.desc, {
+        x: 0.6 + col * 4.7, y: 1.45 + row * 1.1, w: 4.3, h: 0.5,
+        fontSize: 10, color: grayText,
+        fontFace: 'Arial'
+      });
+    });
+
+    slideTec3.addShape('rect', {
+      x: 0.5, y: 4.4, w: 9, h: 0.6,
       fill: { color: 'DBEAFE' }, line: { color: '3B82F6', pt: 1 }
     });
-    slideTec2.addText("📅 Lembrete de CheckList: Toda segunda-feira o sistema exibe um lembrete para o motorista realizar a inspeção semanal.", {
-      x: 0.6, y: 4.15, w: 8.8, h: 0.4,
+    slideTec3.addText("💡 Acesso: Menu Principal → Dashboard (todos os perfis têm acesso ao painel inicial)", {
+      x: 0.6, y: 4.5, w: 8.8, h: 0.4,
       fontSize: 11, color: '1E40AF',
       fontFace: 'Arial'
     });
 
-    // =============== SLIDE 24: ENCERRAMENTO ===============
+    // =============== SLIDE 25: ENCERRAMENTO ===============
     const slideFinal = pres.addSlide();
     slideFinal.addText("SISTEMA CEZAR", {
       x: 0, y: 2.2, w: '100%', h: 0.8,
@@ -1032,7 +1108,7 @@ const Documentation = () => {
                       { title: 'Controle de Frota', desc: 'Abastecimento, manutenção e checklist' },
                       { title: 'Financeiro', desc: 'Contas a pagar e receber integradas' },
                       { title: 'Sistema de Permuta', desc: 'Créditos e débitos de clientes' },
-                      { title: 'Relatórios Gerenciais', desc: 'Análises detalhadas por módulo' },
+                      { title: 'Relatórios e IA', desc: 'Dashboard analítico e assistente inteligente' },
                     ].map((item, i) => (
                       <div key={i} className="p-4 border rounded-lg">
                         <h4 className="font-semibold">{item.title}</h4>
@@ -1085,16 +1161,16 @@ const Documentation = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-muted-foreground">
-                    Visão geral do negócio com indicadores-chave de desempenho.
+                    Painel executivo com indicadores em tempo real e gráficos analíticos.
                   </p>
                   
                   <h4 className="font-semibold mt-4">Cards de Estatísticas:</h4>
                   <div className="grid sm:grid-cols-2 gap-3">
                     {[
-                      { label: 'Receita Total', desc: 'Valor total de vendas do período' },
+                      { label: 'Receita do Mês', desc: 'Valor total de vendas com comparação MoM' },
                       { label: 'Total de Vendas', desc: 'Quantidade de pedidos realizados' },
                       { label: 'Clientes Ativos', desc: 'Número de clientes cadastrados' },
-                      { label: 'Taxa de Conversão', desc: 'Orçamentos convertidos em pedidos' },
+                      { label: 'Contas a Receber', desc: 'Total pendente de recebimento' },
                     ].map((item, i) => (
                       <div key={i} className="p-3 border rounded-lg">
                         <p className="font-medium">{item.label}</p>
@@ -1103,15 +1179,36 @@ const Documentation = () => {
                     ))}
                   </div>
 
-                  <h4 className="font-semibold mt-4">Vendas Recentes:</h4>
+                  <h4 className="font-semibold mt-4">Gráficos e Visualizações:</h4>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {[
+                      { label: 'Tendência de Vendas', desc: 'Gráfico de área com evolução dos últimos 6 meses' },
+                      { label: 'Fluxo de Caixa', desc: 'Recebíveis vs Pagáveis nos próximos 15 dias' },
+                      { label: 'Top 5 Produtos', desc: 'Ranking horizontal dos produtos mais vendidos' },
+                      { label: 'Ranking de Vendedores', desc: 'Leaderboard mensal com receita e quantidade' },
+                    ].map((item, i) => (
+                      <div key={i} className="p-3 border rounded-lg">
+                        <p className="font-medium">{item.label}</p>
+                        <p className="text-xs text-muted-foreground">{item.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <h4 className="font-semibold mt-4">Alertas do Sistema:</h4>
                   <p className="text-sm text-muted-foreground">
-                    Lista das últimas vendas realizadas com cliente, valor e status.
+                    Avisos automáticos de estoque crítico, contas vencidas, manutenções pendentes e checklists atrasados.
                   </p>
 
-                  <h4 className="font-semibold mt-4">Ações Rápidas:</h4>
+                  <h4 className="font-semibold mt-4">Vendas Recentes e Ações Rápidas:</h4>
                   <p className="text-sm text-muted-foreground">
-                    Botões de acesso rápido aos módulos mais utilizados, filtrados conforme as permissões do usuário.
+                    Lista das últimas vendas e botões de acesso rápido filtrados por permissões.
                   </p>
+
+                  <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                    <p className="text-sm text-blue-700">
+                      <strong>💡 Comparações:</strong> Cada indicador mostra a variação percentual em relação ao mês anterior.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             </section>
@@ -1709,7 +1806,7 @@ const Documentation = () => {
                   <div className="grid sm:grid-cols-2 gap-3">
                     {[
                       { title: 'Vendas', desc: 'Análise de vendas por período, cliente, produto' },
-                      { title: 'Produtos', desc: 'Movimentação e estoque em M³ e Toneladas' },
+                      { title: 'Produtos', desc: 'Saída em M³ e Toneladas por produto' },
                       { title: 'Clientes', desc: 'Análise da carteira de clientes' },
                       { title: 'Financeiro', desc: 'Fluxo de caixa, receitas e despesas' },
                       { title: 'Fornecedores', desc: 'Análise de compras por fornecedor' },
@@ -1717,7 +1814,7 @@ const Documentation = () => {
                       { title: 'Ticagem', desc: 'Ratio de pedidos carregados vs pendentes' },
                       { title: 'Partes Diárias', desc: 'Relatórios de viagens dos motoristas' },
                       { title: 'Checklists', desc: 'Histórico de inspeções veiculares' },
-                      { title: 'Manutenções', desc: 'Solicitações de manutenção da frota' },
+                      { title: 'Assistente IA', desc: 'Consultas em linguagem natural' },
                     ].map((item, i) => (
                       <div key={i} className="p-3 border rounded-lg">
                         <h5 className="font-medium">{item.title}</h5>
@@ -1972,6 +2069,30 @@ const Documentation = () => {
                       <div className="mt-2 text-xs text-purple-600">
                         Tecnologia: Edge Function + Modelo de Visão Computacional (Gemini)
                       </div>
+                    </div>
+
+                    <div className="p-4 border rounded-lg bg-purple-50 border-purple-200">
+                      <h4 className="font-semibold flex items-center gap-2 text-purple-800">
+                        💬 Assistente de Negócios com IA
+                      </h4>
+                      <p className="text-sm text-purple-700 mt-1">
+                        Consulte dados do sistema em linguagem natural: "vendas do mês", 
+                        "clientes com saldo devedor", "produtos mais vendidos". 
+                        Respostas instantâneas com dados reais do banco de dados.
+                      </p>
+                      <div className="mt-2 text-xs text-purple-600">
+                        Acesso: Relatórios → Assistente IA
+                      </div>
+                    </div>
+
+                    <div className="p-4 border rounded-lg">
+                      <h4 className="font-semibold flex items-center gap-2">
+                        📈 Dashboard Executivo
+                      </h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Gráficos de tendência de vendas (6 meses), fluxo de caixa (15 dias), 
+                        top 5 produtos, ranking de vendedores e alertas do sistema em tempo real.
+                      </p>
                     </div>
 
                     <div className="p-4 border rounded-lg">
