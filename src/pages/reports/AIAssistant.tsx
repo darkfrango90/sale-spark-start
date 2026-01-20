@@ -4,8 +4,38 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import TopMenu from "@/components/dashboard/TopMenu";
-import { Send, Bot, User, Loader2, Sparkles } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles, Share2 } from "lucide-react";
 import { toast } from "sonner";
+
+const handleShare = async (content: string) => {
+  // Limpar formatação markdown para texto puro
+  const plainText = content
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/<br \/>/g, '\n')
+    .replace(/<strong>(.*?)<\/strong>/g, '$1');
+
+  const shareText = `📊 *Relatório - Sistema de Gestão*\n\n${plainText}`;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: 'Relatório do Sistema',
+        text: shareText,
+      });
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        openWhatsApp(shareText);
+      }
+    }
+  } else {
+    openWhatsApp(shareText);
+  }
+};
+
+const openWhatsApp = (text: string) => {
+  const encoded = encodeURIComponent(text);
+  window.open(`https://wa.me/?text=${encoded}`, '_blank');
+};
 
 interface Message {
   role: "user" | "assistant";
@@ -226,23 +256,36 @@ const AIAssistant = () => {
                           <Bot className="h-4 w-4 text-violet-600" />
                         </div>
                       )}
-                      <div
-                        className={`max-w-[80%] rounded-lg p-3 ${
-                          message.role === "user"
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted"
-                        }`}
-                      >
-                        {message.role === "assistant" && message.content === "" && isLoading ? (
-                          <div className="flex items-center gap-2">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            <span className="text-sm">Buscando informações...</span>
-                          </div>
-                        ) : (
-                          <div
-                            className="text-sm whitespace-pre-wrap"
-                            dangerouslySetInnerHTML={{ __html: formatMessage(message.content) }}
-                          />
+                      <div className="flex flex-col gap-1">
+                        <div
+                          className={`max-w-[80%] rounded-lg p-3 ${
+                            message.role === "user"
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted"
+                          }`}
+                        >
+                          {message.role === "assistant" && message.content === "" && isLoading ? (
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span className="text-sm">Buscando informações...</span>
+                            </div>
+                          ) : (
+                            <div
+                              className="text-sm whitespace-pre-wrap"
+                              dangerouslySetInnerHTML={{ __html: formatMessage(message.content) }}
+                            />
+                          )}
+                        </div>
+                        {message.role === "assistant" && message.content && !isLoading && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="self-start h-7 text-xs text-muted-foreground hover:text-foreground gap-1"
+                            onClick={() => handleShare(message.content)}
+                          >
+                            <Share2 className="h-3 w-3" />
+                            Compartilhar
+                          </Button>
                         )}
                       </div>
                       {message.role === "user" && (
