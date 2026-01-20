@@ -5,7 +5,7 @@ import TopMenu from '@/components/dashboard/TopMenu';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { FileText, ClipboardCheck, Wrench, AlertTriangle } from 'lucide-react';
+import { FileText, ClipboardCheck, Wrench, AlertTriangle, Receipt } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format, startOfWeek, endOfWeek, isMonday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -18,6 +18,7 @@ const DriverDashboard = () => {
     dailyReportsCount: 0,
     checklistsThisWeek: 0,
     pendingMaintenance: 0,
+    expensesThisMonth: 0,
   });
 
   useEffect(() => {
@@ -57,10 +58,18 @@ const DriverDashboard = () => {
       .eq('user_id', user.id)
       .eq('status', 'pendente');
 
+    // Count expenses this month
+    const { count: expensesCount } = await supabase
+      .from('driver_expenses')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', startOfMonth.toISOString());
+
     setStats({
       dailyReportsCount: dailyCount || 0,
       checklistsThisWeek: checklistCount || 0,
       pendingMaintenance: maintenanceCount || 0,
+      expensesThisMonth: expensesCount || 0,
     });
   };
 
@@ -105,6 +114,14 @@ const DriverDashboard = () => {
       path: '/motorista/manutencao',
       stat: stats.pendingMaintenance > 0 ? `${stats.pendingMaintenance} pendente(s)` : 'Nenhum pendente',
       statColor: stats.pendingMaintenance > 0 ? 'text-amber-600' : 'text-green-600',
+    },
+    {
+      title: 'Lançar Despesa',
+      description: 'Registre despesas de viagem com comprovante',
+      icon: Receipt,
+      color: 'bg-purple-500',
+      path: '/motorista/despesas',
+      stat: `${stats.expensesThisMonth} este mês`,
     },
   ];
 
