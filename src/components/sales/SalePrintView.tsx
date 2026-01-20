@@ -49,19 +49,19 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
     const watermarkStyles = showWatermark ? `
       .watermark {
         position: fixed;
-        top: 50%;
+        top: 74mm;
         left: 50%;
         transform: translate(-50%, -50%) rotate(-45deg);
-        font-size: 100px;
+        font-size: 80px;
         font-weight: bold;
         color: rgba(255, 0, 0, 0.18);
         text-transform: uppercase;
         z-index: 1000;
         pointer-events: none;
         white-space: nowrap;
-        letter-spacing: 25px;
+        letter-spacing: 20px;
         text-align: center;
-        width: 200%;
+        width: 130%;
       }
     ` : '';
 
