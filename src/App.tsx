@@ -35,6 +35,7 @@ import FinancialReport from "./pages/reports/FinancialReport";
 import SuppliersReport from "./pages/reports/SuppliersReport";
 import TickingReport from "./pages/reports/TickingReport";
 import AIAssistant from "./pages/reports/AIAssistant";
+import CashRegisterReport from "./pages/reports/CashRegisterReport";
 import OperatorDashboard from "./pages/operations/OperatorDashboard";
 import LoadedOrders from "./pages/operations/LoadedOrders";
 import FuelEntry from "./pages/operations/FuelEntry";
@@ -258,6 +259,13 @@ const AppRoutes = () => {
         <Route path="/relatorios/assistente" element={
           <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <AIAssistant />
+          </ProtectedRoute>
+        } />
+        <Route path="/relatorios/caixa" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+            <PermissionRoute module="relatorios" action="Caixa">
+              <CashRegisterReport />
+            </PermissionRoute>
           </ProtectedRoute>
         } />
         <Route path="/operacao/operador" element={
