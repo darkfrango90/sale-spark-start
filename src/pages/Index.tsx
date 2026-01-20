@@ -1,11 +1,20 @@
-import { DollarSign, ShoppingCart, Users, TrendingUp } from "lucide-react";
+import { DollarSign, ShoppingCart, Users, AlertCircle } from "lucide-react";
 import TopMenu from "@/components/dashboard/TopMenu";
 import Header from "@/components/dashboard/Header";
 import StatCard from "@/components/dashboard/StatCard";
 import RecentSales from "@/components/dashboard/RecentSales";
 import QuickActions from "@/components/dashboard/QuickActions";
+import AlertsCard from "@/components/dashboard/AlertsCard";
+import SalesChart from "@/components/dashboard/SalesChart";
+import PaymentMethodsChart from "@/components/dashboard/PaymentMethodsChart";
+import TopProductsChart from "@/components/dashboard/TopProductsChart";
+import CashFlowChart from "@/components/dashboard/CashFlowChart";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Index = () => {
+  const stats = useDashboardStats();
+
   return (
     <div className="min-h-screen bg-background">
       <TopMenu />
@@ -22,44 +31,67 @@ const Index = () => {
 
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard
-              title="Receita Total"
-              value="R$ 45.231,89"
-              change="+20.1% em relação ao mês passado"
-              changeType="positive"
-              icon={DollarSign}
-              iconClassName="gradient-primary"
-            />
-            <StatCard
-              title="Vendas"
-              value="573"
-              change="+15% em relação ao mês passado"
-              changeType="positive"
-              icon={ShoppingCart}
-              iconClassName="gradient-success"
-            />
-            <StatCard
-              title="Clientes Ativos"
-              value="2.350"
-              change="+180 novos clientes"
-              changeType="positive"
-              icon={Users}
-            />
-            <StatCard
-              title="Taxa de Conversão"
-              value="3.2%"
-              change="-0.4% em relação ao mês passado"
-              changeType="negative"
-              icon={TrendingUp}
-            />
+            {stats.loading ? (
+              <>
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-32 rounded-lg" />
+                ))}
+              </>
+            ) : (
+              <>
+                <StatCard
+                  title="Receita do Mês"
+                  value={stats.totalRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  change={`${stats.revenueChange > 0 ? '+' : ''}${stats.revenueChange.toFixed(1)}% em relação ao mês passado`}
+                  changeType={stats.revenueChangeType}
+                  icon={DollarSign}
+                  iconClassName="gradient-primary"
+                />
+                <StatCard
+                  title="Vendas do Mês"
+                  value={stats.salesCount.toString()}
+                  change={`${stats.salesChange > 0 ? '+' : ''}${stats.salesChange.toFixed(1)}% em relação ao mês passado`}
+                  changeType={stats.salesChangeType}
+                  icon={ShoppingCart}
+                  iconClassName="gradient-success"
+                />
+                <StatCard
+                  title="Clientes Ativos"
+                  value={stats.activeCustomers.toString()}
+                  change={`+${stats.newCustomers} novos este mês`}
+                  changeType="positive"
+                  icon={Users}
+                />
+                <StatCard
+                  title="A Receber"
+                  value={stats.pendingReceivables.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  change={`${stats.pendingReceivablesCount} ${stats.pendingReceivablesCount === 1 ? 'pendência' : 'pendências'}`}
+                  changeType={stats.pendingReceivablesCount > 0 ? "negative" : "positive"}
+                  icon={AlertCircle}
+                />
+              </>
+            )}
           </div>
 
-          {/* Content Grid */}
+          {/* Charts Row 1 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <SalesChart />
+            <PaymentMethodsChart />
+          </div>
+
+          {/* Charts Row 2 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <TopProductsChart />
+            <CashFlowChart />
+          </div>
+
+          {/* Bottom Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <RecentSales />
             </div>
-            <div>
+            <div className="space-y-6">
+              <AlertsCard />
               <QuickActions />
             </div>
           </div>
