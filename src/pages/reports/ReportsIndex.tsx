@@ -11,7 +11,8 @@ import {
   ArrowRight,
   TrendingUp,
   AlertTriangle,
-  Bot
+  Bot,
+  Calculator
 } from "lucide-react";
 import { useSales } from "@/contexts/SalesContext";
 import { useProducts } from "@/contexts/ProductContext";
@@ -134,6 +135,23 @@ const ReportsIndex = () => {
       stats: [
         { label: "Fornecedores Ativos", value: stats.activeSuppliers.toString() },
         { label: "Total", value: suppliers.length.toString() }
+      ]
+    },
+    {
+      title: "Relatório de Caixa",
+      description: "Fechamento diário de caixa, conferência por forma de pagamento",
+      icon: Calculator,
+      path: "/relatorios/caixa",
+      color: "text-emerald-600",
+      bgColor: "bg-emerald-100",
+      stats: [
+        { label: "Vendas Hoje", value: sales.filter(s => {
+          const today = new Date();
+          const saleDate = new Date(s.createdAt);
+          return saleDate.toDateString() === today.toDateString() && 
+                 s.status !== 'cancelado' && s.status !== 'excluido' && s.type === 'pedido';
+        }).length.toString() },
+        { label: "Conferência", value: "Diária" }
       ]
     },
     {
