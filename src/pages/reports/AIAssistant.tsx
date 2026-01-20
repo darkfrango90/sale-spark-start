@@ -4,38 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import TopMenu from "@/components/dashboard/TopMenu";
-import { Send, Bot, User, Loader2, Sparkles, Share2 } from "lucide-react";
+import { Send, Bot, User, Loader2, Sparkles, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
-
-const handleShare = async (content: string) => {
-  // Limpar formatação markdown para texto puro
-  const plainText = content
-    .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/<br \/>/g, '\n')
-    .replace(/<strong>(.*?)<\/strong>/g, '$1');
-
-  const shareText = `📊 *Relatório - Sistema de Gestão*\n\n${plainText}`;
-
-  if (navigator.share) {
-    try {
-      await navigator.share({
-        title: 'Relatório do Sistema',
-        text: shareText,
-      });
-    } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
-        openWhatsApp(shareText);
-      }
-    }
-  } else {
-    openWhatsApp(shareText);
-  }
-};
-
-const openWhatsApp = (text: string) => {
-  const encoded = encodeURIComponent(text);
-  window.open(`https://wa.me/?text=${encoded}`, '_blank');
-};
 
 interface Message {
   role: "user" | "assistant";
@@ -56,8 +26,29 @@ const AIAssistant = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [copiedMessageIndex, setCopiedMessageIndex] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleCopy = async (content: string, index: number) => {
+    const plainText = content
+      .replace(/<strong>(.*?)<\/strong>/g, '$1')
+      .replace(/<br \/>/g, '\n')
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/<[^>]*>/g, '');
+
+    try {
+      await navigator.clipboard.writeText(plainText);
+      setCopiedMessageIndex(index);
+      toast.success("Texto copiado!");
+      
+      setTimeout(() => {
+        setCopiedMessageIndex(null);
+      }, 2000);
+    } catch (error) {
+      toast.error("Erro ao copiar texto");
+    }
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -281,10 +272,19 @@ const AIAssistant = () => {
                             variant="ghost"
                             size="sm"
                             className="self-start h-7 text-xs text-muted-foreground hover:text-foreground gap-1"
-                            onClick={() => handleShare(message.content)}
+                            onClick={() => handleCopy(message.content, index)}
                           >
-                            <Share2 className="h-3 w-3" />
-                            Compartilhar
+                            {copiedMessageIndex === index ? (
+                              <>
+                                <Check className="h-3 w-3 text-green-500" />
+                                Copiado!
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3 w-3" />
+                                Copiar
+                              </>
+                            )}
                           </Button>
                         )}
                       </div>
