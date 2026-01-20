@@ -5,7 +5,7 @@ import TopMenu from '@/components/dashboard/TopMenu';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { FileText, ClipboardCheck, Wrench, AlertTriangle, Receipt } from 'lucide-react';
+import { FileText, ClipboardCheck, Wrench, AlertTriangle, Receipt, TrendingUp, Navigation, DollarSign, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format, startOfWeek, endOfWeek, isMonday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -20,10 +20,17 @@ const DriverDashboard = () => {
     pendingMaintenance: 0,
     expensesThisMonth: 0,
   });
+  const [summary, setSummary] = useState({
+    lastReport: null as { customer_name: string; created_at: string; vehicle_plate: string } | null,
+    tripsThisMonth: 0,
+    totalKmMonth: 0,
+    totalFreightMonth: 0,
+  });
 
   useEffect(() => {
     if (user) {
       loadStats();
+      loadSummary();
       checkWeeklyChecklist();
     }
   }, [user]);
@@ -70,6 +77,45 @@ const DriverDashboard = () => {
       checklistsThisWeek: checklistCount || 0,
       pendingMaintenance: maintenanceCount || 0,
       expensesThisMonth: expensesCount || 0,
+    });
+  };
+
+  const loadSummary = async () => {
+    if (!user) return;
+
+    const today = new Date();
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    // Get last daily report
+    const { data: lastReportData } = await supabase
+      .from('daily_reports')
+      .select('customer_name, created_at, vehicle_plate')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    // Get monthly stats (trips, km, freight)
+    const { data: monthlyReports } = await supabase
+      .from('daily_reports')
+      .select('km_initial, km_final, freight_value')
+      .eq('user_id', user.id)
+      .gte('created_at', startOfMonth.toISOString());
+
+    let totalKm = 0;
+    let totalFreight = 0;
+    const tripsCount = monthlyReports?.length || 0;
+
+    monthlyReports?.forEach((report) => {
+      totalKm += (report.km_final || 0) - (report.km_initial || 0);
+      totalFreight += report.freight_value || 0;
+    });
+
+    setSummary({
+      lastReport: lastReportData || null,
+      tripsThisMonth: tripsCount,
+      totalKmMonth: totalKm,
+      totalFreightMonth: totalFreight,
     });
   };
 
@@ -136,6 +182,58 @@ const DriverDashboard = () => {
           <p className="text-muted-foreground mt-1">
             {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
           </p>
+        </div>
+
+        {/* Monthly Summary */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-foreground mb-3">Resumo do Mês</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp className="h-4 w-4 text-blue-600" />
+                  <span className="text-xs text-blue-600 font-medium">Viagens</span>
+                </div>
+                <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{summary.tripsThisMonth}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Navigation className="h-4 w-4 text-green-600" />
+                  <span className="text-xs text-green-600 font-medium">KM Rodados</span>
+                </div>
+                <p className="text-2xl font-bold text-green-700 dark:text-green-400">{summary.totalKmMonth.toLocaleString('pt-BR')}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-900">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <DollarSign className="h-4 w-4 text-purple-600" />
+                  <span className="text-xs text-purple-600 font-medium">Faturado</span>
+                </div>
+                <p className="text-2xl font-bold text-purple-700 dark:text-purple-400">
+                  {summary.totalFreightMonth.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Calendar className="h-4 w-4 text-amber-600" />
+                  <span className="text-xs text-amber-600 font-medium">Última Viagem</span>
+                </div>
+                {summary.lastReport ? (
+                  <div>
+                    <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 truncate">{summary.lastReport.customer_name}</p>
+                    <p className="text-xs text-amber-600">{summary.lastReport.vehicle_plate} • {format(new Date(summary.lastReport.created_at), 'dd/MM')}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-amber-600">Nenhuma registrada</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
