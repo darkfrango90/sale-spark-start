@@ -6,7 +6,7 @@ import RecentSales from "@/components/dashboard/RecentSales";
 import QuickActions from "@/components/dashboard/QuickActions";
 import AlertsCard from "@/components/dashboard/AlertsCard";
 import SalesChart from "@/components/dashboard/SalesChart";
-import PaymentMethodsChart from "@/components/dashboard/PaymentMethodsChart";
+import SellersRankingCard from "@/components/dashboard/SellersRankingCard";
 import TopProductsChart from "@/components/dashboard/TopProductsChart";
 import CashFlowChart from "@/components/dashboard/CashFlowChart";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
@@ -76,7 +76,7 @@ const Index = () => {
           {/* Charts Row 1 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <SalesChart />
-            <PaymentMethodsChart />
+            <SellersRankingCard />
           </div>
 
           {/* Charts Row 2 */}
