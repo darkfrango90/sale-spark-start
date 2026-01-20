@@ -22,7 +22,8 @@ Formato de resposta OBRIGATÓRIO:
 Tabelas disponíveis para consulta:
 - customers: clientes (nome, código, cpf_cnpj, permuta: has_barter, barter_credit, barter_limit)
 - products: produtos (nome, código, estoque, preço)
-- sales: vendas (número, cliente, total, data, status, tipo: venda/orcamento/pedido)
+- sales: vendas/pedidos/orçamentos (número, cliente, total, data, status, tipo: venda/orcamento/pedido)
+  IMPORTANTE: Quando usuário perguntar "vendas do mês" ou similar de forma genérica, use type="all" para buscar todos os tipos.
 - sale_items: itens de vendas (produto, quantidade, valor)
 - suppliers: fornecedores
 - accounts_receivable: contas a receber
@@ -74,14 +75,14 @@ const tools = [
     type: "function",
     function: {
       name: "query_sales",
-      description: "Busca vendas por período, cliente ou produto",
+      description: "Busca vendas/pedidos/orçamentos por período, cliente ou produto. Quando usuário pergunta 'vendas' de forma genérica, busque todos os tipos.",
       parameters: {
         type: "object",
         properties: {
           customer_name: { type: "string", description: "Nome do cliente" },
           product_name: { type: "string", description: "Nome do produto" },
           period: { type: "string", enum: ["today", "week", "month", "year"], description: "Período de busca" },
-          type: { type: "string", enum: ["venda", "orcamento", "pedido"], description: "Tipo de venda" }
+          type: { type: "string", enum: ["venda", "orcamento", "pedido", "all"], description: "Tipo específico ou 'all' para todos. Use 'all' quando usuário perguntar 'vendas' de forma genérica." }
         }
       }
     }
@@ -164,7 +165,8 @@ async function executeQuery(supabase: any, toolName: string, args: any) {
       if (args.customer_name) {
         query = query.ilike("customer_name", `%${args.customer_name}%`);
       }
-      if (args.type) {
+      // Only filter by type if specified and not "all"
+      if (args.type && args.type !== "all") {
         query = query.eq("type", args.type);
       }
       if (args.period) {
