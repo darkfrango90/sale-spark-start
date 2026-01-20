@@ -112,8 +112,6 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
             body { padding: 5px; max-height: 148mm; }
             @page { margin: 5mm; size: A4; }
             .watermark {
-              position: fixed;
-              top: 20px;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
             }
