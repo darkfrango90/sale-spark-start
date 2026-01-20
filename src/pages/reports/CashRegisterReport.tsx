@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,6 @@ const CashRegisterReport = () => {
   const navigate = useNavigate();
   const { sales } = useSales();
   const { user } = useAuth();
-  const printRef = useRef<HTMLDivElement>(null);
   
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [sellerFilter, setSellerFilter] = useState<string>("all");
@@ -91,11 +90,11 @@ const CashRegisterReport = () => {
   };
 
   const handlePrint = () => {
-    const printContent = printRef.current;
-    if (!printContent) return;
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+    const printWindow = window.open('', '', 'width=800,height=600');
+    if (!printWindow) {
+      alert('Por favor, permita pop-ups para imprimir o relatório.');
+      return;
+    }
 
     printWindow.document.write(`
       <!DOCTYPE html>
