@@ -142,11 +142,16 @@ async function executeQuery(supabase: any, toolName: string, args: any) {
       if (args.search_term) {
         query = query.or(`name.ilike.%${args.search_term}%,code.ilike.%${args.search_term}%`);
       }
-      if (args.filter_critical) {
-        query = query.lt("stock", supabase.raw("min_stock"));
-      }
-      const { data, error } = await query.limit(20);
+
+      const { data, error } = await query.limit(50);
       if (error) throw error;
+
+      // PostgREST não permite comparar coluna com coluna diretamente (stock < min_stock).
+      // Então filtramos no runtime quando solicitado.
+      if (args.filter_critical && Array.isArray(data)) {
+        return data.filter((p: any) => (p.stock ?? 0) < (p.min_stock ?? 0));
+      }
+
       return data;
     }
 
@@ -216,16 +221,25 @@ async function executeQuery(supabase: any, toolName: string, args: any) {
     }
 
     case "query_financial": {
-      const table = args.type === "payable" ? "accounts_payable" : "accounts_receivable";
+      const isPayable = args.type === "payable";
+      const table = isPayable ? "accounts_payable" : "accounts_receivable";
       let query = supabase.from(table).select("*");
-      
+
+      // Observação: accounts_receivable não possui due_date no schema atual.
+      // Para evitar erro, tratamos "vencido" em contas a receber como "pendente".
       if (args.status === "vencido") {
-        query = query.eq("status", "pendente").lt("due_date", now.toISOString().split("T")[0]);
+        if (isPayable) {
+          query = query.eq("status", "pendente").lt("due_date", now.toISOString().split("T")[0]);
+        } else {
+          query = query.eq("status", "pendente");
+        }
       } else if (args.status) {
         query = query.eq("status", args.status);
       }
-      
-      const { data, error } = await query.order("due_date", { ascending: true }).limit(50);
+
+      // Ordenação: payable tem due_date; receivable não.
+      const orderColumn = isPayable ? "due_date" : "created_at";
+      const { data, error } = await query.order(orderColumn, { ascending: true }).limit(50);
       if (error) throw error;
 
       const total = data?.reduce((sum: number, item: any) => sum + (item.final_amount || 0), 0) || 0;
@@ -378,8 +392,19 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("business-chat error:", error);
+    const details = (() => {
+      try {
+        return typeof error === "object" ? JSON.stringify(error) : String(error);
+      } catch {
+        return "(unserializable error)";
+      }
+    })();
+
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Erro desconhecido" }),
+      JSON.stringify({
+        error: error instanceof Error ? error.message : "Erro desconhecido",
+        details,
+      }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
