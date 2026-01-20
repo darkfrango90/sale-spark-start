@@ -49,19 +49,19 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
     const watermarkStyles = showWatermark ? `
       .watermark {
         position: fixed;
-        top: 180px;
-        left: 0;
-        right: 0;
-        transform: rotate(-15deg);
-        font-size: 80px;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 100px;
         font-weight: bold;
-        color: rgba(255, 0, 0, 0.20);
+        color: rgba(255, 0, 0, 0.18);
         text-transform: uppercase;
         z-index: 1000;
         pointer-events: none;
         white-space: nowrap;
-        letter-spacing: 12px;
+        letter-spacing: 25px;
         text-align: center;
+        width: 200%;
       }
     ` : '';
 
@@ -267,10 +267,15 @@ const SalePrintView = ({ sale, open, onClose }: SalePrintViewProps) => {
         <div className="p-4 bg-white text-black relative text-[11px]">
           {/* Marca d'água na preview - centralizada na metade superior */}
           {showWatermark && (
-            <div className="absolute top-24 left-0 right-0 -rotate-[15deg] pointer-events-none z-10 text-center">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 overflow-hidden">
               <span 
-                className="text-red-500/20 font-bold text-[50px] whitespace-nowrap"
-                style={{ letterSpacing: '10px' }}
+                className="text-red-500/20 font-bold text-[60px] whitespace-nowrap"
+                style={{ 
+                  transform: 'rotate(-45deg)', 
+                  letterSpacing: '20px',
+                  width: '200%',
+                  textAlign: 'center'
+                }}
               >
                 {watermarkText}
               </span>
