@@ -541,6 +541,12 @@ const DataImport = () => {
                         <TableHead>
                           {importType === 'customers' ? 'Telefone' : 'Preço'}
                         </TableHead>
+                        {importType === 'customers' && (
+                          <>
+                            <TableHead>Cidade</TableHead>
+                            <TableHead>UF</TableHead>
+                          </>
+                        )}
                         <TableHead className="w-24">Status</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -563,6 +569,12 @@ const DataImport = () => {
                               : `R$ ${item.mappedData.sale_price?.toFixed(2) || '0,00'}`
                             }
                           </TableCell>
+                          {importType === 'customers' && (
+                            <>
+                              <TableCell>{item.mappedData.city || '-'}</TableCell>
+                              <TableCell>{item.mappedData.state || '-'}</TableCell>
+                            </>
+                          )}
                           <TableCell>
                             {getStatusBadge(item.status)}
                           </TableCell>
@@ -570,7 +582,7 @@ const DataImport = () => {
                       ))}
                       {readyItems.length > 50 && (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center text-muted-foreground">
+                          <TableCell colSpan={importType === 'customers' ? 7 : 5} className="text-center text-muted-foreground">
                             ... e mais {readyItems.length - 50} registros
                           </TableCell>
                         </TableRow>
