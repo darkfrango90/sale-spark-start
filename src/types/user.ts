@@ -8,20 +8,20 @@ export interface User {
   accessCode: string;
   name: string;
   cpf: string;
-  password: string;
-  role: 'admin' | 'gerente' | 'vendedor' | 'caixa' | 'estoquista' | 'motorista';
+  role: 'diretor' | 'gerente' | 'vendedor' | 'caixa' | 'administrativo' | 'motorista' | 'operador';
   permissions: Permission[];
   active: boolean;
   createdAt: Date;
 }
 
 export const ROLES = {
-  admin: 'Administrador',
+  diretor: 'Diretor',
   gerente: 'Gerente',
   vendedor: 'Vendedor',
   caixa: 'Caixa',
-  estoquista: 'Estoquista',
+  administrativo: 'Administrativo',
   motorista: 'Motorista',
+  operador: 'Operador',
 } as const;
 
 export const MODULES = {
@@ -54,18 +54,3 @@ export const MODULES = {
     actions: ['Empresa', 'Sistema', 'Contas de Recebimento'],
   },
 } as const;
-
-export const DEFAULT_ADMIN: User = {
-  id: '1',
-  accessCode: '001',
-  name: 'Administrador',
-  cpf: '000.000.000-00',
-  password: 'admin123',
-  role: 'admin',
-  permissions: Object.keys(MODULES).map((module) => ({
-    module,
-    actions: MODULES[module as keyof typeof MODULES].actions as unknown as string[],
-  })),
-  active: true,
-  createdAt: new Date(),
-};

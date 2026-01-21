@@ -12,30 +12,48 @@ const Login = () => {
   const [accessCode, setAccessCode] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login, users } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate async login
-    setTimeout(() => {
-      const success = login(accessCode, password);
+    try {
+      const success = await login(accessCode, password);
       if (success) {
         toast.success('Login realizado com sucesso!');
-        // Redirect based on user role
-        const loggedUser = users.find(u => u.accessCode === accessCode);
-        if (loggedUser?.role === 'motorista') {
-          navigate('/motorista');
+        // Need to get the user after login to check role
+        // The login function already sets the user, so we need to re-check
+        const { data: appUser } = await import('@/integrations/supabase/client').then(m => 
+          m.supabase.from('app_users').select('id').eq('access_code', accessCode).single()
+        );
+        
+        if (appUser) {
+          const { data: roleData } = await import('@/integrations/supabase/client').then(m =>
+            m.supabase.from('user_roles').select('role').eq('user_id', appUser.id).single()
+          );
+          
+          const role = roleData?.role;
+          if (role === 'motorista') {
+            navigate('/motorista');
+          } else if (role === 'operador') {
+            navigate('/operador');
+          } else {
+            navigate('/');
+          }
         } else {
           navigate('/');
         }
       } else {
         toast.error('Código de acesso ou senha inválidos');
       }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('Erro ao fazer login');
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   };
 
   return (

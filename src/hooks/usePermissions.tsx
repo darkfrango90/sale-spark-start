@@ -5,13 +5,13 @@ export const usePermissions = () => {
 
   const hasModuleAccess = (module: string): boolean => {
     if (!user) return false;
-    if (user.role === 'admin') return true;
+    if (user.role === 'diretor') return true;
     return user.permissions.some((p) => p.module === module);
   };
 
   const hasActionAccess = (module: string, action: string): boolean => {
     if (!user) return false;
-    if (user.role === 'admin') return true;
+    if (user.role === 'diretor') return true;
     const permission = user.permissions.find((p) => p.module === module);
     return permission?.actions.includes(action) ?? false;
   };
@@ -19,6 +19,6 @@ export const usePermissions = () => {
   return {
     hasModuleAccess,
     hasActionAccess,
-    isAdmin: user?.role === 'admin',
+    isAdmin: user?.role === 'diretor',
   };
 };

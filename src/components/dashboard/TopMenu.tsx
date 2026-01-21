@@ -37,6 +37,7 @@ interface MenuItem {
   module?: string;
   items?: SubMenuItem[];
   driverOnly?: boolean;
+  operatorOnly?: boolean;
 }
 
 const menuItems: MenuItem[] = [
@@ -108,9 +109,13 @@ const TopMenu = () => {
 
   // Filter menu items based on permissions
   const filteredMenuItems = menuItems.filter(item => {
-    // Driver menu only visible for drivers and admins
+    // Driver menu only visible for drivers and directors
     if (item.driverOnly) {
-      return user?.role === 'motorista' || user?.role === 'admin';
+      return user?.role === 'motorista' || user?.role === 'diretor';
+    }
+    // Operator menu visible for operators and directors
+    if (item.operatorOnly) {
+      return user?.role === 'operador' || user?.role === 'diretor';
     }
     if (!item.module) return true;
     return hasModuleAccess(item.module);

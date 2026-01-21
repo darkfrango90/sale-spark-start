@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { User, ROLES, MODULES, Permission } from '@/types/user';
 import TopMenu from '@/components/dashboard/TopMenu';
@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, UserCog } from 'lucide-react';
+import { Plus, Pencil, Trash2, UserCog, Loader2 } from 'lucide-react';
 
 const formatCPF = (value: string) => {
   const numbers = value.replace(/\D/g, '');
@@ -43,9 +43,11 @@ const formatCPF = (value: string) => {
 };
 
 const UserManagement = () => {
-  const { users, addUser, updateUser, deleteUser, getNextAccessCode, user: currentUser } = useAuth();
+  const { users, addUser, updateUser, deleteUser, getNextAccessCode, user: currentUser, refreshUsers } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [nextCode, setNextCode] = useState('001');
   
   const [formData, setFormData] = useState({
     name: '',
@@ -55,6 +57,10 @@ const UserManagement = () => {
     active: true,
     permissions: [] as Permission[],
   });
+
+  useEffect(() => {
+    refreshUsers();
+  }, []);
 
   const resetForm = () => {
     setFormData({
@@ -68,8 +74,10 @@ const UserManagement = () => {
     setEditingUser(null);
   };
 
-  const openNewUserDialog = () => {
+  const openNewUserDialog = async () => {
     resetForm();
+    const code = await getNextAccessCode();
+    setNextCode(code);
     setIsDialogOpen(true);
   };
 
@@ -138,59 +146,75 @@ const UserManagement = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
 
-    if (!formData.name || !formData.cpf) {
-      toast.error('Preencha todos os campos obrigatórios');
-      return;
-    }
-
-    if (!editingUser && !formData.password) {
-      toast.error('A senha é obrigatória para novos usuários');
-      return;
-    }
-
-    if (editingUser) {
-      const updateData: Partial<User> = {
-        name: formData.name,
-        cpf: formData.cpf,
-        role: formData.role,
-        active: formData.active,
-        permissions: formData.permissions,
-      };
-      if (formData.password) {
-        updateData.password = formData.password;
+    try {
+      if (!formData.name || !formData.cpf) {
+        toast.error('Preencha todos os campos obrigatórios');
+        setIsLoading(false);
+        return;
       }
-      updateUser(editingUser.id, updateData);
-      toast.success('Usuário atualizado com sucesso!');
-    } else {
-      const newUser = addUser({
-        name: formData.name,
-        cpf: formData.cpf,
-        password: formData.password,
-        role: formData.role,
-        active: formData.active,
-        permissions: formData.permissions,
-      });
-      toast.success(`Usuário criado com sucesso! Código de acesso: ${newUser.accessCode}`);
-    }
 
-    setIsDialogOpen(false);
-    resetForm();
+      if (!editingUser && !formData.password) {
+        toast.error('A senha é obrigatória para novos usuários');
+        setIsLoading(false);
+        return;
+      }
+
+      if (editingUser) {
+        const updateData: Partial<User> & { password?: string } = {
+          name: formData.name,
+          cpf: formData.cpf,
+          role: formData.role,
+          active: formData.active,
+          permissions: formData.permissions,
+        };
+        if (formData.password) {
+          updateData.password = formData.password;
+        }
+        await updateUser(editingUser.id, updateData);
+        toast.success('Usuário atualizado com sucesso!');
+      } else {
+        const newUser = await addUser({
+          name: formData.name,
+          cpf: formData.cpf,
+          password: formData.password,
+          role: formData.role,
+          active: formData.active,
+          permissions: formData.permissions,
+        });
+        toast.success(`Usuário criado com sucesso! Código de acesso: ${newUser.accessCode}`);
+      }
+
+      setIsDialogOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error('Error saving user:', error);
+      toast.error('Erro ao salvar usuário');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDelete = (user: User) => {
+  const handleDelete = async (user: User) => {
     if (user.accessCode === '001') {
-      toast.error('Não é possível excluir o administrador principal');
+      toast.error('Não é possível excluir o diretor principal');
       return;
     }
     if (user.id === currentUser?.id) {
       toast.error('Não é possível excluir o usuário logado');
       return;
     }
-    deleteUser(user.id);
-    toast.success('Usuário excluído com sucesso!');
+    
+    try {
+      await deleteUser(user.id);
+      toast.success('Usuário excluído com sucesso!');
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error('Erro ao excluir usuário');
+    }
   };
 
   return (
@@ -222,7 +246,7 @@ const UserManagement = () => {
                       <Label htmlFor="accessCode">Código de Acesso</Label>
                       <Input
                         id="accessCode"
-                        value={editingUser?.accessCode ?? getNextAccessCode()}
+                        value={editingUser?.accessCode ?? nextCode}
                         disabled
                         className="bg-slate-100"
                       />
@@ -354,11 +378,19 @@ const UserManagement = () => {
                       type="button"
                       variant="outline"
                       onClick={() => setIsDialogOpen(false)}
+                      disabled={isLoading}
                     >
                       Cancelar
                     </Button>
-                    <Button type="submit">
-                      {editingUser ? 'Salvar Alterações' : 'Cadastrar Usuário'}
+                    <Button type="submit" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Salvando...
+                        </>
+                      ) : (
+                        editingUser ? 'Salvar Alterações' : 'Cadastrar Usuário'
+                      )}
                     </Button>
                   </div>
                 </form>

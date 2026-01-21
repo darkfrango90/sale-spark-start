@@ -78,8 +78,8 @@ const ProtectedRoute = ({ isAuthenticated, isLoading, children }: RouteGateProps
 
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
-  if (user?.role !== 'admin') {
-    toast.error('Acesso restrito a administradores');
+  if (user?.role !== 'diretor') {
+    toast.error('Acesso restrito a diretores');
     return <Navigate to="/" replace />;
   }
   return <>{children}</>;
