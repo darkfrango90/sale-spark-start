@@ -86,6 +86,7 @@ const menuItems: MenuItem[] = [
     { label: "Condições de Pagamento", path: "/configuracao/pagamentos", module: "configuracao", action: "Empresa" },
     { label: "Contas de Recebimento", path: "/configuracao/contas-recebimento", module: "configuracao", action: "Contas de Recebimento" },
     { label: "Veículos", path: "/configuracao/veiculos", module: "configuracao", action: "Veículos" },
+    { label: "Importação de Dados", path: "/configuracao/importacao", module: "configuracao", action: "Importação" },
     { label: "Sistema", module: "configuracao", action: "Sistema" }
   ]},
 ];
