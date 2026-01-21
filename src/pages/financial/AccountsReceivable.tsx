@@ -29,7 +29,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Wallet, Eye, Check, CalendarIcon, FileImage, X } from "lucide-react";
+import { Wallet, Eye, Check, CalendarIcon, FileImage, X, Bot } from "lucide-react";
 import { useFinancial } from "@/contexts/FinancialContext";
 import { useToast } from "@/hooks/use-toast";
 import { AccountReceivable } from "@/types/financial";
@@ -233,9 +233,16 @@ const AccountsReceivablePage = () => {
                       </TableCell>
                       <TableCell>{formatDate(ar.createdAt)}</TableCell>
                       <TableCell>
-                        <Badge variant={ar.status === 'pendente' ? 'secondary' : 'default'}>
-                          {ar.status === 'pendente' ? 'Pendente' : 'Recebido'}
-                        </Badge>
+                        {ar.confirmedBy === 'ia' ? (
+                          <Badge className="bg-blue-500 hover:bg-blue-600 flex items-center gap-1 w-fit">
+                            <Bot className="h-3 w-3" />
+                            Recebido por I.A.
+                          </Badge>
+                        ) : (
+                          <Badge variant={ar.status === 'pendente' ? 'secondary' : 'default'}>
+                            {ar.status === 'pendente' ? 'Pendente' : 'Recebido'}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">

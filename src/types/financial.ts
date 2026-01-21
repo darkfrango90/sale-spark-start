@@ -20,6 +20,7 @@ export interface AccountReceivable {
   receiptDate?: Date;
   receiptUrl?: string;
   notes?: string;
+  confirmedBy?: 'manual' | 'ia';
   createdAt: Date;
   updatedAt: Date;
 }

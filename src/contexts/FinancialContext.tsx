@@ -21,6 +21,7 @@ interface FinancialContextType {
     receivingAccountId: string;
     interestPenalty: number;
     receiptDate: Date;
+    confirmedBy?: 'manual' | 'ia';
   }) => Promise<void>;
   cancelReceipt: (id: string) => Promise<void>;
 
@@ -115,6 +116,7 @@ export const FinancialProvider = ({ children }: { children: ReactNode }) => {
         receiptDate: ar.receipt_date ? new Date(ar.receipt_date) : undefined,
         receiptUrl: ar.receipt_url || undefined,
         notes: ar.notes || undefined,
+        confirmedBy: (ar as any).confirmed_by as 'manual' | 'ia' | undefined,
         createdAt: new Date(ar.created_at),
         updatedAt: new Date(ar.updated_at),
       }));
@@ -204,7 +206,7 @@ export const FinancialProvider = ({ children }: { children: ReactNode }) => {
 
   const getActiveReceivingAccounts = () => receivingAccounts.filter(acc => acc.active);
 
-  const confirmReceipt = async (id: string, data: { receivingAccountId: string; interestPenalty: number; receiptDate: Date; }) => {
+  const confirmReceipt = async (id: string, data: { receivingAccountId: string; interestPenalty: number; receiptDate: Date; confirmedBy?: 'manual' | 'ia' }) => {
     const ar = accountsReceivable.find(a => a.id === id);
     if (!ar) throw new Error('Conta a receber não encontrada');
     const finalAmount = ar.originalAmount + data.interestPenalty;
@@ -212,6 +214,7 @@ export const FinancialProvider = ({ children }: { children: ReactNode }) => {
       status: 'recebido', receiving_account_id: data.receivingAccountId,
       interest_penalty: data.interestPenalty, final_amount: finalAmount,
       receipt_date: data.receiptDate.toISOString().split('T')[0],
+      confirmed_by: data.confirmedBy || 'manual',
     }).eq('id', id);
     await supabase.from('sales').update({ status: 'finalizado' }).eq('id', ar.saleId);
     await fetchAccountsReceivable();

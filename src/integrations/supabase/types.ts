@@ -97,6 +97,7 @@ export type Database = {
       }
       accounts_receivable: {
         Row: {
+          confirmed_by: string | null
           created_at: string | null
           final_amount: number
           id: string
@@ -111,6 +112,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          confirmed_by?: string | null
           created_at?: string | null
           final_amount: number
           id?: string
@@ -125,6 +127,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          confirmed_by?: string | null
           created_at?: string | null
           final_amount?: number
           id?: string
