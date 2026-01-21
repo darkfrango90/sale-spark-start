@@ -51,7 +51,7 @@ const menuItems: MenuItem[] = [
     { label: "Pedidos", path: "/vendas/pedidos", module: "vendas", action: "Pedidos" }
   ]},
   { label: "Operação", module: "operacao", items: [
-    { label: "Operador", path: "/operacao/operador", module: "operacao", action: "Operador" },
+    { label: "Painel Operador", path: "/operador", module: "operacao", action: "Operador" },
     { label: "Carregados", path: "/operacao/carregados", module: "operacao", action: "Carregados" },
     { label: "Abastecimento", path: "/operacao/abastecimento" },
     { label: "Veículos", path: "/operacao/veiculos", module: "operacao", action: "Veículos" }

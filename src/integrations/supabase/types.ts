@@ -466,6 +466,117 @@ export type Database = {
         }
         Relationships: []
       }
+      operator_checklists: {
+        Row: {
+          alarme_re: string
+          ar_condicionado: string
+          articulacao_central: string
+          buzina: string
+          cabo_conexao_balanca: string
+          cacamba_estado: string
+          calibracao_balanca: string
+          cilindros_hidraulicos: string
+          cintos_seguranca: string
+          comandos_operacionais: string
+          created_at: string
+          dentes_cacamba: string
+          display_balanca: string
+          equipment_id: string
+          espelhos_retrovisores: string
+          extintor: string
+          filtro_ar_limpo: string
+          freios: string
+          has_repairs_needed: boolean | null
+          id: string
+          limpador_parabrisa: string
+          luzes_funcionando: string
+          mangueiras_hidraulicas: string
+          nivel_liquido_arrefecimento: string
+          nivel_oleo_hidraulico: string
+          nivel_oleo_motor: string
+          parafusos_rodas: string
+          pinos_buchas: string
+          pneus_calibragem: string
+          pneus_estado: string
+          sensores_balanca: string
+          user_id: string
+          user_name: string
+          vazamentos_hidraulicos: string
+        }
+        Insert: {
+          alarme_re?: string
+          ar_condicionado?: string
+          articulacao_central?: string
+          buzina?: string
+          cabo_conexao_balanca?: string
+          cacamba_estado?: string
+          calibracao_balanca?: string
+          cilindros_hidraulicos?: string
+          cintos_seguranca?: string
+          comandos_operacionais?: string
+          created_at?: string
+          dentes_cacamba?: string
+          display_balanca?: string
+          equipment_id: string
+          espelhos_retrovisores?: string
+          extintor?: string
+          filtro_ar_limpo?: string
+          freios?: string
+          has_repairs_needed?: boolean | null
+          id?: string
+          limpador_parabrisa?: string
+          luzes_funcionando?: string
+          mangueiras_hidraulicas?: string
+          nivel_liquido_arrefecimento?: string
+          nivel_oleo_hidraulico?: string
+          nivel_oleo_motor?: string
+          parafusos_rodas?: string
+          pinos_buchas?: string
+          pneus_calibragem?: string
+          pneus_estado?: string
+          sensores_balanca?: string
+          user_id: string
+          user_name: string
+          vazamentos_hidraulicos?: string
+        }
+        Update: {
+          alarme_re?: string
+          ar_condicionado?: string
+          articulacao_central?: string
+          buzina?: string
+          cabo_conexao_balanca?: string
+          cacamba_estado?: string
+          calibracao_balanca?: string
+          cilindros_hidraulicos?: string
+          cintos_seguranca?: string
+          comandos_operacionais?: string
+          created_at?: string
+          dentes_cacamba?: string
+          display_balanca?: string
+          equipment_id?: string
+          espelhos_retrovisores?: string
+          extintor?: string
+          filtro_ar_limpo?: string
+          freios?: string
+          has_repairs_needed?: boolean | null
+          id?: string
+          limpador_parabrisa?: string
+          luzes_funcionando?: string
+          mangueiras_hidraulicas?: string
+          nivel_liquido_arrefecimento?: string
+          nivel_oleo_hidraulico?: string
+          nivel_oleo_motor?: string
+          parafusos_rodas?: string
+          pinos_buchas?: string
+          pneus_calibragem?: string
+          pneus_estado?: string
+          sensores_balanca?: string
+          user_id?: string
+          user_name?: string
+          vazamentos_hidraulicos?: string
+        }
+        Relationships: []
+      }
       order_loadings: {
         Row: {
           ai_response: Json | null

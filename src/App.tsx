@@ -37,6 +37,8 @@ import TickingReport from "./pages/reports/TickingReport";
 import AIAssistant from "./pages/reports/AIAssistant";
 import CashRegisterReport from "./pages/reports/CashRegisterReport";
 import OperatorDashboard from "./pages/operations/OperatorDashboard";
+import OperatorPanel from "./pages/operations/OperatorPanel";
+import OperatorChecklist from "./pages/operations/OperatorChecklist";
 import LoadedOrders from "./pages/operations/LoadedOrders";
 import FuelEntry from "./pages/operations/FuelEntry";
 import FuelReport from "./pages/reports/FuelReport";
@@ -269,10 +271,25 @@ const AppRoutes = () => {
             </PermissionRoute>
           </ProtectedRoute>
         } />
-        <Route path="/operacao/operador" element={
+        {/* Operator Routes */}
+        <Route path="/operador" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+            <PermissionRoute module="operacao" action="Operador">
+              <OperatorPanel />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/operador/carregamento" element={
           <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="operacao" action="Operador">
               <OperatorDashboard />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/operador/checklist" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+            <PermissionRoute module="operacao" action="Operador">
+              <OperatorChecklist />
             </PermissionRoute>
           </ProtectedRoute>
         } />
