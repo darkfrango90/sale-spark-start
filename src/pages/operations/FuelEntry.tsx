@@ -19,7 +19,8 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const fuelTypeLabels: Record<FuelType, string> = {
   gasolina: "Gasolina",
-  diesel: "Diesel"
+  diesel: "Diesel",
+  etanol: "Etanol"
 };
 
 const FuelEntry = () => {
@@ -326,7 +327,7 @@ const FuelEntry = () => {
                   {vehicles.length === 0 && (
                     <p className="text-sm text-muted-foreground">
                       Nenhum veículo cadastrado.{" "}
-                      <Button variant="link" className="p-0 h-auto" onClick={() => navigate("/operacao/veiculos")}>
+                      <Button variant="link" className="p-0 h-auto" onClick={() => navigate("/configuracao/veiculos")}>
                         Cadastrar veículo
                       </Button>
                     </p>

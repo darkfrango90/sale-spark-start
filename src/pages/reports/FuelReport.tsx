@@ -16,7 +16,8 @@ import { Vehicle, FuelEntry, FuelType } from "@/types/vehicle";
 
 const fuelTypeLabels: Record<FuelType, string> = {
   gasolina: "Gasolina",
-  diesel: "Diesel"
+  diesel: "Diesel",
+  etanol: "Etanol"
 };
 
 interface FuelEntryWithConsumption extends FuelEntry {

@@ -1183,36 +1183,66 @@ export type Database = {
       vehicles: {
         Row: {
           active: boolean
+          brand: string | null
+          color: string | null
           created_at: string
+          current_km: number | null
           fuel_type: string
           id: string
+          model: string | null
           name: string
+          notes: string | null
+          ownership: string | null
           plate: string | null
+          renavam_serial: string | null
           tank_capacity: number | null
           type: string
+          updated_at: string | null
           uses_odometer: boolean
+          year: number | null
+          year_model: number | null
         }
         Insert: {
           active?: boolean
+          brand?: string | null
+          color?: string | null
           created_at?: string
+          current_km?: number | null
           fuel_type?: string
           id?: string
+          model?: string | null
           name: string
+          notes?: string | null
+          ownership?: string | null
           plate?: string | null
+          renavam_serial?: string | null
           tank_capacity?: number | null
           type: string
+          updated_at?: string | null
           uses_odometer?: boolean
+          year?: number | null
+          year_model?: number | null
         }
         Update: {
           active?: boolean
+          brand?: string | null
+          color?: string | null
           created_at?: string
+          current_km?: number | null
           fuel_type?: string
           id?: string
+          model?: string | null
           name?: string
+          notes?: string | null
+          ownership?: string | null
           plate?: string | null
+          renavam_serial?: string | null
           tank_capacity?: number | null
           type?: string
+          updated_at?: string | null
           uses_odometer?: boolean
+          year?: number | null
+          year_model?: number | null
         }
         Relationships: []
       }
