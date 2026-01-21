@@ -76,14 +76,24 @@ const CashRegisterReport = () => {
   }, [filteredSales]);
 
   // Totals
-  const totals = useMemo(() => ({
-    count: filteredSales.length,
-    total: filteredSales.reduce((sum, s) => sum + s.total, 0),
-    discounts: filteredSales.reduce((sum, s) => sum + s.discount, 0),
-    average: filteredSales.length > 0 
-      ? filteredSales.reduce((sum, s) => sum + s.total, 0) / filteredSales.length 
-      : 0
-  }), [filteredSales]);
+  const totals = useMemo(() => {
+    let freightTotal = 0;
+    
+    filteredSales.forEach(sale => {
+      sale.items.forEach(item => {
+        if (item.productName.toLowerCase().includes('frete')) {
+          freightTotal += item.total;
+        }
+      });
+    });
+
+    return {
+      count: filteredSales.length,
+      total: filteredSales.reduce((sum, s) => sum + s.total, 0),
+      discounts: filteredSales.reduce((sum, s) => sum + s.discount, 0),
+      freight: freightTotal
+    };
+  }, [filteredSales]);
 
   // Material output by product
   const materialOutput = useMemo(() => {
@@ -279,8 +289,8 @@ const CashRegisterReport = () => {
                 <p>${formatCurrency(totals.total)}</p>
               </div>
               <div class="summary-card">
-                <h4>TICKET MÉDIO</h4>
-                <p>${formatCurrency(totals.average)}</p>
+                <h4>VALOR FRETE</h4>
+                <p>${formatCurrency(totals.freight)}</p>
               </div>
               <div class="summary-card">
                 <h4>DESCONTOS</h4>
@@ -458,8 +468,8 @@ const CashRegisterReport = () => {
                     <CreditCard className="h-5 w-5 text-purple-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Ticket Médio</p>
-                    <p className="text-xl font-bold text-foreground">{formatCurrency(totals.average)}</p>
+                    <p className="text-sm text-muted-foreground">Valor Frete</p>
+                    <p className="text-xl font-bold text-purple-600">{formatCurrency(totals.freight)}</p>
                   </div>
                 </div>
               </CardContent>
