@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSales } from "@/contexts/SalesContext";
 import { useProducts } from "@/contexts/ProductContext";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Truck, Camera, RefreshCw, CheckCircle2, Search } from "lucide-react";
+import { LogOut, Truck, Camera, RefreshCw, CheckCircle2, Search, Fuel } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -325,14 +325,23 @@ const OperatorDashboard = () => {
               {user && <span className="ml-2 text-slate-300">{user.name.split(' ')[0]}</span>}
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={handleLogout} 
-            className="text-white hover:bg-slate-700 h-12 w-12"
-          >
-            <LogOut className="h-6 w-6" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              onClick={() => navigate('/operacao/abastecimento')}
+              className="bg-amber-500 hover:bg-amber-600 text-white h-10 px-3"
+            >
+              <Fuel className="h-5 w-5 mr-2" />
+              Abastecimento
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleLogout} 
+              className="text-white hover:bg-slate-700 h-12 w-12"
+            >
+              <LogOut className="h-6 w-6" />
+            </Button>
+          </div>
         </div>
       </div>
 
