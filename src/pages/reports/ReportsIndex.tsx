@@ -12,15 +12,17 @@ import {
   TrendingUp,
   AlertTriangle,
   Bot,
-  Calculator
+  Calculator,
+  Fuel
 } from "lucide-react";
 import { useSales } from "@/contexts/SalesContext";
 import { useProducts } from "@/contexts/ProductContext";
 import { useCustomers } from "@/contexts/CustomerContext";
 import { useFinancial } from "@/contexts/FinancialContext";
 import { useSuppliers } from "@/contexts/SupplierContext";
-import { useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 
 const ReportsIndex = () => {
   const navigate = useNavigate();
@@ -29,10 +31,23 @@ const ReportsIndex = () => {
   const { customers } = useCustomers();
   const { accountsReceivable, accountsPayable } = useFinancial();
   const { suppliers } = useSuppliers();
+  const [fuelEntriesCount, setFuelEntriesCount] = useState(0);
 
   const today = new Date();
   const monthStart = startOfMonth(today);
   const monthEnd = endOfMonth(today);
+
+  // Fetch fuel entries count
+  useEffect(() => {
+    const fetchFuelCount = async () => {
+      const { count } = await supabase
+        .from('fuel_entries')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', monthStart.toISOString());
+      setFuelEntriesCount(count || 0);
+    };
+    fetchFuelCount();
+  }, []);
 
   // Quick stats
   const stats = useMemo(() => {
@@ -164,6 +179,18 @@ const ReportsIndex = () => {
       stats: [
         { label: "Consultas", value: "∞" },
         { label: "Tempo Real", value: "✓" }
+      ]
+    },
+    {
+      title: "Relatório de Abastecimento",
+      description: "Consumo de combustível por veículo com média KM/L",
+      icon: Fuel,
+      path: "/relatorios/abastecimento",
+      color: "text-amber-600",
+      bgColor: "bg-amber-100",
+      stats: [
+        { label: "Abastecimentos", value: fuelEntriesCount.toString() },
+        { label: "Este Mês", value: "✓" }
       ]
     }
   ];

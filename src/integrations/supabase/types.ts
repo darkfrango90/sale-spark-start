@@ -383,6 +383,7 @@ export type Database = {
           operator_name: string | null
           price_per_liter: number | null
           total_cost: number | null
+          user_id: string | null
           vehicle_id: string
         }
         Insert: {
@@ -396,6 +397,7 @@ export type Database = {
           operator_name?: string | null
           price_per_liter?: number | null
           total_cost?: number | null
+          user_id?: string | null
           vehicle_id: string
         }
         Update: {
@@ -409,6 +411,7 @@ export type Database = {
           operator_name?: string | null
           price_per_liter?: number | null
           total_cost?: number | null
+          user_id?: string | null
           vehicle_id?: string
         }
         Relationships: [

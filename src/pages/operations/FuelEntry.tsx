@@ -14,6 +14,7 @@ import { useNavigate } from "react-router-dom";
 import { Vehicle, FuelEntry as FuelEntryType, FuelType } from "@/types/vehicle";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useAuth } from "@/contexts/AuthContext";
 
 const fuelTypeLabels: Record<FuelType, string> = {
   gasolina: "Gasolina",
@@ -22,21 +23,23 @@ const fuelTypeLabels: Record<FuelType, string> = {
 
 const FuelEntry = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [entries, setEntries] = useState<FuelEntryType[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
 
-  // Form state
+  // Form state - usando total_cost em vez de price_per_liter
   const [formData, setFormData] = useState({
     vehicle_id: "",
     date: format(new Date(), "yyyy-MM-dd"),
     odometer_value: "",
     liters: "",
     fuel_type: "diesel" as FuelType,
-    price_per_liter: "",
-    operator_name: "",
+    total_cost: "", // Valor Total (input do usuário)
     notes: ""
   });
 
@@ -56,12 +59,19 @@ const FuelEntry = () => {
   };
 
   const fetchEntries = async () => {
-    const { data, error } = await supabase
+    let query = supabase
       .from("fuel_entries")
       .select("*, vehicle:vehicles(*)")
       .order("date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(20);
+
+    // Se não for admin, filtrar pelo user_id do usuário logado
+    if (!isAdmin && user?.id) {
+      query = query.eq("user_id", user.id);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       toast.error("Erro ao carregar abastecimentos");
@@ -74,8 +84,13 @@ const FuelEntry = () => {
 
   useEffect(() => {
     fetchVehicles();
-    fetchEntries();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchEntries();
+    }
+  }, [user, isAdmin]);
 
   // Update selected vehicle when vehicle_id changes
   useEffect(() => {
@@ -93,10 +108,14 @@ const FuelEntry = () => {
     }
   }, [formData.vehicle_id, vehicles]);
 
-  const calculateTotalCost = () => {
-    const liters = parseFloat(formData.liters) || 0;
-    const price = parseFloat(formData.price_per_liter) || 0;
-    return liters * price;
+  // Calcular preço por litro automaticamente
+  const calculatePricePerLiter = (): number | null => {
+    const totalCost = parseFloat(formData.total_cost);
+    const liters = parseFloat(formData.liters);
+    if (totalCost > 0 && liters > 0) {
+      return totalCost / liters;
+    }
+    return null;
   };
 
   const resetForm = () => {
@@ -106,8 +125,7 @@ const FuelEntry = () => {
       odometer_value: "",
       liters: "",
       fuel_type: "diesel",
-      price_per_liter: "",
-      operator_name: "",
+      total_cost: "",
       notes: ""
     });
     setSelectedVehicle(null);
@@ -133,7 +151,8 @@ const FuelEntry = () => {
 
     setSaving(true);
 
-    const totalCost = calculateTotalCost();
+    const totalCost = parseFloat(formData.total_cost) || null;
+    const pricePerLiter = calculatePricePerLiter();
 
     const entryData = {
       vehicle_id: formData.vehicle_id,
@@ -141,9 +160,10 @@ const FuelEntry = () => {
       odometer_value: parseFloat(formData.odometer_value),
       liters: parseFloat(formData.liters),
       fuel_type: formData.fuel_type,
-      price_per_liter: formData.price_per_liter ? parseFloat(formData.price_per_liter) : null,
-      total_cost: totalCost > 0 ? totalCost : null,
-      operator_name: formData.operator_name.trim() || null,
+      price_per_liter: pricePerLiter,
+      total_cost: totalCost,
+      operator_name: user?.name || null,
+      user_id: user?.id || null,
       notes: formData.notes.trim() || null
     };
 
@@ -162,6 +182,8 @@ const FuelEntry = () => {
 
     setSaving(false);
   };
+
+  const pricePerLiter = calculatePricePerLiter();
 
   return (
     <div className="min-h-screen bg-background">
@@ -288,45 +310,28 @@ const FuelEntry = () => {
                   </div>
                 </div>
 
-                {/* Price and Operator */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="price" className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4" />
-                      Preço/Litro (R$)
-                    </Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      step="0.01"
-                      value={formData.price_per_liter}
-                      onChange={(e) => setFormData({ ...formData, price_per_liter: e.target.value })}
-                      placeholder="Ex: 6.89"
-                      className="h-12 text-lg"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="operator">Operador</Label>
-                    <Input
-                      id="operator"
-                      value={formData.operator_name}
-                      onChange={(e) => setFormData({ ...formData, operator_name: e.target.value })}
-                      placeholder="Nome do operador"
-                      className="h-12 text-lg"
-                    />
-                  </div>
+                {/* Total Cost (novo campo) */}
+                <div className="space-y-2">
+                  <Label htmlFor="totalCost" className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Valor Total (R$)
+                  </Label>
+                  <Input
+                    id="totalCost"
+                    type="number"
+                    step="0.01"
+                    value={formData.total_cost}
+                    onChange={(e) => setFormData({ ...formData, total_cost: e.target.value })}
+                    placeholder="Ex: 850.00"
+                    className="h-12 text-lg"
+                  />
+                  {/* Exibir preço por litro calculado automaticamente */}
+                  {pricePerLiter && (
+                    <p className="text-sm text-muted-foreground">
+                      Preço/Litro: R$ {pricePerLiter.toFixed(3)}
+                    </p>
+                  )}
                 </div>
-
-                {/* Total Cost Display */}
-                {formData.price_per_liter && formData.liters && (
-                  <div className="bg-muted/50 p-4 rounded-lg">
-                    <span className="text-muted-foreground">Custo Total: </span>
-                    <span className="text-xl font-bold text-primary">
-                      R$ {calculateTotalCost().toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                )}
 
                 {/* Notes */}
                 <div className="space-y-2">
@@ -357,8 +362,12 @@ const FuelEntry = () => {
           {/* Recent Entries */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Últimos Abastecimentos</CardTitle>
-              <CardDescription>20 registros mais recentes</CardDescription>
+              <CardTitle className="text-lg">
+                {isAdmin ? 'Últimos 20 Abastecimentos' : 'Meus Últimos Abastecimentos'}
+              </CardTitle>
+              <CardDescription>
+                {isAdmin ? '20 registros mais recentes de todos os usuários' : 'Seus registros mais recentes'}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -378,6 +387,7 @@ const FuelEntry = () => {
                         <TableHead>Litros</TableHead>
                         <TableHead>Combustível</TableHead>
                         <TableHead>Custo</TableHead>
+                        {isAdmin && <TableHead>Operador</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -409,6 +419,11 @@ const FuelEntry = () => {
                               ? `R$ ${entry.total_cost.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
                               : "-"}
                           </TableCell>
+                          {isAdmin && (
+                            <TableCell className="text-muted-foreground">
+                              {entry.operator_name || "-"}
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))}
                     </TableBody>

@@ -5,7 +5,7 @@ import TopMenu from '@/components/dashboard/TopMenu';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { FileText, ClipboardCheck, Wrench, AlertTriangle, Receipt, TrendingUp, Navigation, DollarSign, Calendar } from 'lucide-react';
+import { FileText, ClipboardCheck, Wrench, AlertTriangle, Receipt, TrendingUp, Navigation, DollarSign, Calendar, Fuel } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format, startOfWeek, endOfWeek, isMonday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -19,6 +19,7 @@ const DriverDashboard = () => {
     checklistsThisWeek: 0,
     pendingMaintenance: 0,
     expensesThisMonth: 0,
+    fuelEntriesThisMonth: 0,
   });
   const [summary, setSummary] = useState({
     lastReport: null as { customer_name: string; created_at: string; vehicle_plate: string } | null,
@@ -72,11 +73,19 @@ const DriverDashboard = () => {
       .eq('user_id', user.id)
       .gte('created_at', startOfMonth.toISOString());
 
+    // Count fuel entries this month
+    const { count: fuelCount } = await supabase
+      .from('fuel_entries')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', startOfMonth.toISOString());
+
     setStats({
       dailyReportsCount: dailyCount || 0,
       checklistsThisWeek: checklistCount || 0,
       pendingMaintenance: maintenanceCount || 0,
       expensesThisMonth: expensesCount || 0,
+      fuelEntriesThisMonth: fuelCount || 0,
     });
   };
 
@@ -168,6 +177,14 @@ const DriverDashboard = () => {
       color: 'bg-purple-500',
       path: '/motorista/despesas',
       stat: `${stats.expensesThisMonth} este mês`,
+    },
+    {
+      title: 'Abastecimento',
+      description: 'Registre abastecimentos de veículos',
+      icon: Fuel,
+      color: 'bg-amber-500',
+      path: '/operacao/abastecimento',
+      stat: `${stats.fuelEntriesThisMonth} este mês`,
     },
   ];
 
