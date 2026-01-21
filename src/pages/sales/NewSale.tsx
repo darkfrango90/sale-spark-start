@@ -321,6 +321,31 @@ const NewSale = () => {
     return urlData.publicUrl;
   };
 
+  // Analyze receipt with AI
+  const analyzeReceiptWithAI = async (base64Image: string): Promise<{
+    success: boolean;
+    banco?: string;
+    valor?: number;
+    confianca?: number;
+    tipo_transacao?: string;
+  } | null> => {
+    try {
+      const response = await supabase.functions.invoke('analyze-receipt', {
+        body: { imageBase64: base64Image }
+      });
+
+      if (response.error) {
+        console.error('Error calling analyze-receipt:', response.error);
+        return null;
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error('Error analyzing receipt:', error);
+      return null;
+    }
+  };
+
   // Verifica se deve mostrar campo de comprovante
   const shouldShowReceiptUpload = paymentCondition === 'PIX' || paymentCondition === 'Deposito';
 
@@ -386,26 +411,71 @@ const NewSale = () => {
       // Upload receipt and create accounts receivable for ALL sales (pedidos)
       if (saleType === 'pedido') {
         let receiptUrl: string | null = null;
+        let aiAnalysisResult: { banco?: string; valor?: number; confianca?: number } | null = null;
         
         if (receiptFile && shouldShowReceiptUpload) {
           receiptUrl = await uploadReceipt(newSale.id);
+          
+          // Analyze receipt with AI
+          if (receiptPreview) {
+            toast({
+              title: "🤖 Analisando comprovante...",
+              description: "A IA está verificando o comprovante de pagamento.",
+            });
+            aiAnalysisResult = await analyzeReceiptWithAI(receiptPreview);
+          }
+        }
+
+        // Determine if AI can auto-confirm
+        let autoConfirmed = false;
+        let confirmedBy: 'manual' | 'ia' | undefined = undefined;
+        
+        if (aiAnalysisResult && aiAnalysisResult.confianca && aiAnalysisResult.confianca >= 0.8 && aiAnalysisResult.valor) {
+          // Check if value matches (tolerance of R$ 0.50)
+          const valorConfere = Math.abs(aiAnalysisResult.valor - total) < 0.50;
+          
+          if (valorConfere) {
+            autoConfirmed = true;
+            confirmedBy = 'ia';
+            toast({
+              title: "✅ Baixa Automática por I.A.",
+              description: `Comprovante validado! Banco: ${aiAnalysisResult.banco || 'N/A'} | Valor: R$ ${aiAnalysisResult.valor.toFixed(2)}`,
+            });
+          } else {
+            toast({
+              title: "⚠️ Valor Divergente",
+              description: `Comprovante: R$ ${aiAnalysisResult.valor.toFixed(2)} | Venda: R$ ${total.toFixed(2)}. Requer verificação manual.`,
+              variant: "destructive",
+            });
+          }
         }
 
         // Create accounts receivable entry
-        // Dinheiro: status 'recebido' | Outros: status 'pendente'
+        // Dinheiro: status 'recebido' | AI auto-confirmed: 'recebido' | Outros: status 'pendente'
+        const finalStatus = isDinheiro || autoConfirmed ? 'recebido' : 'pendente';
+        
         const { error: arError } = await supabase
           .from('accounts_receivable')
           .insert({
             sale_id: newSale.id,
             original_amount: total,
             final_amount: total,
-            status: isDinheiro ? 'recebido' : 'pendente',
+            status: finalStatus,
             receipt_url: receiptUrl,
-            receipt_date: isDinheiro ? new Date().toISOString().split('T')[0] : null,
+            receipt_date: finalStatus === 'recebido' ? new Date().toISOString().split('T')[0] : null,
+            confirmed_by: autoConfirmed ? 'ia' : (isDinheiro ? 'manual' : null),
+            notes: autoConfirmed && aiAnalysisResult ? 
+              `Baixa automática por IA. Banco: ${aiAnalysisResult.banco || 'N/A'}. Valor identificado: R$ ${aiAnalysisResult.valor?.toFixed(2) || 'N/A'}` : 
+              null,
           });
 
         if (arError) {
           console.error('Error creating accounts receivable:', arError);
+        }
+
+        // Update sale status if auto-confirmed
+        if (autoConfirmed) {
+          await supabase.from('sales').update({ status: 'finalizado' }).eq('id', newSale.id);
         }
       }
 
