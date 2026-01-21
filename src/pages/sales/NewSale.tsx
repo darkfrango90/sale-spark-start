@@ -587,18 +587,14 @@ const NewSale = () => {
                       </div>
                     </PopoverTrigger>
                     <PopoverContent className="w-[400px] p-0" align="start">
-                      <Command>
-                        <CommandInput 
-                          placeholder="Buscar cliente..." 
-                          value={customerSearch}
-                          onValueChange={setCustomerSearch}
-                        />
+                      <Command shouldFilter={false}>
                         <CommandList>
                           <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
                           <CommandGroup>
                             {filteredCustomers.slice(0, 10).map((customer) => (
                               <CommandItem
                                 key={customer.id}
+                                value={customer.id}
                                 onSelect={() => handleSelectCustomer(customer)}
                                 className="cursor-pointer"
                               >
