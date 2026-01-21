@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import TopMenu from "@/components/dashboard/TopMenu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Fuel, Plus, ArrowLeft, Calendar, Gauge, Droplets, DollarSign, Truck } from "lucide-react";
+import { Fuel, Plus, ArrowLeft, Calendar, Gauge, Droplets, DollarSign, Truck, Camera, Upload, X, Check, Image } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Vehicle, FuelEntry as FuelEntryType, FuelType } from "@/types/vehicle";
 import { format } from "date-fns";
@@ -25,12 +26,20 @@ const FuelEntry = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [entries, setEntries] = useState<FuelEntryType[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+
+  // Modal de comprovante
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [savedEntryId, setSavedEntryId] = useState<string | null>(null);
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
   // Form state - usando total_cost em vez de price_per_liter
   const [formData, setFormData] = useState({
@@ -167,20 +176,102 @@ const FuelEntry = () => {
       notes: formData.notes.trim() || null
     };
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("fuel_entries")
-      .insert([entryData]);
+      .insert([entryData])
+      .select()
+      .single();
 
     if (error) {
       toast.error("Erro ao salvar abastecimento");
       console.error(error);
+      setSaving(false);
     } else {
-      toast.success("Abastecimento registrado com sucesso!");
+      toast.success("Abastecimento registrado!");
+      setSavedEntryId(data.id);
+      setShowReceiptModal(true);
       resetForm();
       fetchEntries();
+      setSaving(false);
     }
+  };
 
-    setSaving(false);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validar tipo de arquivo
+      if (!file.type.startsWith('image/')) {
+        toast.error("Por favor, selecione uma imagem");
+        return;
+      }
+      
+      // Validar tamanho (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("Imagem muito grande. Máximo 10MB");
+        return;
+      }
+
+      setReceiptFile(file);
+      
+      // Criar preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setReceiptPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUploadReceipt = async () => {
+    if (!receiptFile || !savedEntryId) return;
+
+    setUploadingReceipt(true);
+
+    try {
+      // Gerar nome único para o arquivo
+      const fileExt = receiptFile.name.split('.').pop();
+      const fileName = `${savedEntryId}-${Date.now()}.${fileExt}`;
+
+      // Upload para o Storage
+      const { error: uploadError } = await supabase.storage
+        .from('fuel-receipts')
+        .upload(fileName, receiptFile);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Obter URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('fuel-receipts')
+        .getPublicUrl(fileName);
+
+      // Atualizar o registro com a URL do comprovante
+      const { error: updateError } = await supabase
+        .from('fuel_entries')
+        .update({ receipt_url: publicUrl })
+        .eq('id', savedEntryId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      toast.success("Comprovante anexado com sucesso!");
+      closeReceiptModal();
+      fetchEntries();
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao enviar comprovante");
+    } finally {
+      setUploadingReceipt(false);
+    }
+  };
+
+  const closeReceiptModal = () => {
+    setShowReceiptModal(false);
+    setSavedEntryId(null);
+    setReceiptPreview(null);
+    setReceiptFile(null);
   };
 
   const pricePerLiter = calculatePricePerLiter();
@@ -387,6 +478,7 @@ const FuelEntry = () => {
                         <TableHead>Litros</TableHead>
                         <TableHead>Combustível</TableHead>
                         <TableHead>Custo</TableHead>
+                        <TableHead>Comprov.</TableHead>
                         {isAdmin && <TableHead>Operador</TableHead>}
                       </TableRow>
                     </TableHeader>
@@ -419,6 +511,21 @@ const FuelEntry = () => {
                               ? `R$ ${entry.total_cost.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
                               : "-"}
                           </TableCell>
+                          <TableCell>
+                            {(entry as any).receipt_url ? (
+                              <a
+                                href={(entry as any).receipt_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline flex items-center gap-1"
+                              >
+                                <Image className="h-4 w-4" />
+                                Ver
+                              </a>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
                           {isAdmin && (
                             <TableCell className="text-muted-foreground">
                               {entry.operator_name || "-"}
@@ -434,6 +541,104 @@ const FuelEntry = () => {
           </Card>
         </div>
       </div>
+
+      {/* Modal de Anexar Comprovante */}
+      <Dialog open={showReceiptModal} onOpenChange={setShowReceiptModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Camera className="h-5 w-5" />
+              Anexar Comprovante
+            </DialogTitle>
+            <DialogDescription>
+              Tire uma foto ou selecione uma imagem do comprovante de abastecimento
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Input de arquivo oculto */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+
+            {/* Preview ou botões */}
+            {receiptPreview ? (
+              <div className="relative">
+                <img
+                  src={receiptPreview}
+                  alt="Preview do comprovante"
+                  className="w-full rounded-lg border max-h-64 object-contain bg-muted"
+                />
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-2 right-2"
+                  onClick={() => {
+                    setReceiptPreview(null);
+                    setReceiptFile(null);
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <Button
+                  variant="outline"
+                  className="h-24 flex-col gap-2"
+                  onClick={() => {
+                    if (fileInputRef.current) {
+                      fileInputRef.current.setAttribute('capture', 'environment');
+                      fileInputRef.current.click();
+                    }
+                  }}
+                >
+                  <Camera className="h-8 w-8" />
+                  <span>Tirar Foto</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-24 flex-col gap-2"
+                  onClick={() => {
+                    if (fileInputRef.current) {
+                      fileInputRef.current.removeAttribute('capture');
+                      fileInputRef.current.click();
+                    }
+                  }}
+                >
+                  <Upload className="h-8 w-8" />
+                  <span>Galeria</span>
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={closeReceiptModal}>
+              Pular
+            </Button>
+            <Button
+              onClick={handleUploadReceipt}
+              disabled={!receiptFile || uploadingReceipt}
+              className="gap-2"
+            >
+              {uploadingReceipt ? (
+                "Enviando..."
+              ) : (
+                <>
+                  <Check className="h-4 w-4" />
+                  Salvar Comprovante
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

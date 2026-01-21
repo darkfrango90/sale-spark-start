@@ -382,6 +382,7 @@ export type Database = {
           odometer_value: number
           operator_name: string | null
           price_per_liter: number | null
+          receipt_url: string | null
           total_cost: number | null
           user_id: string | null
           vehicle_id: string
@@ -396,6 +397,7 @@ export type Database = {
           odometer_value: number
           operator_name?: string | null
           price_per_liter?: number | null
+          receipt_url?: string | null
           total_cost?: number | null
           user_id?: string | null
           vehicle_id: string
@@ -410,6 +412,7 @@ export type Database = {
           odometer_value?: number
           operator_name?: string | null
           price_per_liter?: number | null
+          receipt_url?: string | null
           total_cost?: number | null
           user_id?: string | null
           vehicle_id?: string
