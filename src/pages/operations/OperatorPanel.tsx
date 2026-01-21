@@ -17,8 +17,7 @@ const OperatorPanel = () => {
   const [stats, setStats] = useState({
     loadingsToday: 0,
     fuelingsMonth: 0,
-    checklistDone: false,
-    pendingOrders: 0
+    checklistDone: false
   });
 
   useEffect(() => {
@@ -48,18 +47,10 @@ const OperatorPanel = () => {
         .gte('date', startOfMonth)
         .eq('user_id', user?.id);
 
-      // Pending orders count
-      const { count: pendingCount } = await supabase
-        .from('sales')
-        .select('*', { count: 'exact', head: true })
-        .eq('type', 'pedido')
-        .eq('status', 'pendente');
-
       setStats(prev => ({
         ...prev,
         loadingsToday: loadingsCount || 0,
-        fuelingsMonth: fuelingsCount || 0,
-        pendingOrders: pendingCount || 0
+        fuelingsMonth: fuelingsCount || 0
       }));
     } catch (error) {
       console.error('Erro ao carregar estatísticas:', error);
@@ -101,7 +92,7 @@ const OperatorPanel = () => {
       icon: Truck,
       path: '/operador/carregamento',
       color: 'bg-blue-500',
-      stat: `${stats.pendingOrders} pendente${stats.pendingOrders !== 1 ? 's' : ''}`
+      stat: `${stats.loadingsToday} hoje`
     },
     {
       title: 'Abastecimento',
