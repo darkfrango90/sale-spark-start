@@ -53,6 +53,7 @@ import ChecklistsAdmin from "./pages/reports/ChecklistsAdmin";
 import MaintenanceAdmin from "./pages/reports/MaintenanceAdmin";
 import NotFound from "./pages/NotFound";
 import Documentation from "./pages/Documentation";
+import DataImport from "./pages/settings/DataImport";
 
 const queryClient = new QueryClient();
 
@@ -146,6 +147,13 @@ const AppRoutes = () => {
           <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
             <PermissionRoute module="configuracao" action="Contas de Recebimento">
               <ReceivingAccounts />
+            </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/configuracao/importacao" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+            <PermissionRoute module="configuracao" action="Importação">
+              <DataImport />
             </PermissionRoute>
           </ProtectedRoute>
         } />
