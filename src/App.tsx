@@ -39,6 +39,7 @@ import CashRegisterReport from "./pages/reports/CashRegisterReport";
 import OperatorDashboard from "./pages/operations/OperatorDashboard";
 import LoadedOrders from "./pages/operations/LoadedOrders";
 import FuelEntry from "./pages/operations/FuelEntry";
+import FuelReport from "./pages/reports/FuelReport";
 import VehicleManagement from "./pages/operations/VehicleManagement";
 import DriverDashboard from "./pages/driver/DriverDashboard";
 import DailyReport from "./pages/driver/DailyReport";
@@ -284,9 +285,7 @@ const AppRoutes = () => {
         } />
         <Route path="/operacao/abastecimento" element={
           <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-            <PermissionRoute module="operacao" action="Abastecimento">
-              <FuelEntry />
-            </PermissionRoute>
+            <FuelEntry />
           </ProtectedRoute>
         } />
         <Route path="/operacao/veiculos" element={
@@ -322,6 +321,11 @@ const AppRoutes = () => {
             <PermissionRoute module="relatorios" action="Manutenções">
               <MaintenanceAdmin />
             </PermissionRoute>
+          </ProtectedRoute>
+        } />
+        <Route path="/relatorios/abastecimento" element={
+          <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
+            <FuelReport />
           </ProtectedRoute>
         } />
         <Route path="/documentacao" element={<ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}><Documentation /></ProtectedRoute>} />
