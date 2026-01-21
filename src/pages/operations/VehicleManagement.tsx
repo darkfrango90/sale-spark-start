@@ -267,9 +267,9 @@ const VehicleManagement = () => {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="proprio">Próprio</SelectItem>
-                            <SelectItem value="terceiro">Terceiro</SelectItem>
-                            <SelectItem value="alugado">Alugado</SelectItem>
+                            <SelectItem value="vg_cezar">VG Cezar</SelectItem>
+                            <SelectItem value="nova_mineracao">Nova Mineração</SelectItem>
+                            <SelectItem value="outros">Outros</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
