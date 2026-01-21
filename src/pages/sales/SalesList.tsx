@@ -30,13 +30,21 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, Plus, RefreshCw, FileText, ShoppingBag, Printer, Ban, Calendar } from "lucide-react";
+import { Search, Plus, RefreshCw, FileText, ShoppingBag, Printer, Ban, Calendar, Paperclip, Loader2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { useSales } from "@/contexts/SalesContext";
@@ -45,6 +53,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import SalePrintView from "@/components/sales/SalePrintView";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SalesListProps {
   type?: 'pedido' | 'orcamento';
@@ -80,8 +89,118 @@ const SalesList = ({ type }: SalesListProps) => {
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [saleToPrint, setSaleToPrint] = useState<Sale | null>(null);
 
+  // Receipt dialog
+  const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
+  const [saleForReceipt, setSaleForReceipt] = useState<Sale | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
   // Obter lista única de condições de pagamento para o filtro
   const paymentMethods = [...new Set(sales.filter(s => s.paymentMethodName).map(s => s.paymentMethodName))];
+
+  // Verificar se é método que aceita comprovante (PIX ou Depósito)
+  const isReceiptPayment = (paymentMethodName: string | undefined) => {
+    if (!paymentMethodName) return false;
+    const methodLower = paymentMethodName.toLowerCase();
+    return methodLower.includes('pix') || methodLower.includes('depósito') || methodLower.includes('deposito');
+  };
+
+  // Handle file selection for receipt
+  const handleReceiptFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setReceiptFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setReceiptPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Analyze receipt with AI
+  const handleReceiptAnalysis = async () => {
+    if (!saleForReceipt || !receiptPreview || !receiptFile) return;
+    
+    setIsAnalyzing(true);
+    
+    try {
+      // 1. Upload receipt to storage
+      const fileName = `${saleForReceipt.id}-${Date.now()}.png`;
+      const { error: uploadError } = await supabase.storage
+        .from('receipts')
+        .upload(fileName, receiptFile);
+      
+      if (uploadError) {
+        throw new Error('Erro ao fazer upload do comprovante');
+      }
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('receipts')
+        .getPublicUrl(fileName);
+      
+      // 2. Call Edge Function to analyze receipt
+      const { data, error } = await supabase.functions.invoke('analyze-receipt', {
+        body: { imageBase64: receiptPreview }
+      });
+      
+      if (error) {
+        throw new Error('Erro ao analisar comprovante');
+      }
+      
+      // 3. Check if value matches (tolerance R$ 0.50)
+      const valorConfere = data?.valor && Math.abs(data.valor - saleForReceipt.total) < 0.50;
+      const confiancaAlta = data?.confianca >= 0.8;
+      
+      if (valorConfere && confiancaAlta) {
+        // Auto-settle: update accounts_receivable
+        await supabase.from('accounts_receivable').update({
+          status: 'recebido',
+          confirmed_by: 'ia',
+          receipt_date: new Date().toISOString().split('T')[0],
+          receipt_url: publicUrl,
+          notes: `Baixa automática por IA. Banco: ${data.banco || 'N/A'}. Valor: R$ ${data.valor?.toFixed(2) || '0.00'}`
+        }).eq('sale_id', saleForReceipt.id);
+        
+        // Finalize sale
+        await updateSale(saleForReceipt.id, { status: 'finalizado' });
+        
+        toast({
+          title: "✅ Pagamento Confirmado por I.A.",
+          description: `Banco: ${data.banco || 'Identificado'}. Valor: R$ ${data.valor?.toFixed(2)}. Pedido finalizado automaticamente.`,
+        });
+      } else {
+        // Save receipt but keep pending for manual review
+        await supabase.from('accounts_receivable').update({
+          receipt_url: publicUrl,
+          notes: `Comprovante anexado. IA: valor R$ ${data?.valor?.toFixed(2) || '0.00'}, confiança ${((data?.confianca || 0) * 100).toFixed(0)}%. Verificar manualmente.`
+        }).eq('sale_id', saleForReceipt.id);
+        
+        toast({
+          title: "⚠️ Verificação Necessária",
+          description: `Valor no comprovante (R$ ${data?.valor?.toFixed(2) || '?'}) diverge do pedido (R$ ${saleForReceipt.total.toFixed(2)}). Verificar manualmente.`,
+          variant: "destructive",
+        });
+      }
+      
+      // Close dialog and reset state
+      setIsReceiptDialogOpen(false);
+      setSaleForReceipt(null);
+      setReceiptFile(null);
+      setReceiptPreview(null);
+      
+    } catch (error) {
+      console.error('Error analyzing receipt:', error);
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Erro ao analisar comprovante",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const filteredSales = sales.filter(sale => {
     const matchesType = !filterType || sale.type === filterType;
@@ -442,6 +561,21 @@ const SalesList = ({ type }: SalesListProps) => {
                                 <RefreshCw className="h-4 w-4 text-blue-600" />
                               </Button>
                             )}
+                            {sale.type === 'pedido' && sale.status === 'pendente' && isReceiptPayment(sale.paymentMethodName) && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                title="Anexar Comprovante"
+                                onClick={() => {
+                                  setSaleForReceipt(sale);
+                                  setReceiptFile(null);
+                                  setReceiptPreview(null);
+                                  setIsReceiptDialogOpen(true);
+                                }}
+                              >
+                                <Paperclip className="h-4 w-4 text-green-600" />
+                              </Button>
+                            )}
                             {sale.status === 'pendente' && (
                               <Button 
                                 variant="ghost" 
@@ -526,6 +660,71 @@ const SalesList = ({ type }: SalesListProps) => {
           setSaleToPrint(null);
         }} 
       />
+
+      {/* Receipt Dialog */}
+      <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Anexar Comprovante de Pagamento</DialogTitle>
+            <DialogDescription>
+              Pedido #{saleForReceipt?.number} - Valor: {formatCurrency(saleForReceipt?.total || 0)}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Input 
+                type="file" 
+                accept="image/*" 
+                onChange={handleReceiptFileChange}
+                disabled={isAnalyzing}
+              />
+            </div>
+            
+            {receiptPreview && (
+              <div className="border rounded-md p-2">
+                <img 
+                  src={receiptPreview} 
+                  alt="Preview do comprovante" 
+                  className="max-h-48 mx-auto rounded" 
+                />
+              </div>
+            )}
+            
+            <p className="text-sm text-muted-foreground">
+              A IA irá analisar o comprovante e, se o valor conferir, fará a baixa automática.
+            </p>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsReceiptDialogOpen(false);
+                setSaleForReceipt(null);
+                setReceiptFile(null);
+                setReceiptPreview(null);
+              }}
+              disabled={isAnalyzing}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleReceiptAnalysis} 
+              disabled={!receiptFile || isAnalyzing}
+            >
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Analisando...
+                </>
+              ) : (
+                'Enviar para Análise'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
