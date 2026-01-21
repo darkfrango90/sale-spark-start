@@ -25,7 +25,7 @@ const fuelTypeLabels: Record<FuelType, string> = {
 const FuelEntry = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'diretor';
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
