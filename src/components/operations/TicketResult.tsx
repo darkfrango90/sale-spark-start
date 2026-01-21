@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, AlertTriangle, XCircle, RotateCcw, Loader2 } from "lucide-react";
+import { speak, stopSpeaking } from "@/lib/speechUtils";
 
 interface TicketData {
   peso_bruto_kg?: number | null;
@@ -45,6 +47,28 @@ const TicketResult = ({
   const formatWeight = (kg: number) => {
     return new Intl.NumberFormat('pt-BR').format(Math.round(kg)) + ' Kg';
   };
+
+  // Voice feedback when result is ready
+  useEffect(() => {
+    if (isLoading) return;
+
+    let message = '';
+
+    if (couldNotRead) {
+      message = "Não foi possível ler o ticket. Tire outra foto.";
+    } else if (isOk) {
+      message = `Peso confere! ${Math.round(ticketWeightKg)} quilos. Diferença de ${Math.abs(differencePercent).toFixed(0)} por cento.`;
+    } else {
+      message = `Atenção! Peso diferente! Esperado ${Math.round(expectedWeightKg)} quilos, ticket mostra ${Math.round(ticketWeightKg)} quilos. Diferença de ${Math.abs(differencePercent).toFixed(0)} por cento.`;
+    }
+
+    speak(message);
+
+    // Cleanup: stop speaking if component unmounts
+    return () => {
+      stopSpeaking();
+    };
+  }, [isLoading, couldNotRead, isOk, ticketWeightKg, expectedWeightKg, differencePercent]);
 
   if (isLoading) {
     return (
