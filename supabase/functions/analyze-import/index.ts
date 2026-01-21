@@ -66,7 +66,20 @@ serve(async (req) => {
     const schema = schemas[type];
     const sampleData = data.slice(0, 10);
 
-    const systemPrompt = `Você é um assistente especializado em análise e mapeamento de dados para importação em banco de dados.
+  // State mapping for normalization
+  const stateMap: Record<string, string> = {
+    'acre': 'AC', 'alagoas': 'AL', 'amapa': 'AP', 'amapá': 'AP', 'amazonas': 'AM',
+    'bahia': 'BA', 'ceara': 'CE', 'ceará': 'CE', 'distrito federal': 'DF', 'espirito santo': 'ES',
+    'espírito santo': 'ES', 'goias': 'GO', 'goiás': 'GO', 'maranhao': 'MA', 'maranhão': 'MA',
+    'mato grosso': 'MT', 'mato grosso do sul': 'MS', 'minas gerais': 'MG', 'para': 'PA', 'pará': 'PA',
+    'paraiba': 'PB', 'paraíba': 'PB', 'parana': 'PR', 'paraná': 'PR', 'pernambuco': 'PE',
+    'piaui': 'PI', 'piauí': 'PI', 'rio de janeiro': 'RJ', 'rio grande do norte': 'RN',
+    'rio grande do sul': 'RS', 'rondonia': 'RO', 'rondônia': 'RO', 'roraima': 'RR',
+    'santa catarina': 'SC', 'sao paulo': 'SP', 'são paulo': 'SP', 'sergipe': 'SE',
+    'tocantins': 'TO'
+  };
+
+  const systemPrompt = `Você é um assistente especializado em análise e mapeamento de dados para importação em banco de dados.
 Sua tarefa é analisar dados de uma planilha Excel e mapear para o esquema do banco de dados.
 
 TIPO DE IMPORTAÇÃO: ${type.toUpperCase()}
@@ -75,6 +88,22 @@ ESQUEMA DO BANCO DE DADOS:
 - Campos obrigatórios: ${schema.required.join(', ')}
 - Campos opcionais: ${schema.optional.join(', ')}
 - Validações: ${JSON.stringify(schema.validations, null, 2)}
+
+${type === 'customers' ? `
+REGRAS IMPORTANTES DE MAPEAMENTO DE ENDEREÇO:
+- Colunas com "CEP", "Código Postal", "Cod Postal", "ZIP", "C.E.P." → mapear para "zip_code"
+- Colunas com "Endereço", "Logradouro", "Rua", "Avenida", "Av.", "Endereco" → mapear para "street"
+- Colunas com "Número", "Num", "Nº", "No", "N°", "Numero" → mapear para "number"
+- Colunas com "Complemento", "Comp", "Apto", "Apartamento", "Bloco" → mapear para "complement"
+- Colunas com "Bairro" → mapear para "neighborhood"
+- Colunas com "Cidade", "Município", "Municipio", "Localidade" → mapear para "city"
+- Colunas com "Estado", "UF", "Unidade Federativa" → mapear para "state"
+
+FORMATAÇÃO DE ENDEREÇO:
+- CEP deve ter 8 dígitos, formatar como XXXXX-XXX (ex: 01310-100)
+- Estado deve ser sigla de 2 letras maiúsculas (SP, RJ, MG, etc)
+- Se o estado vier por extenso (São Paulo), converter para sigla (SP)
+` : ''}
 
 ${type === 'customers' && existingCustomers ? `
 CLIENTES EXISTENTES (para verificar duplicados):
@@ -93,6 +122,7 @@ REGRAS DE MAPEAMENTO:
    - Se CPF/CNPJ tem 14 dígitos → type = "juridica"
    - Telefone deve ter DDD (adicione se faltar, baseado na cidade/estado)
    - Formate CPF como apenas números (remova pontos e traços)
+   - IMPORTANTE: Mapeie TODOS os campos de endereço encontrados
 3. Para produtos:
    - Normalize unidades: "unid"/"unidade" → "UN", "quilo" → "KG", "metro cubico" → "M3"
    - Preços devem ser números (remova "R$", pontos de milhar, troque vírgula por ponto)
@@ -228,6 +258,61 @@ RESPOSTA OBRIGATÓRIA EM JSON:
               canAutoFix: false
             });
             if (status !== 'error') status = 'needs_correction';
+          }
+
+          // Validate and format ZIP code (CEP)
+          if (mappedData.zip_code) {
+            const cep = mappedData.zip_code.toString().replace(/\D/g, '');
+            if (cep.length === 8) {
+              mappedData.zip_code = cep.replace(/(\d{5})(\d{3})/, '$1-$2');
+            } else if (cep.length > 0 && cep.length !== 8) {
+              issues.push({
+                field: 'zip_code',
+                problem: 'CEP deve ter 8 dígitos',
+                currentValue: mappedData.zip_code,
+                suggestedValue: cep.length < 8 ? cep.padStart(8, '0').replace(/(\d{5})(\d{3})/, '$1-$2') : null,
+                severity: 'warning',
+                canAutoFix: cep.length < 8
+              });
+              if (status !== 'error') status = 'needs_correction';
+            }
+          }
+
+          // Normalize state to 2-letter abbreviation
+          if (mappedData.state) {
+            const normalizedState = mappedData.state.toString().toLowerCase().trim();
+            if (stateMap[normalizedState]) {
+              mappedData.state = stateMap[normalizedState];
+            } else if (mappedData.state.length === 2) {
+              mappedData.state = mappedData.state.toUpperCase();
+            } else if (mappedData.state.length > 2) {
+              issues.push({
+                field: 'state',
+                problem: 'Estado não reconhecido',
+                currentValue: mappedData.state,
+                suggestedValue: null,
+                severity: 'warning',
+                canAutoFix: false
+              });
+              if (status !== 'error') status = 'needs_correction';
+            }
+          }
+
+          // Clean up street/number/complement
+          if (mappedData.street) {
+            mappedData.street = mappedData.street.toString().trim();
+          }
+          if (mappedData.number) {
+            mappedData.number = mappedData.number.toString().trim();
+          }
+          if (mappedData.complement) {
+            mappedData.complement = mappedData.complement.toString().trim();
+          }
+          if (mappedData.neighborhood) {
+            mappedData.neighborhood = mappedData.neighborhood.toString().trim();
+          }
+          if (mappedData.city) {
+            mappedData.city = mappedData.city.toString().trim();
           }
         }
         
