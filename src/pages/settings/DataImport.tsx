@@ -213,6 +213,17 @@ const DataImport = () => {
     toast.success('Correções aplicadas', { description: 'As sugestões automáticas foram aplicadas.' });
   };
 
+  // Helper to generate unique code
+  const getUniqueCode = (existingCodes: Set<string>, startNum: number): { code: string; nextNum: number } => {
+    let num = startNum;
+    let code = String(num).padStart(3, '0');
+    while (existingCodes.has(code)) {
+      num++;
+      code = String(num).padStart(3, '0');
+    }
+    return { code, nextNum: num + 1 };
+  };
+
   const importData = async () => {
     if (!analysis) return;
 
@@ -226,13 +237,41 @@ const DataImport = () => {
     setIsImporting(true);
     let successCount = 0;
     let errorCount = 0;
+    let skippedCount = 0;
 
     try {
-      for (const item of readyItems) {
-        try {
-          if (importType === 'customers') {
+      if (importType === 'customers') {
+        // Build sets for tracking existing codes and CPF/CNPJ
+        const existingCodes = new Set(customers.map(c => c.code));
+        const existingCpfCnpj = new Set(customers.map(c => c.cpfCnpj?.replace(/\D/g, '')));
+        let nextCodeNum = Math.max(1, ...customers.map(c => parseInt(c.code, 10) || 0)) + 1;
+
+        for (const item of readyItems) {
+          try {
+            // Check for duplicate CPF/CNPJ
+            const cleanCpfCnpj = item.mappedData.cpf_cnpj?.toString().replace(/\D/g, '');
+            if (cleanCpfCnpj && existingCpfCnpj.has(cleanCpfCnpj)) {
+              console.log(`Skipping duplicate CPF/CNPJ: ${cleanCpfCnpj}`);
+              skippedCount++;
+              continue;
+            }
+
+            // Generate unique code if empty or duplicate
+            let code = item.mappedData.code?.toString().trim() || '';
+            if (!code || existingCodes.has(code)) {
+              const result = getUniqueCode(existingCodes, nextCodeNum);
+              code = result.code;
+              nextCodeNum = result.nextNum;
+            }
+            
+            // Add to tracking sets immediately to avoid duplicates in same batch
+            existingCodes.add(code);
+            if (cleanCpfCnpj) {
+              existingCpfCnpj.add(cleanCpfCnpj);
+            }
+
             await addCustomer({
-              code: item.mappedData.code || '',
+              code,
               name: item.mappedData.name,
               tradeName: item.mappedData.trade_name,
               type: item.mappedData.type || 'fisica',
@@ -257,9 +296,30 @@ const DataImport = () => {
               barterNotes: item.mappedData.barter_notes
             });
             successCount++;
-          } else if (importType === 'products') {
+          } catch (err: any) {
+            console.error(`Error importing row ${item.row}:`, err);
+            errorCount++;
+          }
+        }
+      } else if (importType === 'products') {
+        // Build sets for tracking existing codes
+        const existingCodes = new Set(products.map(p => p.code));
+        let nextCodeNum = Math.max(1, ...products.map(p => parseInt(p.code, 10) || 0)) + 1;
+
+        for (const item of readyItems) {
+          try {
+            // Generate unique code if empty or duplicate
+            let code = item.mappedData.code?.toString().trim() || '';
+            if (!code || existingCodes.has(code)) {
+              const result = getUniqueCode(existingCodes, nextCodeNum);
+              code = result.code;
+              nextCodeNum = result.nextNum;
+            }
+            
+            existingCodes.add(code);
+
             await addProduct({
-              code: item.mappedData.code || '',
+              code,
               barcode: item.mappedData.barcode,
               name: item.mappedData.name,
               description: item.mappedData.description,
@@ -273,22 +333,30 @@ const DataImport = () => {
               active: true
             });
             successCount++;
+          } catch (err) {
+            console.error(`Error importing row ${item.row}:`, err);
+            errorCount++;
           }
-        } catch (err) {
-          console.error(`Error importing row ${item.row}:`, err);
-          errorCount++;
         }
       }
 
       if (successCount > 0) {
+        const parts = [`${successCount} importados`];
+        if (skippedCount > 0) parts.push(`${skippedCount} duplicados ignorados`);
+        if (errorCount > 0) parts.push(`${errorCount} erros`);
+        
         toast.success('Importação concluída', { 
-          description: `${successCount} registros importados${errorCount > 0 ? `, ${errorCount} erros` : ''}` 
+          description: parts.join(', ')
         });
         
         // Reset state
         setFile(null);
         setRawData([]);
         setAnalysis(null);
+      } else if (skippedCount > 0) {
+        toast.info('Todos os registros já existem', { 
+          description: `${skippedCount} registros ignorados por duplicidade de CPF/CNPJ` 
+        });
       } else {
         toast.error('Falha na importação', { description: 'Nenhum registro foi importado.' });
       }
