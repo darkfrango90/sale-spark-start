@@ -54,8 +54,7 @@ const menuItems: MenuItem[] = [
   { label: "Operação", module: "operacao", items: [
     { label: "Painel Operador", path: "/operador", module: "operacao", action: "Operador" },
     { label: "Carregados", path: "/operacao/carregados", module: "operacao", action: "Carregados" },
-    { label: "Abastecimento", path: "/operacao/abastecimento" },
-    { label: "Veículos", path: "/operacao/veiculos", module: "operacao", action: "Veículos" }
+    { label: "Abastecimento", path: "/operacao/abastecimento" }
   ]},
   { label: "Motorista", module: "motorista", driverOnly: true, items: [
     { label: "Painel", path: "/motorista", module: "motorista" },
@@ -86,6 +85,7 @@ const menuItems: MenuItem[] = [
     { label: "Usuários", path: "/configuracao/usuarios", adminOnly: true },
     { label: "Condições de Pagamento", path: "/configuracao/pagamentos", module: "configuracao", action: "Empresa" },
     { label: "Contas de Recebimento", path: "/configuracao/contas-recebimento", module: "configuracao", action: "Contas de Recebimento" },
+    { label: "Veículos", path: "/configuracao/veiculos", module: "configuracao", action: "Veículos" },
     { label: "Sistema", module: "configuracao", action: "Sistema" }
   ]},
 ];

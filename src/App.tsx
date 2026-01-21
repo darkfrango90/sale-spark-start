@@ -305,9 +305,9 @@ const AppRoutes = () => {
             <FuelEntry />
           </ProtectedRoute>
         } />
-        <Route path="/operacao/veiculos" element={
+        <Route path="/configuracao/veiculos" element={
           <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-            <PermissionRoute module="operacao" action="Veículos">
+            <PermissionRoute module="configuracao" action="Veículos">
               <VehicleManagement />
             </PermissionRoute>
           </ProtectedRoute>
