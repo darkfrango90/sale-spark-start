@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import TopMenu from "@/components/dashboard/TopMenu";
 import { useSales } from "@/contexts/SalesContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProducts } from "@/contexts/ProductContext";
 import { useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, 
@@ -16,7 +17,9 @@ import {
   Banknote, 
   CreditCard, 
   Receipt,
-  Clock
+  Clock,
+  Package,
+  Scale
 } from "lucide-react";
 import { format, isSameDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -25,6 +28,7 @@ const CashRegisterReport = () => {
   const navigate = useNavigate();
   const { sales } = useSales();
   const { user } = useAuth();
+  const { products } = useProducts();
   
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [sellerFilter, setSellerFilter] = useState<string>("all");
@@ -80,6 +84,60 @@ const CashRegisterReport = () => {
       ? filteredSales.reduce((sum, s) => sum + s.total, 0) / filteredSales.length 
       : 0
   }), [filteredSales]);
+
+  // Material output by product
+  const materialOutput = useMemo(() => {
+    const outputByProduct: Record<string, {
+      productId: string;
+      productName: string;
+      m3: number;
+      tons: number;
+    }> = {};
+
+    filteredSales.forEach(sale => {
+      sale.items.forEach(item => {
+        const product = products.find(p => p.id === item.productId);
+        const density = item.density || product?.density || 0;
+
+        let m3 = 0;
+        let tons = 0;
+
+        const unitLower = item.unit.toLowerCase();
+
+        if (unitLower === 'm3' || unitLower === 'm³') {
+          m3 = item.quantity;
+          tons = density > 0 ? (item.quantity * density) / 1000 : 0;
+        } else if (unitLower === 'kg') {
+          tons = item.quantity / 1000;
+          m3 = density > 0 ? item.quantity / density : 0;
+        } else if (unitLower === 'ton' || unitLower === 't') {
+          tons = item.quantity;
+          m3 = density > 0 ? (item.quantity * 1000) / density : 0;
+        }
+
+        if (!outputByProduct[item.productId]) {
+          outputByProduct[item.productId] = {
+            productId: item.productId,
+            productName: item.productName,
+            m3: 0,
+            tons: 0
+          };
+        }
+        outputByProduct[item.productId].m3 += m3;
+        outputByProduct[item.productId].tons += tons;
+      });
+    });
+
+    return Object.values(outputByProduct)
+      .filter(item => item.m3 > 0 || item.tons > 0)
+      .sort((a, b) => b.m3 - a.m3);
+  }, [filteredSales, products]);
+
+  // Material output totals
+  const outputTotals = useMemo(() => ({
+    totalM3: materialOutput.reduce((sum, item) => sum + item.m3, 0),
+    totalTons: materialOutput.reduce((sum, item) => sum + item.tons, 0)
+  }), [materialOutput]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -257,6 +315,45 @@ const CashRegisterReport = () => {
               </table>
             </div>
           </div>
+
+          ${materialOutput.length > 0 ? `
+          <div class="payment-summary">
+            <h3>SAÍDA DE MATERIAL DO DIA</h3>
+            <div class="summary-grid">
+              <div class="summary-card">
+                <h4>TOTAL EM M³</h4>
+                <p>${outputTotals.totalM3.toFixed(2)} m³</p>
+              </div>
+              <div class="summary-card">
+                <h4>TOTAL EM TONELADAS</h4>
+                <p>${outputTotals.totalTons.toFixed(2)} t</p>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th class="text-right">M³</th>
+                  <th class="text-right">Toneladas</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${materialOutput.map(item => `
+                  <tr>
+                    <td>${item.productName}</td>
+                    <td class="text-right">${item.m3.toFixed(2)}</td>
+                    <td class="text-right">${item.tons.toFixed(2)}</td>
+                  </tr>
+                `).join('')}
+                <tr style="font-weight: bold; background: #f0f0f0;">
+                  <td>TOTAL</td>
+                  <td class="text-right">${outputTotals.totalM3.toFixed(2)}</td>
+                  <td class="text-right">${outputTotals.totalTons.toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          ` : ''}
 
           <div class="footer">
             Impresso em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} por ${user?.name || 'Sistema'}
@@ -445,7 +542,7 @@ const CashRegisterReport = () => {
 
           {/* Payment Method Summary */}
           {filteredSales.length > 0 && (
-            <Card>
+            <Card className="mb-6">
               <CardHeader>
                 <CardTitle className="text-lg">Resumo por Forma de Pagamento</CardTitle>
               </CardHeader>
@@ -474,6 +571,70 @@ const CashRegisterReport = () => {
                       <TableCell className="text-right text-green-600">
                         {formatCurrency(totals.total)}
                       </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Material Output Summary */}
+          {filteredSales.length > 0 && materialOutput.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Saída de Material do Dia
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {/* Totals Cards */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total em M³</p>
+                        <p className="text-2xl font-bold text-blue-600">
+                          {outputTotals.totalM3.toFixed(2)} m³
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-4 bg-orange-50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Scale className="h-5 w-5 text-orange-600" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total em Toneladas</p>
+                        <p className="text-2xl font-bold text-orange-600">
+                          {outputTotals.totalTons.toFixed(2)} t
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Products Table */}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Produto</TableHead>
+                      <TableHead className="text-right">M³</TableHead>
+                      <TableHead className="text-right">Toneladas</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {materialOutput.map((item) => (
+                      <TableRow key={item.productId}>
+                        <TableCell className="font-medium">{item.productName}</TableCell>
+                        <TableCell className="text-right">{item.m3.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{item.tons.toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-muted/50 font-bold">
+                      <TableCell>TOTAL</TableCell>
+                      <TableCell className="text-right text-blue-600">{outputTotals.totalM3.toFixed(2)}</TableCell>
+                      <TableCell className="text-right text-orange-600">{outputTotals.totalTons.toFixed(2)}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
