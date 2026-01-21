@@ -345,14 +345,8 @@ const OperatorDashboard = () => {
         </div>
       </div>
 
-      {/* Search and count */}
+      {/* Search */}
       <div className="flex items-center gap-3 px-4 py-3 border-b bg-muted/50">
-        <div className="flex items-center gap-2">
-          <span className="text-lg font-semibold text-foreground">Pendentes</span>
-          <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-lg font-bold">
-            {pendingOrders.length}
-          </span>
-        </div>
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
