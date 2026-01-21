@@ -53,7 +53,7 @@ const menuItems: MenuItem[] = [
   { label: "Operação", module: "operacao", items: [
     { label: "Operador", path: "/operacao/operador", module: "operacao", action: "Operador" },
     { label: "Carregados", path: "/operacao/carregados", module: "operacao", action: "Carregados" },
-    { label: "Abastecimento", path: "/operacao/abastecimento", module: "operacao", action: "Abastecimento" },
+    { label: "Abastecimento", path: "/operacao/abastecimento" },
     { label: "Veículos", path: "/operacao/veiculos", module: "operacao", action: "Veículos" }
   ]},
   { label: "Motorista", module: "motorista", driverOnly: true, items: [
