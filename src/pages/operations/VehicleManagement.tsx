@@ -35,9 +35,9 @@ const fuelTypeLabels: Record<FuelType, string> = {
 };
 
 const ownershipLabels: Record<OwnershipType, string> = {
-  proprio: "Próprio",
-  terceiro: "Terceiro",
-  alugado: "Alugado"
+  vg_cezar: "VG Cezar",
+  nova_mineracao: "Nova Mineração",
+  outros: "Outros"
 };
 
 const VehicleManagement = () => {
@@ -64,7 +64,7 @@ const VehicleManagement = () => {
     current_km: "",
     renavam_serial: "",
     color: "",
-    ownership: "proprio" as OwnershipType,
+    ownership: "vg_cezar" as OwnershipType,
     notes: ""
   });
 
@@ -104,7 +104,7 @@ const VehicleManagement = () => {
       current_km: "",
       renavam_serial: "",
       color: "",
-      ownership: "proprio",
+      ownership: "vg_cezar",
       notes: ""
     });
     setEditingVehicle(null);
@@ -127,7 +127,7 @@ const VehicleManagement = () => {
       current_km: vehicle.current_km?.toString() || "",
       renavam_serial: vehicle.renavam_serial || "",
       color: vehicle.color || "",
-      ownership: vehicle.ownership || "proprio",
+      ownership: (vehicle.ownership as OwnershipType) || "vg_cezar",
       notes: vehicle.notes || ""
     });
     setDialogOpen(true);

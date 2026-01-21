@@ -1,6 +1,6 @@
 export type VehicleType = 'caminhao' | 'carro' | 'maquinario';
 export type FuelType = 'gasolina' | 'diesel' | 'etanol';
-export type OwnershipType = 'proprio' | 'terceiro' | 'alugado';
+export type OwnershipType = 'vg_cezar' | 'nova_mineracao' | 'outros';
 
 export interface Vehicle {
   id: string;
