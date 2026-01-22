@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.auth-hash-password]
 verify_jwt = false
+
+[functions.analyze-sales-pdf]
+verify_jwt = false
