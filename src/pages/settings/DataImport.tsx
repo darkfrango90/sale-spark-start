@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, XCircle, Loader2, Check, X } from 'lucide-react';
+import { ArrowLeft, Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, XCircle, Loader2, Check, X, UserPlus } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useCustomers } from '@/contexts/CustomerContext';
 import { useProducts } from '@/contexts/ProductContext';
+import { useSales } from '@/contexts/SalesContext';
 import TopMenu from '@/components/dashboard/TopMenu';
 
 type ImportType = 'customers' | 'products' | 'sales';
@@ -33,6 +34,8 @@ interface ImportItem {
   mappedData: Record<string, any>;
   status: ItemStatus;
   issues: ImportIssue[];
+  needs_customer_creation?: boolean;
+  matched_product_name?: string;
 }
 
 interface ColumnMapping {
@@ -54,8 +57,9 @@ interface AnalysisResult {
 
 const DataImport = () => {
   const navigate = useNavigate();
-  const { customers, addCustomer } = useCustomers();
+  const { customers, addCustomer, getNextCustomerCode, refreshCustomers } = useCustomers();
   const { products, addProduct } = useProducts();
+  const { sales, addSale, getNextSaleNumber, refreshSales } = useSales();
   
   const [importType, setImportType] = useState<ImportType>('customers');
   const [file, setFile] = useState<File | null>(null);
@@ -134,20 +138,28 @@ const DataImport = () => {
     setIsAnalyzing(true);
     
     try {
-      const existingCustomers = importType === 'customers' 
-        ? customers.map(c => ({ code: c.code, cpf_cnpj: c.cpfCnpj, name: c.name }))
-        : undefined;
+      // Always send customers and products for sales matching
+      const existingCustomers = customers.map(c => ({ 
+        id: c.id, 
+        code: c.code, 
+        cpf_cnpj: c.cpfCnpj, 
+        name: c.name 
+      }));
       
-      const existingProducts = importType === 'products'
-        ? products.map(p => ({ code: p.code, name: p.name }))
-        : undefined;
+      const existingProducts = products.map(p => ({ 
+        id: p.id, 
+        code: p.code, 
+        name: p.name, 
+        unit: p.unit, 
+        salePrice: p.salePrice 
+      }));
 
       const { data, error } = await supabase.functions.invoke('analyze-import', {
         body: {
           type: importType,
           data: rawData,
-          existingCustomers,
-          existingProducts
+          existingCustomers: importType === 'customers' || importType === 'sales' ? existingCustomers : undefined,
+          existingProducts: importType === 'products' || importType === 'sales' ? existingProducts : undefined
         }
       });
 
@@ -238,6 +250,7 @@ const DataImport = () => {
     let successCount = 0;
     let errorCount = 0;
     let skippedCount = 0;
+    let customersCreated = 0;
 
     try {
       if (importType === 'customers') {
@@ -338,10 +351,142 @@ const DataImport = () => {
             errorCount++;
           }
         }
+      } else if (importType === 'sales') {
+        // Import sales with auto-creation of customers and sequential numbering
+        let currentSaleNumber = parseInt(getNextSaleNumber());
+        
+        // Keep track of customers we create during import
+        const createdCustomersCpfCnpj = new Map<string, { id: string; code: string; name: string }>();
+        
+        // Refresh to get latest customers
+        await refreshCustomers();
+        
+        for (const item of readyItems) {
+          try {
+            const cpfCnpjClean = item.mappedData.customer_cpf_cnpj?.toString().replace(/\D/g, '') || '';
+            
+            // 1. Find or create customer
+            let customer = customers.find(c => 
+              c.cpfCnpj?.replace(/\D/g, '') === cpfCnpjClean ||
+              c.name.toLowerCase().trim() === item.mappedData.customer_name?.toLowerCase().trim()
+            );
+            
+            // Check if we already created this customer in this batch
+            if (!customer && cpfCnpjClean && createdCustomersCpfCnpj.has(cpfCnpjClean)) {
+              const created = createdCustomersCpfCnpj.get(cpfCnpjClean)!;
+              customer = {
+                id: created.id,
+                code: created.code,
+                name: created.name,
+                cpfCnpj: cpfCnpjClean,
+                type: cpfCnpjClean.length === 11 ? 'fisica' : 'juridica',
+                phone: '',
+                active: true,
+                createdAt: new Date()
+              } as any;
+            }
+            
+            // Create customer if not found
+            if (!customer && item.needs_customer_creation) {
+              const newCode = getNextCustomerCode();
+              const customerType = cpfCnpjClean.length === 11 ? 'fisica' : 'juridica';
+              
+              await addCustomer({
+                code: newCode,
+                name: item.mappedData.customer_name || 'Cliente Importado',
+                type: customerType as 'fisica' | 'juridica',
+                cpfCnpj: cpfCnpjClean,
+                phone: '',
+                active: true
+              });
+              
+              customersCreated++;
+              
+              // Store in our batch tracking
+              createdCustomersCpfCnpj.set(cpfCnpjClean, {
+                id: crypto.randomUUID(), // Temporary ID
+                code: newCode,
+                name: item.mappedData.customer_name || 'Cliente Importado'
+              });
+              
+              // Refresh to get the actual customer data
+              await refreshCustomers();
+              
+              // Find the newly created customer
+              customer = customers.find(c => c.cpfCnpj?.replace(/\D/g, '') === cpfCnpjClean);
+            }
+            
+            if (!customer) {
+              console.error(`Customer not found for row ${item.row}`);
+              errorCount++;
+              continue;
+            }
+            
+            // 2. Find product by name
+            const productNameLower = (item.matched_product_name || item.mappedData.product_name)?.toLowerCase().trim();
+            const product = products.find(p => 
+              p.name.toLowerCase().includes(productNameLower) ||
+              productNameLower.includes(p.name.toLowerCase())
+            );
+            
+            if (!product) {
+              console.error(`Product not found for row ${item.row}: ${item.mappedData.product_name}`);
+              errorCount++;
+              continue;
+            }
+            
+            // 3. Create sale with sequential number
+            const saleNumber = String(currentSaleNumber++).padStart(5, '0');
+            const quantity = Number(item.mappedData.quantity) || 1;
+            const unitPrice = Number(item.mappedData.unit_price) || product.salePrice;
+            const total = quantity * unitPrice;
+            
+            await addSale({
+              type: 'pedido',
+              number: saleNumber,
+              customerId: customer.id,
+              customerCode: customer.code,
+              customerName: customer.name,
+              customerCpfCnpj: customer.cpfCnpj || '',
+              customerPhone: customer.phone,
+              paymentMethodId: '',
+              paymentMethodName: item.mappedData.payment_method || 'Importado',
+              items: [{
+                id: crypto.randomUUID(),
+                productId: product.id,
+                productCode: product.code,
+                productName: product.name,
+                unit: product.unit,
+                quantity,
+                originalPrice: product.salePrice,
+                unitPrice,
+                discount: 0,
+                total,
+                density: product.density,
+                weight: product.density ? quantity * product.density : undefined
+              }],
+              subtotal: total,
+              discount: 0,
+              total,
+              totalWeight: product.density ? quantity * product.density : 0,
+              status: 'finalizado',
+              sellerName: item.mappedData.seller_name || 'Importação'
+            });
+            
+            successCount++;
+          } catch (err: any) {
+            console.error(`Error importing sale row ${item.row}:`, err);
+            errorCount++;
+          }
+        }
+        
+        // Refresh sales at the end
+        await refreshSales();
       }
 
       if (successCount > 0) {
         const parts = [`${successCount} importados`];
+        if (customersCreated > 0) parts.push(`${customersCreated} clientes criados`);
         if (skippedCount > 0) parts.push(`${skippedCount} duplicados ignorados`);
         if (errorCount > 0) parts.push(`${errorCount} erros`);
         
@@ -392,6 +537,7 @@ const DataImport = () => {
 
   const pendingItems = analysis?.items.filter(i => i.status !== 'ready') || [];
   const readyItems = analysis?.items.filter(i => i.status === 'ready') || [];
+  const itemsNeedingCustomerCreation = readyItems.filter(i => i.needs_customer_creation).length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -463,10 +609,16 @@ const DataImport = () => {
                     <Label htmlFor="products">Produtos</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="sales" id="sales" disabled />
-                    <Label htmlFor="sales" className="text-muted-foreground">Vendas (em breve)</Label>
+                    <RadioGroupItem value="sales" id="sales" />
+                    <Label htmlFor="sales">Vendas</Label>
                   </div>
                 </RadioGroup>
+                
+                {importType === 'sales' && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    A importação de vendas gera números de pedido sequenciais, busca produtos pelo nome e cria clientes automaticamente se não existirem.
+                  </p>
+                )}
               </div>
 
               <Button 
@@ -511,6 +663,15 @@ const DataImport = () => {
                     <p className="text-sm text-red-600">Com Erro</p>
                   </div>
                 </div>
+                
+                {importType === 'sales' && itemsNeedingCustomerCreation > 0 && (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg flex items-center gap-2">
+                    <UserPlus className="h-5 w-5 text-blue-600" />
+                    <span className="text-sm text-blue-700">
+                      {itemsNeedingCustomerCreation} cliente(s) serão criados automaticamente durante a importação
+                    </span>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -601,19 +762,22 @@ const DataImport = () => {
                       <TableRow>
                         <TableHead className="w-16">Linha</TableHead>
                         <TableHead>
-                          {importType === 'customers' ? 'Nome' : 'Produto'}
+                          {importType === 'customers' ? 'Nome' : importType === 'sales' ? 'Cliente' : 'Produto'}
                         </TableHead>
                         <TableHead>
-                          {importType === 'customers' ? 'CPF/CNPJ' : 'Código'}
+                          {importType === 'customers' ? 'CPF/CNPJ' : importType === 'sales' ? 'Produto' : 'Código'}
                         </TableHead>
                         <TableHead>
-                          {importType === 'customers' ? 'Telefone' : 'Preço'}
+                          {importType === 'customers' ? 'Telefone' : importType === 'sales' ? 'Qtd' : 'Preço'}
                         </TableHead>
                         {importType === 'customers' && (
                           <>
                             <TableHead>Cidade</TableHead>
                             <TableHead>UF</TableHead>
                           </>
+                        )}
+                        {importType === 'sales' && (
+                          <TableHead>Valor Un.</TableHead>
                         )}
                         <TableHead className="w-24">Status</TableHead>
                       </TableRow>
@@ -623,17 +787,21 @@ const DataImport = () => {
                         <TableRow key={item.row}>
                           <TableCell>{item.row}</TableCell>
                           <TableCell className="font-medium">
-                            {item.mappedData.name}
+                            {importType === 'sales' ? item.mappedData.customer_name : item.mappedData.name}
                           </TableCell>
                           <TableCell>
                             {importType === 'customers' 
                               ? item.mappedData.cpf_cnpj 
+                              : importType === 'sales'
+                              ? (item.matched_product_name || item.mappedData.product_name)
                               : item.mappedData.code
                             }
                           </TableCell>
                           <TableCell>
                             {importType === 'customers' 
                               ? item.mappedData.phone 
+                              : importType === 'sales'
+                              ? item.mappedData.quantity
                               : `R$ ${item.mappedData.sale_price?.toFixed(2) || '0,00'}`
                             }
                           </TableCell>
@@ -643,14 +811,24 @@ const DataImport = () => {
                               <TableCell>{item.mappedData.state || '-'}</TableCell>
                             </>
                           )}
+                          {importType === 'sales' && (
+                            <TableCell>R$ {item.mappedData.unit_price?.toFixed(2) || '0,00'}</TableCell>
+                          )}
                           <TableCell>
-                            {getStatusBadge(item.status)}
+                            {item.needs_customer_creation ? (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                <UserPlus className="h-3 w-3 mr-1" />
+                                Novo
+                              </Badge>
+                            ) : (
+                              getStatusBadge(item.status)
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
                       {readyItems.length > 50 && (
                         <TableRow>
-                          <TableCell colSpan={importType === 'customers' ? 7 : 5} className="text-center text-muted-foreground">
+                          <TableCell colSpan={importType === 'customers' ? 7 : importType === 'sales' ? 6 : 5} className="text-center text-muted-foreground">
                             ... e mais {readyItems.length - 50} registros
                           </TableCell>
                         </TableRow>

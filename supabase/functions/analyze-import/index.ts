@@ -9,8 +9,8 @@ const corsHeaders = {
 interface ImportData {
   type: 'customers' | 'products' | 'sales';
   data: Record<string, any>[];
-  existingCustomers?: { code: string; cpf_cnpj: string; name: string }[];
-  existingProducts?: { code: string; name: string }[];
+  existingCustomers?: { id?: string; code: string; cpf_cnpj: string; name: string }[];
+  existingProducts?: { id?: string; code: string; name: string; unit?: string; salePrice?: number }[];
 }
 
 serve(async (req) => {
@@ -54,11 +54,12 @@ serve(async (req) => {
         }
       },
       sales: {
-        required: ['customer_name', 'items', 'total'],
-        optional: ['number', 'customer_cpf_cnpj', 'payment_method', 'notes', 'status'],
+        required: ['customer_name', 'customer_cpf_cnpj', 'product_name', 'quantity', 'unit_price'],
+        optional: ['seller_name', 'payment_method', 'notes'],
         validations: {
-          items: 'Lista de itens com produto, quantidade e preço',
-          status: ['pendente', 'finalizado', 'cancelado']
+          quantity: 'Deve ser um número positivo',
+          unit_price: 'Deve ser um número positivo',
+          customer_cpf_cnpj: 'CPF deve ter 11 dígitos, CNPJ deve ter 14 dígitos'
         }
       }
     };
@@ -66,20 +67,20 @@ serve(async (req) => {
     const schema = schemas[type];
     const sampleData = data.slice(0, 10);
 
-  // State mapping for normalization
-  const stateMap: Record<string, string> = {
-    'acre': 'AC', 'alagoas': 'AL', 'amapa': 'AP', 'amapá': 'AP', 'amazonas': 'AM',
-    'bahia': 'BA', 'ceara': 'CE', 'ceará': 'CE', 'distrito federal': 'DF', 'espirito santo': 'ES',
-    'espírito santo': 'ES', 'goias': 'GO', 'goiás': 'GO', 'maranhao': 'MA', 'maranhão': 'MA',
-    'mato grosso': 'MT', 'mato grosso do sul': 'MS', 'minas gerais': 'MG', 'para': 'PA', 'pará': 'PA',
-    'paraiba': 'PB', 'paraíba': 'PB', 'parana': 'PR', 'paraná': 'PR', 'pernambuco': 'PE',
-    'piaui': 'PI', 'piauí': 'PI', 'rio de janeiro': 'RJ', 'rio grande do norte': 'RN',
-    'rio grande do sul': 'RS', 'rondonia': 'RO', 'rondônia': 'RO', 'roraima': 'RR',
-    'santa catarina': 'SC', 'sao paulo': 'SP', 'são paulo': 'SP', 'sergipe': 'SE',
-    'tocantins': 'TO'
-  };
+    // State mapping for normalization
+    const stateMap: Record<string, string> = {
+      'acre': 'AC', 'alagoas': 'AL', 'amapa': 'AP', 'amapá': 'AP', 'amazonas': 'AM',
+      'bahia': 'BA', 'ceara': 'CE', 'ceará': 'CE', 'distrito federal': 'DF', 'espirito santo': 'ES',
+      'espírito santo': 'ES', 'goias': 'GO', 'goiás': 'GO', 'maranhao': 'MA', 'maranhão': 'MA',
+      'mato grosso': 'MT', 'mato grosso do sul': 'MS', 'minas gerais': 'MG', 'para': 'PA', 'pará': 'PA',
+      'paraiba': 'PB', 'paraíba': 'PB', 'parana': 'PR', 'paraná': 'PR', 'pernambuco': 'PE',
+      'piaui': 'PI', 'piauí': 'PI', 'rio de janeiro': 'RJ', 'rio grande do norte': 'RN',
+      'rio grande do sul': 'RS', 'rondonia': 'RO', 'rondônia': 'RO', 'roraima': 'RR',
+      'santa catarina': 'SC', 'sao paulo': 'SP', 'são paulo': 'SP', 'sergipe': 'SE',
+      'tocantins': 'TO'
+    };
 
-  const systemPrompt = `Você é um assistente especializado em análise e mapeamento de dados para importação em banco de dados.
+    let systemPrompt = `Você é um assistente especializado em análise e mapeamento de dados para importação em banco de dados.
 Sua tarefa é analisar dados de uma planilha Excel e mapear para o esquema do banco de dados.
 
 TIPO DE IMPORTAÇÃO: ${type.toUpperCase()}
@@ -88,8 +89,10 @@ ESQUEMA DO BANCO DE DADOS:
 - Campos obrigatórios: ${schema.required.join(', ')}
 - Campos opcionais: ${schema.optional.join(', ')}
 - Validações: ${JSON.stringify(schema.validations, null, 2)}
+`;
 
-${type === 'customers' ? `
+    if (type === 'customers') {
+      systemPrompt += `
 REGRAS IMPORTANTES DE MAPEAMENTO DE ENDEREÇO:
 - Colunas com "CEP", "Código Postal", "Cod Postal", "ZIP", "C.E.P." → mapear para "zip_code"
 - Colunas com "Endereço", "Logradouro", "Rua", "Avenida", "Av.", "Endereco" → mapear para "street"
@@ -103,18 +106,70 @@ FORMATAÇÃO DE ENDEREÇO:
 - CEP deve ter 8 dígitos, formatar como XXXXX-XXX (ex: 01310-100)
 - Estado deve ser sigla de 2 letras maiúsculas (SP, RJ, MG, etc)
 - Se o estado vier por extenso (São Paulo), converter para sigla (SP)
-` : ''}
-
-${type === 'customers' && existingCustomers ? `
+`;
+      if (existingCustomers) {
+        systemPrompt += `
 CLIENTES EXISTENTES (para verificar duplicados):
 ${JSON.stringify(existingCustomers.slice(0, 50), null, 2)}
-` : ''}
+`;
+      }
+    }
 
-${type === 'products' && existingProducts ? `
+    if (type === 'products' && existingProducts) {
+      systemPrompt += `
 PRODUTOS EXISTENTES (para verificar duplicados):
 ${JSON.stringify(existingProducts.slice(0, 50), null, 2)}
-` : ''}
+`;
+    }
 
+    if (type === 'sales') {
+      systemPrompt += `
+REGRAS ESPECIAIS PARA IMPORTAÇÃO DE VENDAS:
+
+IGNORAR COMPLETAMENTE:
+- Cabeçalhos de relatório (nome da empresa, CNPJ, endereço, telefone, etc.)
+- Títulos de relatório ("Relatorio de Vendas", "Conferencia de Vendas", etc.)
+- Linhas de filtros ("Período:", "Vendedor:", "Tipo:", etc.)
+- Rodapés ("Maxdata Sistemas", paginação, etc.)
+- Linhas de totalização ("Total Geral:", "Subtotal:", "Total de Venda:", etc.)
+- Linhas vazias ou com apenas espaços
+
+EXTRAIR APENAS:
+- Linhas que contêm dados reais de vendas (cliente + produto + quantidade + preço)
+
+MAPEAMENTO DE COLUNAS:
+- Colunas com "Cliente", "Nome", "Razão Social" → customer_name
+- Colunas com "CPF", "CNPJ", "CPF/CNPJ", "Documento" → customer_cpf_cnpj
+- Colunas com "Produto", "Item", "Descrição", "Mercadoria" → product_name
+- Colunas com "Qtd", "Quantidade", "Qt", "Qtde" → quantity
+- Colunas com "Vlr. Un.", "Valor Un", "Preço", "Unit", "Vlr.Un" → unit_price
+- Colunas com "Vendedor" → seller_name
+- Colunas com "Cond.Pag", "Condição", "Pagamento", "Forma Pag" → payment_method
+
+VALIDAÇÃO COM DADOS EXISTENTES:
+`;
+      if (existingProducts && existingProducts.length > 0) {
+        systemPrompt += `
+PRODUTOS CADASTRADOS NO SISTEMA (buscar por nome similar):
+${JSON.stringify(existingProducts.slice(0, 100).map(p => ({ name: p.name, code: p.code })), null, 2)}
+
+- Se o produto da planilha NÃO corresponder a nenhum produto existente → marcar como "error" com issue "Produto não encontrado no sistema"
+- Se corresponder → status "ready"
+`;
+      }
+
+      if (existingCustomers && existingCustomers.length > 0) {
+        systemPrompt += `
+CLIENTES CADASTRADOS NO SISTEMA (verificar se já existe):
+${JSON.stringify(existingCustomers.slice(0, 100).map(c => ({ name: c.name, cpf_cnpj: c.cpf_cnpj })), null, 2)}
+
+- Se cliente NÃO existir pelo CPF/CNPJ → marcar com status "ready" e flag "needs_customer_creation": true
+- Se cliente existir → marcar com status "ready"
+`;
+      }
+    }
+
+    systemPrompt += `
 REGRAS DE MAPEAMENTO:
 1. Identifique qual coluna da planilha corresponde a qual campo do banco
 2. Para clientes:
@@ -127,8 +182,10 @@ REGRAS DE MAPEAMENTO:
    - Normalize unidades: "unid"/"unidade" → "UN", "quilo" → "KG", "metro cubico" → "M3"
    - Preços devem ser números (remova "R$", pontos de milhar, troque vírgula por ponto)
 4. Para vendas:
-   - Identifique cliente pelo nome ou CPF/CNPJ
-   - Identifique produtos pelo nome ou código
+   - Identifique cliente pelo nome e CPF/CNPJ
+   - Identifique produto pelo nome (buscar correspondência no sistema)
+   - Extraia quantidade e valor unitário
+   - IGNORE linhas que não são dados de vendas (cabeçalhos, totais, etc.)
 
 RESPOSTA OBRIGATÓRIA EM JSON:
 {
@@ -141,6 +198,8 @@ RESPOSTA OBRIGATÓRIA EM JSON:
       "originalData": { dados originais },
       "mappedData": { dados mapeados para o banco },
       "status": "ready" | "needs_correction" | "error",
+      "needs_customer_creation": false,
+      "matched_product_name": "nome do produto encontrado no sistema (se for venda)",
       "issues": [
         {
           "field": "campo",
@@ -216,6 +275,8 @@ RESPOSTA OBRIGATÓRIA EM JSON:
         
         // Basic validation
         let status = 'ready';
+        let needsCustomerCreation = false;
+        let matchedProductName = null;
         
         if (type === 'customers') {
           // Validate CPF/CNPJ
@@ -367,14 +428,164 @@ RESPOSTA OBRIGATÓRIA EM JSON:
             }
           }
         }
+
+        if (type === 'sales') {
+          // Validate required fields
+          if (!mappedData.customer_name) {
+            issues.push({
+              field: 'customer_name',
+              problem: 'Nome do cliente é obrigatório',
+              currentValue: null,
+              suggestedValue: null,
+              severity: 'error',
+              canAutoFix: false
+            });
+            status = 'error';
+          }
+
+          if (!mappedData.product_name) {
+            issues.push({
+              field: 'product_name',
+              problem: 'Nome do produto é obrigatório',
+              currentValue: null,
+              suggestedValue: null,
+              severity: 'error',
+              canAutoFix: false
+            });
+            status = 'error';
+          }
+
+          // Parse and validate quantity
+          if (mappedData.quantity) {
+            const qty = parseFloat(mappedData.quantity.toString().replace(',', '.'));
+            if (isNaN(qty) || qty <= 0) {
+              issues.push({
+                field: 'quantity',
+                problem: 'Quantidade inválida',
+                currentValue: mappedData.quantity,
+                suggestedValue: null,
+                severity: 'error',
+                canAutoFix: false
+              });
+              status = 'error';
+            } else {
+              mappedData.quantity = qty;
+            }
+          } else {
+            issues.push({
+              field: 'quantity',
+              problem: 'Quantidade é obrigatória',
+              currentValue: null,
+              suggestedValue: null,
+              severity: 'error',
+              canAutoFix: false
+            });
+            status = 'error';
+          }
+
+          // Parse and validate unit price
+          if (mappedData.unit_price) {
+            const priceStr = mappedData.unit_price.toString()
+              .replace('R$', '')
+              .replace(/\./g, '')
+              .replace(',', '.')
+              .trim();
+            const price = parseFloat(priceStr);
+            if (isNaN(price) || price <= 0) {
+              issues.push({
+                field: 'unit_price',
+                problem: 'Preço unitário inválido',
+                currentValue: mappedData.unit_price,
+                suggestedValue: null,
+                severity: 'error',
+                canAutoFix: false
+              });
+              status = 'error';
+            } else {
+              mappedData.unit_price = price;
+            }
+          } else {
+            issues.push({
+              field: 'unit_price',
+              problem: 'Preço unitário é obrigatório',
+              currentValue: null,
+              suggestedValue: null,
+              severity: 'error',
+              canAutoFix: false
+            });
+            status = 'error';
+          }
+
+          // Validate CPF/CNPJ
+          if (mappedData.customer_cpf_cnpj) {
+            const cpfCnpj = mappedData.customer_cpf_cnpj.toString().replace(/\D/g, '');
+            if (cpfCnpj.length !== 11 && cpfCnpj.length !== 14) {
+              issues.push({
+                field: 'customer_cpf_cnpj',
+                problem: 'CPF/CNPJ com formato inválido',
+                currentValue: mappedData.customer_cpf_cnpj,
+                suggestedValue: null,
+                severity: 'error',
+                canAutoFix: false
+              });
+              status = 'error';
+            } else {
+              mappedData.customer_cpf_cnpj = cpfCnpj;
+            }
+          }
+
+          // Check if product exists
+          if (status !== 'error' && existingProducts && mappedData.product_name) {
+            const productNameLower = mappedData.product_name.toString().toLowerCase().trim();
+            const matchedProduct = existingProducts.find(p => 
+              p.name.toLowerCase().includes(productNameLower) ||
+              productNameLower.includes(p.name.toLowerCase())
+            );
+            
+            if (!matchedProduct) {
+              issues.push({
+                field: 'product_name',
+                problem: 'Produto não encontrado no sistema',
+                currentValue: mappedData.product_name,
+                suggestedValue: null,
+                severity: 'error',
+                canAutoFix: false
+              });
+              status = 'error';
+            } else {
+              matchedProductName = matchedProduct.name;
+            }
+          }
+
+          // Check if customer exists
+          if (status !== 'error' && existingCustomers && mappedData.customer_cpf_cnpj) {
+            const cpfCnpjClean = mappedData.customer_cpf_cnpj.toString().replace(/\D/g, '');
+            const existingCustomer = existingCustomers.find(c => 
+              c.cpf_cnpj?.replace(/\D/g, '') === cpfCnpjClean
+            );
+            
+            if (!existingCustomer) {
+              needsCustomerCreation = true;
+            }
+          }
+        }
         
-        additionalItems.push({
+        const itemData: any = {
           row: i + 1,
           originalData: row,
           mappedData,
           status,
           issues
-        });
+        };
+
+        if (type === 'sales') {
+          itemData.needs_customer_creation = needsCustomerCreation;
+          if (matchedProductName) {
+            itemData.matched_product_name = matchedProductName;
+          }
+        }
+        
+        additionalItems.push(itemData);
       }
       
       analysis.items = [...analysis.items, ...additionalItems];
