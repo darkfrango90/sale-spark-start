@@ -221,6 +221,53 @@ Use o Cód.Int. para identificar os produtos no sistema.`;
     const aiResponse = await response.json();
     console.log('AI response received:', JSON.stringify(aiResponse).substring(0, 500));
 
+    // Some providers return HTTP 200 with an error object (e.g. provider timeout)
+    // Example:
+    // {"error":{"message":"Provider returned error","code":524,...},"user_id":"..."}
+    if (aiResponse?.error) {
+      const code = aiResponse.error?.code;
+      const providerName = aiResponse.error?.metadata?.provider_name;
+      const raw = aiResponse.error?.metadata?.raw;
+      console.error('AI provider error:', { code, providerName, raw, message: aiResponse.error?.message });
+
+      // 524 is commonly a provider timeout
+      if (code === 524) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'A IA demorou demais para processar o PDF (timeout). Tente novamente, ou envie um PDF menor (menos páginas).',
+            debug: { code, providerName, raw },
+          }),
+          { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Falha do provedor de IA ao processar o PDF. Tente novamente em alguns minutos.',
+          debug: { code, providerName, raw },
+        }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // If we have no choices at all, the payload is not a completion
+    if (!aiResponse?.choices?.length) {
+      console.error('AI response missing choices:', JSON.stringify(aiResponse));
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Resposta inesperada da IA (sem "choices"). Tente novamente, ou envie um PDF menor.',
+          debug: {
+            hasChoices: false,
+            keys: aiResponse ? Object.keys(aiResponse) : null,
+          },
+        }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Try to extract tool call result first
     let extractedData: { sales: ExtractedSale[] } | null = null;
     const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
