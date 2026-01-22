@@ -16,22 +16,6 @@ import { useProducts } from '@/contexts/ProductContext';
 import { useSales } from '@/contexts/SalesContext';
 import TopMenu from '@/components/dashboard/TopMenu';
 
-const fileToBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Falha ao ler o arquivo'));
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result !== 'string') return reject(new Error('Falha ao ler o arquivo'));
-      // result format: data:application/pdf;base64,XXXX
-      const commaIdx = result.indexOf(',');
-      resolve(commaIdx >= 0 ? result.slice(commaIdx + 1) : result);
-    };
-    reader.readAsDataURL(file);
-  });
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 type ImportType = 'customers' | 'products' | 'sales';
 type FileType = 'excel' | 'pdf';
 type ItemStatus = 'ready' | 'needs_correction' | 'error';
@@ -211,8 +195,11 @@ const DataImport = () => {
     setIsAnalyzing(true);
     
     try {
-      // Convert PDF to base64 (more memory-safe than btoa+reduce for large files)
-      const base64 = await fileToBase64(file);
+      // Convert PDF to base64
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+      );
 
       const existingCustomers = customers.map(c => ({ 
         id: c.id, 
@@ -234,44 +221,19 @@ const DataImport = () => {
         duration: 10000
       });
 
-      // Retry strategy for provider timeouts / transient gateway errors
-      // (Provider 524 mapped by backend to 504)
-      const maxAttempts = 2;
-      let lastErr: any = null;
-      let data: any = null;
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        const res = await supabase.functions.invoke('analyze-sales-pdf', {
-          body: {
-            pdfBase64: base64,
-            existingProducts,
-            existingCustomers,
-          },
-        });
-
-        if (!res.error && res.data?.success) {
-          data = res.data;
-          break;
+      const { data, error } = await supabase.functions.invoke('analyze-sales-pdf', {
+        body: {
+          pdfBase64: base64,
+          existingProducts,
+          existingCustomers
         }
+      });
 
-        lastErr = res.error || new Error(res.data?.error || 'Erro na análise do PDF');
-
-        // If it's a timeout / transient provider error, wait a bit and retry.
-        const msg = (res.data?.error || res.error?.message || '').toString();
-        const isRetryable =
-          res.error?.status === 504 ||
-          res.error?.status === 502 ||
-          msg.toLowerCase().includes('timeout') ||
-          msg.includes('524');
-
-        if (attempt < maxAttempts && isRetryable) {
-          toast.info('A IA demorou para responder — tentando novamente...', { duration: 4000 });
-          await sleep(1200 * attempt);
-          continue;
-        }
-        break;
+      if (error) throw error;
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Erro na análise do PDF');
       }
-
-      if (!data) throw lastErr;
 
       setPdfAnalysis(data);
       toast.success('PDF analisado!', { 

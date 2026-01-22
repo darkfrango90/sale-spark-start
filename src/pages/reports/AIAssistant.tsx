@@ -65,21 +65,12 @@ const AIAssistant = () => {
 
     let assistantContent = "";
 
-    // Get auth token from localStorage (custom auth system)
-    const authToken = localStorage.getItem('cezar_auth_token');
-    
-    if (!authToken) {
-      toast.error("Você precisa estar logado para usar o assistente");
-      setIsLoading(false);
-      return;
-    }
-
     try {
       const response = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({ messages: newMessages }),
       });

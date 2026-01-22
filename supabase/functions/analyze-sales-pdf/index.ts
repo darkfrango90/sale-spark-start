@@ -219,115 +219,25 @@ Use o Cód.Int. para identificar os produtos no sistema.`;
     }
 
     const aiResponse = await response.json();
-    console.log('AI response received:', JSON.stringify(aiResponse).substring(0, 500));
+    console.log('AI response received');
 
-    // Some providers return HTTP 200 with an error object (e.g. provider timeout)
-    // Example:
-    // {"error":{"message":"Provider returned error","code":524,...},"user_id":"..."}
-    if (aiResponse?.error) {
-      const code = aiResponse.error?.code;
-      const providerName = aiResponse.error?.metadata?.provider_name;
-      const raw = aiResponse.error?.metadata?.raw;
-      console.error('AI provider error:', { code, providerName, raw, message: aiResponse.error?.message });
-
-      // 524 is commonly a provider timeout
-      if (code === 524) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: 'A IA demorou demais para processar o PDF (timeout). Tente novamente, ou envie um PDF menor (menos páginas).',
-            debug: { code, providerName, raw },
-          }),
-          { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Falha do provedor de IA ao processar o PDF. Tente novamente em alguns minutos.',
-          debug: { code, providerName, raw },
-        }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // If we have no choices at all, the payload is not a completion
-    if (!aiResponse?.choices?.length) {
-      console.error('AI response missing choices:', JSON.stringify(aiResponse));
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Resposta inesperada da IA (sem "choices"). Tente novamente, ou envie um PDF menor.',
-          debug: {
-            hasChoices: false,
-            keys: aiResponse ? Object.keys(aiResponse) : null,
-          },
-        }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Try to extract tool call result first
-    let extractedData: { sales: ExtractedSale[] } | null = null;
+    // Extract tool call result
     const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
-    
-    if (toolCall && toolCall.function?.name === 'extract_sales') {
-      console.log('Found tool call response');
-      try {
-        extractedData = JSON.parse(toolCall.function.arguments);
-      } catch (e) {
-        console.error('Failed to parse tool call arguments:', e);
-      }
-    }
-    
-    // If no tool call, try to extract from content (fallback for models that don't support tool calls)
-    if (!extractedData) {
-      const content = aiResponse.choices?.[0]?.message?.content;
-      console.log('No tool call found, trying content extraction. Content preview:', content?.substring(0, 300));
-      
-      if (content) {
-        // Try to find JSON in the response
-        const jsonMatch = content.match(/\{[\s\S]*"sales"[\s\S]*\}/);
-        if (jsonMatch) {
-          try {
-            extractedData = JSON.parse(jsonMatch[0]);
-            console.log('Extracted data from content JSON');
-          } catch (e) {
-            console.error('Failed to parse content JSON:', e);
-          }
-        }
-        
-        // If still no data, try to parse as array
-        if (!extractedData) {
-          const arrayMatch = content.match(/\[[\s\S]*\]/);
-          if (arrayMatch) {
-            try {
-              const sales = JSON.parse(arrayMatch[0]);
-              if (Array.isArray(sales)) {
-                extractedData = { sales };
-                console.log('Extracted data from content array');
-              }
-            } catch (e) {
-              console.error('Failed to parse content array:', e);
-            }
-          }
-        }
-      }
-    }
-    
-    if (!extractedData || !extractedData.sales) {
-      console.error('Could not extract sales data. Full AI response:', JSON.stringify(aiResponse));
+    if (!toolCall || toolCall.function.name !== 'extract_sales') {
+      console.error('Unexpected AI response format:', JSON.stringify(aiResponse));
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Não foi possível extrair vendas do PDF. O modelo de IA pode não suportar análise de PDF diretamente. Tente converter o PDF para imagens antes de enviar.',
-          debug: {
-            hasChoices: !!aiResponse.choices?.length,
-            hasToolCalls: !!aiResponse.choices?.[0]?.message?.tool_calls?.length,
-            contentPreview: aiResponse.choices?.[0]?.message?.content?.substring(0, 200)
-          }
-        }),
+        JSON.stringify({ success: false, error: 'Formato de resposta inesperado da IA' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    let extractedData: { sales: ExtractedSale[] };
+    try {
+      extractedData = JSON.parse(toolCall.function.arguments);
+    } catch (e) {
+      console.error('Failed to parse AI response:', e);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Falha ao processar resposta da IA' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
