@@ -219,25 +219,68 @@ Use o Cód.Int. para identificar os produtos no sistema.`;
     }
 
     const aiResponse = await response.json();
-    console.log('AI response received');
+    console.log('AI response received:', JSON.stringify(aiResponse).substring(0, 500));
 
-    // Extract tool call result
+    // Try to extract tool call result first
+    let extractedData: { sales: ExtractedSale[] } | null = null;
     const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall || toolCall.function.name !== 'extract_sales') {
-      console.error('Unexpected AI response format:', JSON.stringify(aiResponse));
-      return new Response(
-        JSON.stringify({ success: false, error: 'Formato de resposta inesperado da IA' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    
+    if (toolCall && toolCall.function?.name === 'extract_sales') {
+      console.log('Found tool call response');
+      try {
+        extractedData = JSON.parse(toolCall.function.arguments);
+      } catch (e) {
+        console.error('Failed to parse tool call arguments:', e);
+      }
     }
-
-    let extractedData: { sales: ExtractedSale[] };
-    try {
-      extractedData = JSON.parse(toolCall.function.arguments);
-    } catch (e) {
-      console.error('Failed to parse AI response:', e);
+    
+    // If no tool call, try to extract from content (fallback for models that don't support tool calls)
+    if (!extractedData) {
+      const content = aiResponse.choices?.[0]?.message?.content;
+      console.log('No tool call found, trying content extraction. Content preview:', content?.substring(0, 300));
+      
+      if (content) {
+        // Try to find JSON in the response
+        const jsonMatch = content.match(/\{[\s\S]*"sales"[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            extractedData = JSON.parse(jsonMatch[0]);
+            console.log('Extracted data from content JSON');
+          } catch (e) {
+            console.error('Failed to parse content JSON:', e);
+          }
+        }
+        
+        // If still no data, try to parse as array
+        if (!extractedData) {
+          const arrayMatch = content.match(/\[[\s\S]*\]/);
+          if (arrayMatch) {
+            try {
+              const sales = JSON.parse(arrayMatch[0]);
+              if (Array.isArray(sales)) {
+                extractedData = { sales };
+                console.log('Extracted data from content array');
+              }
+            } catch (e) {
+              console.error('Failed to parse content array:', e);
+            }
+          }
+        }
+      }
+    }
+    
+    if (!extractedData || !extractedData.sales) {
+      console.error('Could not extract sales data. Full AI response:', JSON.stringify(aiResponse));
       return new Response(
-        JSON.stringify({ success: false, error: 'Falha ao processar resposta da IA' }),
+        JSON.stringify({ 
+          success: false, 
+          error: 'Não foi possível extrair vendas do PDF. O modelo de IA pode não suportar análise de PDF diretamente. Tente converter o PDF para imagens antes de enviar.',
+          debug: {
+            hasChoices: !!aiResponse.choices?.length,
+            hasToolCalls: !!aiResponse.choices?.[0]?.message?.tool_calls?.length,
+            contentPreview: aiResponse.choices?.[0]?.message?.content?.substring(0, 200)
+          }
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
