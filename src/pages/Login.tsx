@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { LogIn } from 'lucide-react';
+import logo from '@/assets/logo.png';
 
 const Login = () => {
   const [accessCode, setAccessCode] = useState('');
@@ -70,9 +71,7 @@ const Login = () => {
       <Card className="w-full max-w-md mx-4">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="h-16 w-16 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-2xl">C</span>
-            </div>
+            <img src={logo} alt="Logo" className="h-20 w-auto object-contain" />
           </div>
           <CardTitle className="text-2xl font-bold">CEZAR</CardTitle>
           <CardDescription>Sistema de Vendas</CardDescription>
