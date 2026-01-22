@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, XCircle, Loader2, Check, X, UserPlus } from 'lucide-react';
+import { ArrowLeft, Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, XCircle, Loader2, Check, X, UserPlus, FileText } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,7 @@ import { useSales } from '@/contexts/SalesContext';
 import TopMenu from '@/components/dashboard/TopMenu';
 
 type ImportType = 'customers' | 'products' | 'sales';
+type FileType = 'excel' | 'pdf';
 type ItemStatus = 'ready' | 'needs_correction' | 'error';
 
 interface ImportIssue {
@@ -55,6 +56,48 @@ interface AnalysisResult {
   };
 }
 
+// Types for PDF sales import
+interface PDFSaleItem {
+  product_code: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+  product_id?: string;
+  matched_product_code?: string;
+  matched_product_name?: string;
+  matched_unit?: string;
+  status: 'ready' | 'error';
+  error?: string;
+}
+
+interface PDFSale {
+  customer_code?: string;
+  customer_name: string;
+  customer_cpf_cnpj: string;
+  sale_code?: string;
+  sale_date?: string;
+  seller_name: string;
+  payment_method: string;
+  items: PDFSaleItem[];
+  total: number;
+  existing_customer?: { id: string; code: string; name: string } | null;
+  needs_customer_creation: boolean;
+  status: 'ready' | 'error';
+  errors: string[];
+}
+
+interface PDFAnalysisResult {
+  sales: PDFSale[];
+  summary: {
+    total: number;
+    ready: number;
+    hasError: number;
+    customersToCreate: number;
+    totalItems: number;
+  };
+}
+
 const DataImport = () => {
   const navigate = useNavigate();
   const { customers, addCustomer, getNextCustomerCode, refreshCustomers } = useCustomers();
@@ -62,29 +105,45 @@ const DataImport = () => {
   const { sales, addSale, getNextSaleNumber, refreshSales } = useSales();
   
   const [importType, setImportType] = useState<ImportType>('customers');
+  const [fileType, setFileType] = useState<FileType | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [rawData, setRawData] = useState<Record<string, any>[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [pdfAnalysis, setPdfAnalysis] = useState<PDFAnalysisResult | null>(null);
 
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
     if (!uploadedFile) return;
 
-    const validTypes = [
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-excel'
-    ];
+    const isPDF = uploadedFile.type === 'application/pdf' || uploadedFile.name.toLowerCase().endsWith('.pdf');
+    const isExcel = uploadedFile.type.includes('spreadsheet') || 
+                    uploadedFile.type.includes('excel') || 
+                    uploadedFile.name.match(/\.(xlsx|xls)$/i);
     
-    if (!validTypes.includes(uploadedFile.type) && !uploadedFile.name.match(/\.(xlsx|xls)$/i)) {
-      toast.error('Formato inválido', { description: 'Por favor, envie um arquivo Excel (.xlsx ou .xls)' });
+    if (!isPDF && !isExcel) {
+      toast.error('Formato inválido', { description: 'Por favor, envie um arquivo Excel (.xlsx, .xls) ou PDF' });
+      return;
+    }
+
+    // PDF only allowed for sales import
+    if (isPDF && importType !== 'sales') {
+      toast.error('PDF não suportado', { description: 'Importação via PDF só está disponível para Vendas. Use Excel para Clientes e Produtos.' });
       return;
     }
 
     setFile(uploadedFile);
     setAnalysis(null);
+    setPdfAnalysis(null);
+    setFileType(isPDF ? 'pdf' : 'excel');
 
+    if (isPDF) {
+      toast.success('PDF carregado', { description: 'Clique em "Analisar com IA" para extrair as vendas.' });
+      return;
+    }
+
+    // Process Excel
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
@@ -108,7 +167,7 @@ const DataImport = () => {
       }
     };
     reader.readAsArrayBuffer(uploadedFile);
-  }, []);
+  }, [importType]);
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -129,7 +188,66 @@ const DataImport = () => {
     e.preventDefault();
   }, []);
 
-  const analyzeData = async () => {
+  // Analyze PDF for sales
+  const analyzePDF = async () => {
+    if (!file) return;
+
+    setIsAnalyzing(true);
+    
+    try {
+      // Convert PDF to base64
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+      );
+
+      const existingCustomers = customers.map(c => ({ 
+        id: c.id, 
+        code: c.code, 
+        cpf_cnpj: c.cpfCnpj, 
+        name: c.name 
+      }));
+      
+      const existingProducts = products.map(p => ({ 
+        id: p.id, 
+        code: p.code, 
+        name: p.name, 
+        unit: p.unit, 
+        salePrice: p.salePrice 
+      }));
+
+      toast.info('Processando PDF...', { 
+        description: 'Isso pode levar alguns segundos dependendo do tamanho do arquivo.',
+        duration: 10000
+      });
+
+      const { data, error } = await supabase.functions.invoke('analyze-sales-pdf', {
+        body: {
+          pdfBase64: base64,
+          existingProducts,
+          existingCustomers
+        }
+      });
+
+      if (error) throw error;
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Erro na análise do PDF');
+      }
+
+      setPdfAnalysis(data);
+      toast.success('PDF analisado!', { 
+        description: `${data.summary.ready} vendas prontas, ${data.summary.hasError} com erros, ${data.summary.customersToCreate} clientes a criar` 
+      });
+    } catch (error: any) {
+      console.error('PDF analysis error:', error);
+      toast.error('Erro na análise', { description: error.message || 'Não foi possível analisar o PDF.' });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const analyzeExcelData = async () => {
     if (rawData.length === 0) {
       toast.error('Nenhum dado', { description: 'Carregue uma planilha primeiro.' });
       return;
@@ -138,7 +256,6 @@ const DataImport = () => {
     setIsAnalyzing(true);
     
     try {
-      // Always send customers and products for sales matching
       const existingCustomers = customers.map(c => ({ 
         id: c.id, 
         code: c.code, 
@@ -178,6 +295,14 @@ const DataImport = () => {
       toast.error('Erro na análise', { description: error.message || 'Não foi possível analisar os dados.' });
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const analyzeData = async () => {
+    if (fileType === 'pdf') {
+      await analyzePDF();
+    } else {
+      await analyzeExcelData();
     }
   };
 
@@ -236,7 +361,175 @@ const DataImport = () => {
     return { code, nextNum: num + 1 };
   };
 
-  const importData = async () => {
+  // Import PDF sales
+  const importPDFSales = async () => {
+    if (!pdfAnalysis) return;
+
+    const readySales = pdfAnalysis.sales.filter(s => s.status === 'ready');
+    
+    if (readySales.length === 0) {
+      toast.error('Nenhuma venda pronta', { description: 'Todas as vendas têm erros de produtos não encontrados.' });
+      return;
+    }
+
+    setIsImporting(true);
+    let successCount = 0;
+    let errorCount = 0;
+    let customersCreated = 0;
+
+    try {
+      let currentSaleNumber = parseInt(getNextSaleNumber());
+      
+      // Track created customers during import
+      const createdCustomersCpfCnpj = new Map<string, { id: string; code: string; name: string }>();
+      
+      await refreshCustomers();
+
+      for (const sale of readySales) {
+        try {
+          const cpfCnpjClean = sale.customer_cpf_cnpj;
+          
+          // 1. Find or create customer
+          let customer = sale.existing_customer 
+            ? customers.find(c => c.id === sale.existing_customer?.id) 
+            : customers.find(c => c.cpfCnpj?.replace(/\D/g, '') === cpfCnpjClean);
+          
+          // Check if we already created this customer in this batch
+          if (!customer && cpfCnpjClean && createdCustomersCpfCnpj.has(cpfCnpjClean)) {
+            const created = createdCustomersCpfCnpj.get(cpfCnpjClean)!;
+            customer = {
+              id: created.id,
+              code: created.code,
+              name: created.name,
+              cpfCnpj: cpfCnpjClean,
+              type: cpfCnpjClean.length === 11 ? 'fisica' : 'juridica',
+              phone: '',
+              active: true,
+              createdAt: new Date()
+            } as any;
+          }
+          
+          // Create customer if not found
+          if (!customer && sale.needs_customer_creation) {
+            const newCode = getNextCustomerCode();
+            const customerType = cpfCnpjClean.length === 11 ? 'fisica' : 'juridica';
+            
+            await addCustomer({
+              code: newCode,
+              name: sale.customer_name || 'Cliente Importado',
+              type: customerType as 'fisica' | 'juridica',
+              cpfCnpj: cpfCnpjClean,
+              phone: '',
+              active: true
+            });
+            
+            customersCreated++;
+            
+            createdCustomersCpfCnpj.set(cpfCnpjClean, {
+              id: crypto.randomUUID(),
+              code: newCode,
+              name: sale.customer_name || 'Cliente Importado'
+            });
+            
+            await refreshCustomers();
+            customer = customers.find(c => c.cpfCnpj?.replace(/\D/g, '') === cpfCnpjClean);
+          }
+          
+          if (!customer) {
+            console.error(`Customer not found for sale: ${sale.customer_name}`);
+            errorCount++;
+            continue;
+          }
+          
+          // 2. Build sale items from matched products
+          const saleItems = sale.items
+            .filter(item => item.status === 'ready' && item.product_id)
+            .map(item => {
+              const product = products.find(p => p.id === item.product_id);
+              if (!product) return null;
+              
+              return {
+                id: crypto.randomUUID(),
+                productId: product.id,
+                productCode: product.code,
+                productName: item.matched_product_name || product.name,
+                unit: item.matched_unit || product.unit,
+                quantity: item.quantity,
+                originalPrice: product.salePrice,
+                unitPrice: item.unit_price,
+                discount: 0,
+                total: item.total,
+                density: product.density,
+                weight: product.density ? item.quantity * product.density : undefined
+              };
+            })
+            .filter(Boolean) as any[];
+
+          if (saleItems.length === 0) {
+            console.error(`No valid items for sale: ${sale.customer_name}`);
+            errorCount++;
+            continue;
+          }
+          
+          // 3. Create sale with sequential number
+          const saleNumber = String(currentSaleNumber++).padStart(5, '0');
+          const subtotal = saleItems.reduce((acc, item) => acc + item.total, 0);
+          const totalWeight = saleItems.reduce((acc, item) => acc + (item.weight || 0), 0);
+          
+          await addSale({
+            type: 'pedido',
+            number: saleNumber,
+            customerId: customer.id,
+            customerCode: customer.code,
+            customerName: customer.name,
+            customerCpfCnpj: customer.cpfCnpj || '',
+            customerPhone: customer.phone,
+            paymentMethodId: '',
+            paymentMethodName: sale.payment_method || 'Importado',
+            items: saleItems,
+            subtotal,
+            discount: 0,
+            total: subtotal,
+            totalWeight,
+            status: 'finalizado',
+            sellerName: sale.seller_name || 'Importação'
+          });
+          
+          successCount++;
+        } catch (err: any) {
+          console.error(`Error importing sale:`, err);
+          errorCount++;
+        }
+      }
+      
+      await refreshSales();
+
+      if (successCount > 0) {
+        const parts = [`${successCount} vendas importadas`];
+        if (customersCreated > 0) parts.push(`${customersCreated} clientes criados`);
+        if (errorCount > 0) parts.push(`${errorCount} erros`);
+        
+        toast.success('Importação concluída!', { 
+          description: parts.join(', ')
+        });
+        
+        setFile(null);
+        setRawData([]);
+        setAnalysis(null);
+        setPdfAnalysis(null);
+        setFileType(null);
+      } else {
+        toast.error('Falha na importação', { description: 'Nenhuma venda foi importada.' });
+      }
+    } catch (error: any) {
+      console.error('Import error:', error);
+      toast.error('Erro na importação', { description: error.message });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const importExcelData = async () => {
     if (!analysis) return;
 
     const readyItems = analysis.items.filter(i => i.status === 'ready');
@@ -254,22 +547,18 @@ const DataImport = () => {
 
     try {
       if (importType === 'customers') {
-        // Build sets for tracking existing codes and CPF/CNPJ
         const existingCodes = new Set(customers.map(c => c.code));
         const existingCpfCnpj = new Set(customers.map(c => c.cpfCnpj?.replace(/\D/g, '')));
         let nextCodeNum = Math.max(1, ...customers.map(c => parseInt(c.code, 10) || 0)) + 1;
 
         for (const item of readyItems) {
           try {
-            // Check for duplicate CPF/CNPJ
             const cleanCpfCnpj = item.mappedData.cpf_cnpj?.toString().replace(/\D/g, '');
             if (cleanCpfCnpj && existingCpfCnpj.has(cleanCpfCnpj)) {
-              console.log(`Skipping duplicate CPF/CNPJ: ${cleanCpfCnpj}`);
               skippedCount++;
               continue;
             }
 
-            // Generate unique code if empty or duplicate
             let code = item.mappedData.code?.toString().trim() || '';
             if (!code || existingCodes.has(code)) {
               const result = getUniqueCode(existingCodes, nextCodeNum);
@@ -277,7 +566,6 @@ const DataImport = () => {
               nextCodeNum = result.nextNum;
             }
             
-            // Add to tracking sets immediately to avoid duplicates in same batch
             existingCodes.add(code);
             if (cleanCpfCnpj) {
               existingCpfCnpj.add(cleanCpfCnpj);
@@ -315,13 +603,11 @@ const DataImport = () => {
           }
         }
       } else if (importType === 'products') {
-        // Build sets for tracking existing codes
         const existingCodes = new Set(products.map(p => p.code));
         let nextCodeNum = Math.max(1, ...products.map(p => parseInt(p.code, 10) || 0)) + 1;
 
         for (const item of readyItems) {
           try {
-            // Generate unique code if empty or duplicate
             let code = item.mappedData.code?.toString().trim() || '';
             if (!code || existingCodes.has(code)) {
               const result = getUniqueCode(existingCodes, nextCodeNum);
@@ -352,26 +638,20 @@ const DataImport = () => {
           }
         }
       } else if (importType === 'sales') {
-        // Import sales with auto-creation of customers and sequential numbering
         let currentSaleNumber = parseInt(getNextSaleNumber());
-        
-        // Keep track of customers we create during import
         const createdCustomersCpfCnpj = new Map<string, { id: string; code: string; name: string }>();
         
-        // Refresh to get latest customers
         await refreshCustomers();
         
         for (const item of readyItems) {
           try {
             const cpfCnpjClean = item.mappedData.customer_cpf_cnpj?.toString().replace(/\D/g, '') || '';
             
-            // 1. Find or create customer
             let customer = customers.find(c => 
               c.cpfCnpj?.replace(/\D/g, '') === cpfCnpjClean ||
               c.name.toLowerCase().trim() === item.mappedData.customer_name?.toLowerCase().trim()
             );
             
-            // Check if we already created this customer in this batch
             if (!customer && cpfCnpjClean && createdCustomersCpfCnpj.has(cpfCnpjClean)) {
               const created = createdCustomersCpfCnpj.get(cpfCnpjClean)!;
               customer = {
@@ -386,7 +666,6 @@ const DataImport = () => {
               } as any;
             }
             
-            // Create customer if not found
             if (!customer && item.needs_customer_creation) {
               const newCode = getNextCustomerCode();
               const customerType = cpfCnpjClean.length === 11 ? 'fisica' : 'juridica';
@@ -402,27 +681,21 @@ const DataImport = () => {
               
               customersCreated++;
               
-              // Store in our batch tracking
               createdCustomersCpfCnpj.set(cpfCnpjClean, {
-                id: crypto.randomUUID(), // Temporary ID
+                id: crypto.randomUUID(),
                 code: newCode,
                 name: item.mappedData.customer_name || 'Cliente Importado'
               });
               
-              // Refresh to get the actual customer data
               await refreshCustomers();
-              
-              // Find the newly created customer
               customer = customers.find(c => c.cpfCnpj?.replace(/\D/g, '') === cpfCnpjClean);
             }
             
             if (!customer) {
-              console.error(`Customer not found for row ${item.row}`);
               errorCount++;
               continue;
             }
             
-            // 2. Find product by name
             const productNameLower = (item.matched_product_name || item.mappedData.product_name)?.toLowerCase().trim();
             const product = products.find(p => 
               p.name.toLowerCase().includes(productNameLower) ||
@@ -430,12 +703,10 @@ const DataImport = () => {
             );
             
             if (!product) {
-              console.error(`Product not found for row ${item.row}: ${item.mappedData.product_name}`);
               errorCount++;
               continue;
             }
             
-            // 3. Create sale with sequential number
             const saleNumber = String(currentSaleNumber++).padStart(5, '0');
             const quantity = Number(item.mappedData.quantity) || 1;
             const unitPrice = Number(item.mappedData.unit_price) || product.salePrice;
@@ -480,7 +751,6 @@ const DataImport = () => {
           }
         }
         
-        // Refresh sales at the end
         await refreshSales();
       }
 
@@ -494,7 +764,6 @@ const DataImport = () => {
           description: parts.join(', ')
         });
         
-        // Reset state
         setFile(null);
         setRawData([]);
         setAnalysis(null);
@@ -510,6 +779,14 @@ const DataImport = () => {
       toast.error('Erro na importação', { description: error.message });
     } finally {
       setIsImporting(false);
+    }
+  };
+
+  const importData = async () => {
+    if (fileType === 'pdf') {
+      await importPDFSales();
+    } else {
+      await importExcelData();
     }
   };
 
@@ -539,6 +816,10 @@ const DataImport = () => {
   const readyItems = analysis?.items.filter(i => i.status === 'ready') || [];
   const itemsNeedingCustomerCreation = readyItems.filter(i => i.needs_customer_creation).length;
 
+  // PDF sales data
+  const pdfReadySales = pdfAnalysis?.sales.filter(s => s.status === 'ready') || [];
+  const pdfErrorSales = pdfAnalysis?.sales.filter(s => s.status === 'error') || [];
+
   return (
     <div className="min-h-screen bg-background">
       <TopMenu />
@@ -550,7 +831,7 @@ const DataImport = () => {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">Importação de Dados</h1>
-            <p className="text-muted-foreground">Importe dados de planilhas Excel com análise inteligente</p>
+            <p className="text-muted-foreground">Importe dados de planilhas Excel ou PDF com análise inteligente</p>
           </div>
         </div>
 
@@ -559,7 +840,7 @@ const DataImport = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <FileSpreadsheet className="h-5 w-5" />
+                {fileType === 'pdf' ? <FileText className="h-5 w-5" /> : <FileSpreadsheet className="h-5 w-5" />}
                 Upload de Arquivo
               </CardTitle>
             </CardHeader>
@@ -572,18 +853,31 @@ const DataImport = () => {
               >
                 <Upload className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
                 <p className="text-lg font-medium">
-                  {file ? file.name : 'Arraste um arquivo Excel aqui'}
+                  {file ? (
+                    <span className="flex items-center justify-center gap-2">
+                      {fileType === 'pdf' ? <FileText className="h-5 w-5" /> : <FileSpreadsheet className="h-5 w-5" />}
+                      {file.name}
+                    </span>
+                  ) : (
+                    'Arraste um arquivo aqui'
+                  )}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {file ? `${rawData.length} registros carregados` : 'ou clique para selecionar'}
+                  {file 
+                    ? (fileType === 'pdf' ? 'PDF pronto para análise' : `${rawData.length} registros carregados`) 
+                    : 'ou clique para selecionar'
+                  }
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Formatos suportados: .xlsx, .xls
+                  {importType === 'sales' 
+                    ? 'Formatos suportados: .xlsx, .xls, .pdf' 
+                    : 'Formatos suportados: .xlsx, .xls'
+                  }
                 </p>
                 <input
                   id="file-upload"
                   type="file"
-                  accept=".xlsx,.xls"
+                  accept={importType === 'sales' ? '.xlsx,.xls,.pdf' : '.xlsx,.xls'}
                   onChange={handleFileUpload}
                   className="hidden"
                 />
@@ -597,6 +891,13 @@ const DataImport = () => {
                   onValueChange={(value) => {
                     setImportType(value as ImportType);
                     setAnalysis(null);
+                    setPdfAnalysis(null);
+                    // Reset file if PDF and switching to non-sales
+                    if (fileType === 'pdf' && value !== 'sales') {
+                      setFile(null);
+                      setRawData([]);
+                      setFileType(null);
+                    }
                   }}
                   className="flex gap-6 mt-2"
                 >
@@ -616,29 +917,202 @@ const DataImport = () => {
                 
                 {importType === 'sales' && (
                   <p className="text-sm text-muted-foreground mt-2">
-                    A importação de vendas gera números de pedido sequenciais, busca produtos pelo nome e cria clientes automaticamente se não existirem.
+                    {fileType === 'pdf' 
+                      ? '📄 PDF selecionado: a IA vai extrair vendas com seus itens agrupados, usando Cód.Int. para vincular produtos.'
+                      : 'Você pode usar Excel ou PDF. Para PDF, a IA extrai automaticamente as vendas com múltiplos itens.'
+                    }
                   </p>
                 )}
               </div>
 
               <Button 
                 onClick={analyzeData} 
-                disabled={rawData.length === 0 || isAnalyzing}
+                disabled={(fileType === 'pdf' ? !file : rawData.length === 0) || isAnalyzing}
                 className="w-full"
               >
                 {isAnalyzing ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Analisando com IA...
+                    {fileType === 'pdf' ? 'Extraindo vendas do PDF...' : 'Analisando com IA...'}
                   </>
                 ) : (
-                  'Analisar com IA'
+                  fileType === 'pdf' ? 'Extrair Vendas do PDF com IA' : 'Analisar com IA'
                 )}
               </Button>
             </CardContent>
           </Card>
 
-          {/* Analysis Summary */}
+          {/* PDF Analysis Summary */}
+          {pdfAnalysis && (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Vendas Extraídas do PDF
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-5 gap-4">
+                    <div className="text-center p-4 bg-muted rounded-lg">
+                      <p className="text-3xl font-bold">{pdfAnalysis.summary.total}</p>
+                      <p className="text-sm text-muted-foreground">Vendas</p>
+                    </div>
+                    <div className="text-center p-4 bg-green-50 rounded-lg">
+                      <p className="text-3xl font-bold text-green-600">{pdfAnalysis.summary.ready}</p>
+                      <p className="text-sm text-green-600">Prontas</p>
+                    </div>
+                    <div className="text-center p-4 bg-red-50 rounded-lg">
+                      <p className="text-3xl font-bold text-red-600">{pdfAnalysis.summary.hasError}</p>
+                      <p className="text-sm text-red-600">Com Erro</p>
+                    </div>
+                    <div className="text-center p-4 bg-blue-50 rounded-lg">
+                      <p className="text-3xl font-bold text-blue-600">{pdfAnalysis.summary.customersToCreate}</p>
+                      <p className="text-sm text-blue-600">Clientes Novos</p>
+                    </div>
+                    <div className="text-center p-4 bg-purple-50 rounded-lg">
+                      <p className="text-3xl font-bold text-purple-600">{pdfAnalysis.summary.totalItems}</p>
+                      <p className="text-sm text-purple-600">Itens Total</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* PDF Error Sales */}
+              {pdfErrorSales.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <XCircle className="h-5 w-5 text-red-500" />
+                      Vendas com Erros ({pdfErrorSales.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[200px]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Cliente</TableHead>
+                            <TableHead>Vendedor</TableHead>
+                            <TableHead>Itens</TableHead>
+                            <TableHead>Erro</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {pdfErrorSales.map((sale, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell className="font-medium">{sale.customer_name}</TableCell>
+                              <TableCell>{sale.seller_name}</TableCell>
+                              <TableCell>{sale.items.length}</TableCell>
+                              <TableCell className="text-red-600 text-sm">
+                                {sale.errors.join(', ')}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* PDF Ready Sales */}
+              {pdfReadySales.length > 0 && (
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      Vendas Prontas para Importar ({pdfReadySales.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[300px]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Cliente</TableHead>
+                            <TableHead>CPF/CNPJ</TableHead>
+                            <TableHead>Vendedor</TableHead>
+                            <TableHead>Cond. Pag.</TableHead>
+                            <TableHead>Itens</TableHead>
+                            <TableHead>Total</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {pdfReadySales.slice(0, 50).map((sale, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell className="font-medium">{sale.customer_name}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {sale.customer_cpf_cnpj}
+                              </TableCell>
+                              <TableCell>{sale.seller_name}</TableCell>
+                              <TableCell>{sale.payment_method}</TableCell>
+                              <TableCell>{sale.items.length}</TableCell>
+                              <TableCell>R$ {sale.total.toFixed(2)}</TableCell>
+                              <TableCell>
+                                {sale.needs_customer_creation ? (
+                                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                    <UserPlus className="h-3 w-3 mr-1" />
+                                    Cliente Novo
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                    Pronto
+                                  </Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {pdfReadySales.length > 50 && (
+                            <TableRow>
+                              <TableCell colSpan={7} className="text-center text-muted-foreground">
+                                ... e mais {pdfReadySales.length - 50} vendas
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+
+                    <div className="flex justify-end gap-4 mt-4">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setFile(null);
+                          setRawData([]);
+                          setAnalysis(null);
+                          setPdfAnalysis(null);
+                          setFileType(null);
+                        }}
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Cancelar
+                      </Button>
+                      <Button 
+                        onClick={importData}
+                        disabled={isImporting || pdfReadySales.length === 0}
+                      >
+                        {isImporting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Importando...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="mr-2 h-4 w-4" />
+                            Importar {pdfReadySales.length} Vendas
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
+
+          {/* Excel Analysis Summary */}
           {analysis && (
             <Card>
               <CardHeader>
@@ -676,7 +1150,7 @@ const DataImport = () => {
             </Card>
           )}
 
-          {/* Pending Items */}
+          {/* Pending Items (Excel) */}
           {pendingItems.length > 0 && (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
@@ -746,7 +1220,7 @@ const DataImport = () => {
             </Card>
           )}
 
-          {/* Ready Items */}
+          {/* Ready Items (Excel) */}
           {readyItems.length > 0 && (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
