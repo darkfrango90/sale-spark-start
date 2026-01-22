@@ -70,11 +70,8 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-slate-100">
       <Card className="w-full max-w-md mx-4">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <img src={logo} alt="Logo" className="h-20 w-auto object-contain" />
-          </div>
-          <CardTitle className="text-2xl font-bold">CEZAR</CardTitle>
-          <CardDescription>Sistema de Vendas</CardDescription>
+          <CardTitle className="text-4xl font-bold text-primary">Sistema Cezar</CardTitle>
+          <CardDescription>Acesse sua conta</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
