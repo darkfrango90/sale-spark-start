@@ -23,16 +23,25 @@ const Login = () => {
       const success = await login(accessCode, password);
       if (success) {
         toast.success('Login realizado com sucesso!');
-        // Need to get the user after login to check role
-        // The login function already sets the user, so we need to re-check
-        const { data: appUser } = await import('@/integrations/supabase/client').then(m => 
-          m.supabase.from('app_users').select('id').eq('access_code', accessCode).single()
-        );
         
-        if (appUser) {
-          const { data: roleData } = await import('@/integrations/supabase/client').then(m =>
-            m.supabase.from('user_roles').select('role').eq('user_id', appUser.id).single()
-          );
+        // Fetch role from the login response (stored in context)
+        // The navigation will happen after the context updates
+        const { user } = await import('@/contexts/AuthContext').then(async m => {
+          // Small delay to ensure context is updated
+          await new Promise(resolve => setTimeout(resolve, 100));
+          return { user: null }; // Will be handled by useEffect in protected routes
+        });
+        
+        // Use stored session to determine navigation
+        const session = localStorage.getItem('cezar_session');
+        if (session) {
+          const sessionData = JSON.parse(session);
+          const { supabase } = await import('@/integrations/supabase/client');
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', sessionData.id)
+            .single();
           
           const role = roleData?.role;
           if (role === 'motorista') {

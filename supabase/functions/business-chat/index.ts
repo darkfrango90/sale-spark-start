@@ -6,6 +6,25 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface TokenPayload {
+  userId: string;
+  accessCode: string;
+  iat: number;
+  exp: number;
+}
+
+function verifyToken(token: string): TokenPayload | null {
+  try {
+    const payload = JSON.parse(atob(token)) as TokenPayload;
+    if (payload.exp < Date.now()) {
+      return null;
+    }
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
 const SYSTEM_PROMPT = `Você é um assistente inteligente do sistema de gestão. Seu objetivo é ajudar os usuários a encontrar informações sobre o negócio.
 
 REGRA IMPORTANTE: Para TODA pergunta, você DEVE:
@@ -269,6 +288,25 @@ serve(async (req) => {
   }
 
   try {
+    // Require authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Autenticação necessária" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const payload = verifyToken(token);
+
+    if (!payload) {
+      return new Response(
+        JSON.stringify({ error: "Token inválido ou expirado" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { messages } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
@@ -280,7 +318,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log("Sending request to Lovable AI with tools...");
+    console.log("Authenticated user:", payload.accessCode, "- Sending request to Lovable AI with tools...");
 
     // First request with tools
     const toolResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

@@ -19,6 +19,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const SESSION_KEY = 'cezar_session';
+const TOKEN_KEY = 'cezar_auth_token';
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [users, setUsers] = useState<User[]>([]);
@@ -30,7 +33,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Fetch all users with their roles and permissions
       const { data: appUsers, error: usersError } = await supabase
         .from('app_users')
-        .select('*')
+        .select('id, access_code, name, cpf, active, created_at')
         .order('access_code');
 
       if (usersError) throw usersError;
@@ -79,25 +82,61 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await fetchUsers();
   };
 
+  // Verify stored token on mount
+  const verifyStoredToken = async (): Promise<User | null> => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) return null;
+
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/auth-verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(SESSION_KEY);
+        return null;
+      }
+
+      const data = await response.json();
+      if (data.valid && data.user) {
+        const fullUser: User = {
+          id: data.user.id,
+          accessCode: data.user.accessCode,
+          name: data.user.name,
+          cpf: data.user.cpf,
+          role: data.user.role as User['role'],
+          permissions: data.user.permissions.map((p: { module: string; actions: string[] }) => ({
+            module: p.module,
+            actions: p.actions || [],
+          })),
+          active: data.user.active ?? true,
+          createdAt: new Date(),
+        };
+        return fullUser;
+      }
+    } catch (error) {
+      console.error('Token verification error:', error);
+    }
+
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(SESSION_KEY);
+    return null;
+  };
+
   useEffect(() => {
     const initAuth = async () => {
       // Load users from database
-      const loadedUsers = await fetchUsers();
+      await fetchUsers();
 
-      // Check for existing session
-      const session = localStorage.getItem(SESSION_KEY);
-      if (session) {
-        try {
-          const sessionData = JSON.parse(session);
-          const sessionUser = loadedUsers.find((u) => u.id === sessionData.id);
-          if (sessionUser && sessionUser.active) {
-            setUser(sessionUser);
-          } else {
-            localStorage.removeItem(SESSION_KEY);
-          }
-        } catch {
-          localStorage.removeItem(SESSION_KEY);
-        }
+      // Check for existing token and verify it
+      const verifiedUser = await verifyStoredToken();
+      if (verifiedUser) {
+        setUser(verifiedUser);
       }
 
       setIsLoading(false);
@@ -108,49 +147,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (accessCode: string, password: string): Promise<boolean> => {
     try {
-      // Find user by access code
-      const { data: appUser, error: userError } = await supabase
-        .from('app_users')
-        .select('*')
-        .eq('access_code', accessCode)
-        .eq('active', true)
-        .single();
+      // Use the secure server-side login function
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/auth-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ accessCode, password })
+      });
 
-      if (userError || !appUser) return false;
+      if (!response.ok) {
+        return false;
+      }
 
-      // Verify password (simple comparison since we're storing plain text for now)
-      if (appUser.password_hash !== password) return false;
+      const data = await response.json();
+      
+      if (data.token && data.user) {
+        const fullUser: User = {
+          id: data.user.id,
+          accessCode: data.user.accessCode,
+          name: data.user.name,
+          cpf: data.user.cpf,
+          role: data.user.role as User['role'],
+          permissions: data.user.permissions.map((p: { module: string; actions: string[] }) => ({
+            module: p.module,
+            actions: p.actions || [],
+          })),
+          active: data.user.active ?? true,
+          createdAt: new Date(),
+        };
 
-      // Get user role
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', appUser.id)
-        .single();
+        setUser(fullUser);
+        localStorage.setItem(TOKEN_KEY, data.token);
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ id: data.user.id }));
+        return true;
+      }
 
-      // Get user permissions
-      const { data: permissionsData } = await supabase
-        .from('user_permissions')
-        .select('module, actions')
-        .eq('user_id', appUser.id);
-
-      const fullUser: User = {
-        id: appUser.id,
-        accessCode: appUser.access_code,
-        name: appUser.name,
-        cpf: appUser.cpf,
-        role: (roleData?.role || 'vendedor') as User['role'],
-        permissions: (permissionsData || []).map((p) => ({
-          module: p.module,
-          actions: p.actions || [],
-        })),
-        active: appUser.active ?? true,
-        createdAt: new Date(appUser.created_at),
-      };
-
-      setUser(fullUser);
-      localStorage.setItem(SESSION_KEY, JSON.stringify({ id: appUser.id }));
-      return true;
+      return false;
     } catch (error) {
       console.error('Login error:', error);
       return false;
@@ -160,6 +193,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = () => {
     setUser(null);
     localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TOKEN_KEY);
   };
 
   const getNextAccessCode = async (): Promise<string> => {
@@ -180,10 +214,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Helper function to hash password using edge function
+  const hashPassword = async (password: string): Promise<string> => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    
+    // If no token, fall back to plain text (will be migrated on first login)
+    if (!token) {
+      return password;
+    }
+
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/auth-hash-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ password })
+      });
+
+      if (!response.ok) {
+        // Fall back to plain text if hashing fails
+        console.warn('Password hashing failed, using plain text');
+        return password;
+      }
+
+      const data = await response.json();
+      return data.hashedPassword || password;
+    } catch (error) {
+      console.error('Password hashing error:', error);
+      return password;
+    }
+  };
+
   const addUser = async (
     newUserData: Omit<User, 'id' | 'accessCode' | 'createdAt'> & { password: string }
   ): Promise<User> => {
     const accessCode = await getNextAccessCode();
+    
+    // Hash password before storing
+    const hashedPassword = await hashPassword(newUserData.password);
 
     // Insert user
     const { data: insertedUser, error: insertError } = await supabase
@@ -192,7 +262,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         access_code: accessCode,
         name: newUserData.name,
         cpf: newUserData.cpf,
-        password_hash: newUserData.password,
+        password_hash: hashedPassword,
         active: newUserData.active,
       })
       .select()
@@ -236,7 +306,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (userData.name) updateData.name = userData.name;
     if (userData.cpf) updateData.cpf = userData.cpf;
     if (userData.active !== undefined) updateData.active = userData.active;
-    if (userData.password) updateData.password_hash = userData.password;
+    
+    // Hash password if provided
+    if (userData.password) {
+      updateData.password_hash = await hashPassword(userData.password);
+    }
 
     if (Object.keys(updateData).length > 0) {
       await supabase.from('app_users').update(updateData).eq('id', id);
