@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import DOMPurify from "dompurify";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -180,10 +181,15 @@ const AIAssistant = () => {
   };
 
   const formatMessage = (content: string) => {
-    // Simple markdown-like formatting
-    return content
+    // Simple markdown-like formatting with XSS protection
+    const formatted = content
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n/g, '<br />');
+    // Sanitize to prevent XSS attacks from AI responses
+    return DOMPurify.sanitize(formatted, {
+      ALLOWED_TAGS: ['strong', 'br', 'b', 'i', 'em', 'p', 'span'],
+      ALLOWED_ATTR: []
+    });
   };
 
   return (
