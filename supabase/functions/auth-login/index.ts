@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
+import { encodeHex } from "https://deno.land/std@0.208.0/encoding/hex.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,6 +16,56 @@ function generateToken(userId: string, accessCode: string): string {
     exp: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
   };
   return btoa(JSON.stringify(payload));
+}
+
+// PBKDF2-based password hashing (compatible with Edge Functions)
+async function hashPassword(password: string, existingSalt?: Uint8Array): Promise<string> {
+  const encoder = new TextEncoder();
+  const passwordData = encoder.encode(password);
+  
+  const salt = existingSalt ? existingSalt : crypto.getRandomValues(new Uint8Array(16));
+  
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    passwordData,
+    "PBKDF2",
+    false,
+    ["deriveBits"]
+  );
+  
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: salt as BufferSource,
+      iterations: 100000,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    256
+  );
+  
+  const hashArray = new Uint8Array(derivedBits);
+  const saltHex = encodeHex(salt);
+  const hashHex = encodeHex(hashArray);
+  
+  return `pbkdf2:${saltHex}:${hashHex}`;
+}
+
+async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  // Check if it's a PBKDF2 hash
+  if (storedHash.startsWith("pbkdf2:")) {
+    const parts = storedHash.split(":");
+    if (parts.length !== 3) return false;
+    
+    const saltHex = parts[1];
+    const salt = new Uint8Array(saltHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+    
+    const newHash = await hashPassword(password, salt);
+    return newHash === storedHash;
+  }
+  
+  // Legacy plain text comparison
+  return storedHash === password;
 }
 
 serve(async (req) => {
@@ -52,29 +102,19 @@ serve(async (req) => {
       );
     }
 
-    // Verify password - support both bcrypt hash and legacy plain text
-    let isValidPassword = false;
+    // Verify password
+    const isValidPassword = await verifyPassword(password, appUser.password_hash);
     
-    // Check if it's a bcrypt hash (starts with $2a$, $2b$, or $2y$)
-    if (appUser.password_hash.startsWith("$2")) {
-      // Bcrypt hash - verify properly
-      isValidPassword = await bcrypt.compare(password, appUser.password_hash);
-    } else {
-      // Legacy plain text password - compare directly and schedule for migration
-      isValidPassword = appUser.password_hash === password;
+    // If valid legacy password, hash it and update the database
+    if (isValidPassword && !appUser.password_hash.startsWith("pbkdf2:")) {
+      const hashedPassword = await hashPassword(password);
       
-      // If valid legacy password, hash it and update the database
-      if (isValidPassword) {
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+      await supabase
+        .from("app_users")
+        .update({ password_hash: hashedPassword })
+        .eq("id", appUser.id);
         
-        await supabase
-          .from("app_users")
-          .update({ password_hash: hashedPassword })
-          .eq("id", appUser.id);
-          
-        console.log(`Migrated password for user ${appUser.access_code} to bcrypt`);
-      }
+      console.log(`Migrated password for user ${appUser.access_code} to PBKDF2`);
     }
 
     if (!isValidPassword) {

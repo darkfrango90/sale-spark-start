@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
+import { encodeHex } from "https://deno.land/std@0.208.0/encoding/hex.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,6 +26,38 @@ function verifyToken(token: string): TokenPayload | null {
   } catch {
     return null;
   }
+}
+
+// PBKDF2-based password hashing (compatible with Edge Functions)
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const passwordData = encoder.encode(password);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    passwordData,
+    "PBKDF2",
+    false,
+    ["deriveBits"]
+  );
+  
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: salt as BufferSource,
+      iterations: 100000,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    256
+  );
+  
+  const hashArray = new Uint8Array(derivedBits);
+  const saltHex = encodeHex(salt);
+  const hashHex = encodeHex(hashArray);
+  
+  return `pbkdf2:${saltHex}:${hashHex}`;
 }
 
 serve(async (req) => {
@@ -62,9 +94,8 @@ serve(async (req) => {
       );
     }
 
-    // Hash the password with bcrypt
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    // Hash the password with PBKDF2
+    const hashedPassword = await hashPassword(password);
 
     return new Response(
       JSON.stringify({ hashedPassword }),
