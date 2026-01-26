@@ -552,6 +552,66 @@ const DataImport = () => {
     }
   };
 
+  // Helper function to normalize product names for intelligent matching
+  const normalizeProductName = (name: string): string => {
+    if (!name) return '';
+    return name
+      .toUpperCase()
+      .trim()
+      .replace(/\bN\.\s*/gi, 'Nº')
+      .replace(/\bN\s+(\d)/gi, 'Nº$1')
+      .replace(/\bNO\.\s*/gi, 'Nº')
+      .replace(/\bNR\.\s*/gi, 'Nº')
+      .replace(/\bNUM\.\s*/gi, 'Nº')
+      .replace(/Nº\s+(\d)/g, 'Nº$1')
+      .replace(/\s+/g, ' ')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  };
+
+  // Helper function to find matching product with intelligent matching
+  const findMatchingProduct = (productName: string) => {
+    const normalizedInput = normalizeProductName(productName);
+    
+    // 1. Try exact match after normalization
+    let product = products.find(p => 
+      normalizeProductName(p.name) === normalizedInput
+    );
+    
+    // 2. Try inclusion match
+    if (!product) {
+      product = products.find(p => {
+        const normalizedExisting = normalizeProductName(p.name);
+        return normalizedExisting.includes(normalizedInput) || 
+               normalizedInput.includes(normalizedExisting);
+      });
+    }
+    
+    // 3. Try keyword matching (at least 2 words match)
+    if (!product) {
+      const inputWords = normalizedInput.split(' ').filter(w => w.length > 2);
+      product = products.find(p => {
+        const existingWords = normalizeProductName(p.name).split(' ');
+        const matches = inputWords.filter(w => existingWords.includes(w));
+        return matches.length >= 2 || (inputWords.length > 0 && matches.length === inputWords.length);
+      });
+    }
+    
+    return product;
+  };
+
+  // Helper function to parse date from Excel format
+  const parseExcelDate = (dateStr: string): Date => {
+    if (!dateStr) return new Date();
+    // Formats: "24/01/2026 11:45:56" or "24/01/2026"
+    const parts = dateStr.split(' ')[0].split('/');
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    }
+    return new Date();
+  };
+
   const importExcelData = async () => {
     if (!analysis) return;
 
@@ -567,6 +627,13 @@ const DataImport = () => {
     let errorCount = 0;
     let skippedCount = 0;
     let customersCreated = 0;
+
+    // Show info message for sales import
+    if (importType === 'sales') {
+      toast.info('Modo de importação', { 
+        description: 'Apenas novos pedidos serão criados. Dados existentes não serão alterados.' 
+      });
+    }
 
     try {
       if (importType === 'customers') {
@@ -699,7 +766,8 @@ const DataImport = () => {
                 type: customerType as 'fisica' | 'juridica',
                 cpfCnpj: cpfCnpjClean,
                 phone: '',
-                active: true
+                active: true,
+                notes: `Cliente cadastrado automaticamente via importação em ${new Date().toLocaleDateString('pt-BR')}`
               });
               
               customersCreated++;
@@ -719,13 +787,11 @@ const DataImport = () => {
               continue;
             }
             
-            const productNameLower = (item.matched_product_name || item.mappedData.product_name)?.toLowerCase().trim();
-            const product = products.find(p => 
-              p.name.toLowerCase().includes(productNameLower) ||
-              productNameLower.includes(p.name.toLowerCase())
-            );
+            const productName = item.matched_product_name || item.mappedData.product_name || '';
+            const product = findMatchingProduct(productName);
             
             if (!product) {
+              console.error(`Product not found: ${productName}`);
               errorCount++;
               continue;
             }
