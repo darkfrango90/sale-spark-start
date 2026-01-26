@@ -102,6 +102,7 @@ const CashRegisterReport = () => {
       productName: string;
       m3: number;
       tons: number;
+      totalValue: number;
     }> = {};
 
     filteredSales.forEach(sale => {
@@ -130,23 +131,26 @@ const CashRegisterReport = () => {
             productId: item.productId,
             productName: item.productName,
             m3: 0,
-            tons: 0
+            tons: 0,
+            totalValue: 0
           };
         }
         outputByProduct[item.productId].m3 += m3;
         outputByProduct[item.productId].tons += tons;
+        outputByProduct[item.productId].totalValue += item.total;
       });
     });
 
     return Object.values(outputByProduct)
-      .filter(item => item.m3 > 0 || item.tons > 0)
-      .sort((a, b) => b.m3 - a.m3);
+      .filter(item => item.m3 > 0 || item.tons > 0 || item.totalValue > 0)
+      .sort((a, b) => b.totalValue - a.totalValue);
   }, [filteredSales, products]);
 
   // Material output totals
   const outputTotals = useMemo(() => ({
     totalM3: materialOutput.reduce((sum, item) => sum + item.m3, 0),
-    totalTons: materialOutput.reduce((sum, item) => sum + item.tons, 0)
+    totalTons: materialOutput.reduce((sum, item) => sum + item.tons, 0),
+    totalValue: materialOutput.reduce((sum, item) => sum + item.totalValue, 0)
   }), [materialOutput]);
 
   const formatCurrency = (value: number) => {
@@ -338,6 +342,10 @@ const CashRegisterReport = () => {
                 <h4>TOTAL EM TONELADAS</h4>
                 <p>${outputTotals.totalTons.toFixed(2)} t</p>
               </div>
+              <div class="summary-card">
+                <h4>VALOR TOTAL</h4>
+                <p>${formatCurrency(outputTotals.totalValue)}</p>
+              </div>
             </div>
             <table>
               <thead>
@@ -345,20 +353,23 @@ const CashRegisterReport = () => {
                   <th>Produto</th>
                   <th class="text-right">M³</th>
                   <th class="text-right">Toneladas</th>
+                  <th class="text-right">Valor</th>
                 </tr>
               </thead>
               <tbody>
                 ${materialOutput.map(item => `
                   <tr>
                     <td>${item.productName}</td>
-                    <td class="text-right">${item.m3.toFixed(2)}</td>
-                    <td class="text-right">${item.tons.toFixed(2)}</td>
+                    <td class="text-right">${item.m3 > 0 ? item.m3.toFixed(2) : '-'}</td>
+                    <td class="text-right">${item.tons > 0 ? item.tons.toFixed(2) : '-'}</td>
+                    <td class="text-right">${formatCurrency(item.totalValue)}</td>
                   </tr>
                 `).join('')}
                 <tr style="font-weight: bold; background: #f0f0f0;">
                   <td>TOTAL</td>
                   <td class="text-right">${outputTotals.totalM3.toFixed(2)}</td>
                   <td class="text-right">${outputTotals.totalTons.toFixed(2)}</td>
+                  <td class="text-right">${formatCurrency(outputTotals.totalValue)}</td>
                 </tr>
               </tbody>
             </table>
@@ -631,20 +642,23 @@ const CashRegisterReport = () => {
                       <TableHead>Produto</TableHead>
                       <TableHead className="text-right">M³</TableHead>
                       <TableHead className="text-right">Toneladas</TableHead>
+                      <TableHead className="text-right">Valor</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {materialOutput.map((item) => (
                       <TableRow key={item.productId}>
                         <TableCell className="font-medium">{item.productName}</TableCell>
-                        <TableCell className="text-right">{item.m3.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">{item.tons.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{item.m3 > 0 ? item.m3.toFixed(2) : '-'}</TableCell>
+                        <TableCell className="text-right">{item.tons > 0 ? item.tons.toFixed(2) : '-'}</TableCell>
+                        <TableCell className="text-right font-semibold">{formatCurrency(item.totalValue)}</TableCell>
                       </TableRow>
                     ))}
                     <TableRow className="bg-muted/50 font-bold">
                       <TableCell>TOTAL</TableCell>
                       <TableCell className="text-right text-blue-600">{outputTotals.totalM3.toFixed(2)}</TableCell>
                       <TableCell className="text-right text-orange-600">{outputTotals.totalTons.toFixed(2)}</TableCell>
+                      <TableCell className="text-right text-green-600">{formatCurrency(outputTotals.totalValue)}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
