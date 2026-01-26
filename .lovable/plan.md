@@ -1,57 +1,49 @@
 
 
-# Plano: Atualizar Tipo de Pagamento nas Vendas Importadas
+# Plano: Vincular Vendas aos Vendedores Corretos
 
 ## Objetivo
-Preencher o campo `payment_type` nas vendas existentes com base no método de pagamento.
+Atualizar o campo `seller_name` nas vendas importadas para corresponder aos nomes dos usuários cadastrados no sistema.
 
 ---
 
-## Regras de Mapeamento
+## Dados Identificados
 
-| Método de Pagamento | Tipo de Pagamento |
-|---------------------|-------------------|
-| PIX | `vista` (A Vista) |
-| Dinheiro | `vista` (A Vista) |
-| Cartão Débito | `vista` (A Vista) |
-| Carteira | `prazo` (A Prazo) |
-| Vale | `prazo` (A Prazo) |
-| Boleto | `prazo` (A Prazo) |
-| Cartão de Crédito | `prazo` (A Prazo) |
+### Vendas no Sistema
+| Nome Atual | Quantidade |
+|------------|------------|
+| ANNE STEFANE | 67 vendas |
+| NAYSLLA | 85 vendas |
+
+### Usuários Cadastrados
+| Nome | Código | ID |
+|------|--------|-----|
+| Anne Stefany | 002 | 2ce348bd-543c-40ad-be5f-fff5d8982589 |
+| Nayslla Adriana Fernando Tavares | 006 | 370835b3-834a-4487-8c27-abbd9d415b03 |
 
 ---
 
 ## Etapa Única: Executar UPDATE no Banco de Dados
 
-Executar duas queries SQL para atualizar os registros:
-
-### Query 1: Pagamentos A Vista
+### Query 1: Vincular vendas da Anne
 ```sql
 UPDATE sales 
-SET payment_type = 'vista' 
-WHERE payment_method_name IN ('PIX', 'Dinheiro', 'Cartão Débito', 'DINHEIRO', 'pix', 'CARTÃO DEBITO')
-  AND (payment_type IS NULL OR payment_type = '');
+SET seller_name = 'Anne Stefany'
+WHERE seller_name ILIKE '%ANNE%';
 ```
 
-### Query 2: Pagamentos A Prazo
+### Query 2: Vincular vendas da Nayslla
 ```sql
 UPDATE sales 
-SET payment_type = 'prazo' 
-WHERE payment_method_name IN ('Carteira', 'Vale', 'Boleto', 'Cartão de Crédito', 'CARTEIRA', 'VALE', 'BOLETO', 'CARTÃO DE CREDITO', 'Cartão Crédito')
-  AND (payment_type IS NULL OR payment_type = '');
+SET seller_name = 'Nayslla Adriana Fernando Tavares'
+WHERE seller_name ILIKE '%NAYSLLA%';
 ```
 
 ---
 
 ## Resultado Esperado
 
-- **35 vendas** serão marcadas como "A Vista" (PIX + Dinheiro + Cartão Débito)
-- **117 vendas** serão marcadas como "A Prazo" (Carteira + Vale + Boleto)
-- Dados existentes não serão alterados se já tiverem `payment_type` preenchido
-
----
-
-## Verificação
-
-Após a atualização, verificar se todos os registros foram atualizados corretamente com uma query de conferência.
+- **67 vendas** serão atualizadas para "Anne Stefany"
+- **85 vendas** serão atualizadas para "Nayslla Adriana Fernando Tavares"
+- Os nomes ficarão consistentes com os usuários cadastrados no sistema
 
