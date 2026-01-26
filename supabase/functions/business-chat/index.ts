@@ -308,27 +308,37 @@ serve(async (req) => {
     }
 
     const { messages } = await req.json();
+    
+    // Check for OpenAI API key first, fallback to Lovable AI
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const useOpenAI = !!OPENAI_API_KEY;
+    const apiKey = useOpenAI ? OPENAI_API_KEY : LOVABLE_API_KEY;
+    const apiUrl = useOpenAI 
+      ? "https://api.openai.com/v1/chat/completions" 
+      : "https://ai.gateway.lovable.dev/v1/chat/completions";
+    const model = useOpenAI ? "gpt-4o" : "google/gemini-3-flash-preview";
+    
+    if (!apiKey) {
+      throw new Error("Nenhuma API key configurada (OPENAI_API_KEY ou LOVABLE_API_KEY)");
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log("Authenticated user:", payload.accessCode, "- Sending request to Lovable AI with tools...");
+    console.log(`Authenticated user: ${payload.accessCode} - Using ${useOpenAI ? 'OpenAI GPT-4o' : 'Lovable AI Gemini'}`);
 
     // First request with tools
-    const toolResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const toolResponse = await fetch(apiUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           ...messages
@@ -352,7 +362,7 @@ serve(async (req) => {
         });
       }
       const errorText = await toolResponse.text();
-      console.error("AI gateway error:", toolResponse.status, errorText);
+      console.error("AI API error:", toolResponse.status, errorText);
       throw new Error("Erro ao processar sua pergunta");
     }
 
@@ -380,14 +390,14 @@ serve(async (req) => {
       }
 
       // Second request with tool results - now with streaming
-      const finalResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const finalResponse = await fetch(apiUrl, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             ...messages,
@@ -410,14 +420,14 @@ serve(async (req) => {
     }
 
     // No tool calls, stream the direct response
-    const streamResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const streamResponse = await fetch(apiUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           ...messages
