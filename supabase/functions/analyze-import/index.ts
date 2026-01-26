@@ -137,24 +137,41 @@ IGNORAR COMPLETAMENTE:
 EXTRAIR APENAS:
 - Linhas que contêm dados reais de vendas (cliente + produto + quantidade + preço)
 
-MAPEAMENTO DE COLUNAS:
-- Colunas com "Cliente", "Nome", "Razão Social" → customer_name
-- Colunas com "CPF", "CNPJ", "CPF/CNPJ", "Documento" → customer_cpf_cnpj
-- Colunas com "Produto", "Item", "Descrição", "Mercadoria" → product_name
+MAPEAMENTO DE COLUNAS (estrutura do Excel):
+- "Data" → sale_date (formato DD/MM/YYYY HH:MM:SS ou DD/MM/YYYY)
+- Colunas com "Cliente", "Nome Cliente", "Nome", "Razão Social" → customer_name
+- Colunas com "CPF", "CNPJ", "CPF/CNPJ", "CPF / CNPJ Cliente", "Documento" → customer_cpf_cnpj
+- Colunas com "Produto", "Nome Produto", "Item", "Descrição", "Mercadoria" → product_name
 - Colunas com "Qtd", "Quantidade", "Qt", "Qtde" → quantity
-- Colunas com "Vlr. Un.", "Valor Un", "Preço", "Unit", "Vlr.Un" → unit_price
-- Colunas com "Vendedor" → seller_name
-- Colunas com "Cond.Pag", "Condição", "Pagamento", "Forma Pag" → payment_method
+- Colunas com "Vlr. Un.", "Valor Unit.", "Valor Un", "Preço", "Unit", "Vlr.Un" → unit_price
+- Colunas com "Vendedor", "Vendedora" → seller_name
+- Colunas com "Cond.Pag", "Condição", "Pagamento", "Forma Pag", "Tipo Pagamento" → payment_method
+
+NORMALIZAÇÃO DE NOMES DE PRODUTOS:
+Ao buscar correspondência de produtos, normalize variações ANTES de comparar:
+- "N." seguido de espaço ou número → "Nº" (ex: "SEIXO BRITADO N.1" = "SEIXO BRITADO Nº1")
+- "N " seguido de número → "Nº" (ex: "SEIXO ROLADO N 0" = "SEIXO ROLADO Nº0")
+- "NO." → "Nº"
+- "NR." → "Nº"
+- Remover espaços extras antes de números após "Nº"
+- Ignorar acentos na comparação (AREIA MEDIA = AREIA MÉDIA)
+- Ignorar diferenças de maiúsculas/minúsculas
+
+REGRA CRÍTICA:
+- Apenas CRIAR novos pedidos
+- NÃO alterar banco de dados existente (produtos, clientes existentes)
+- Se cliente não existir pelo CPF/CNPJ → marcar needs_customer_creation: true
+- Se produto não for encontrado mesmo com normalização → marcar como error
 
 VALIDAÇÃO COM DADOS EXISTENTES:
 `;
       if (existingProducts && existingProducts.length > 0) {
         systemPrompt += `
-PRODUTOS CADASTRADOS NO SISTEMA (buscar por nome similar):
+PRODUTOS CADASTRADOS NO SISTEMA (buscar por nome similar, usar normalização):
 ${JSON.stringify(existingProducts.slice(0, 100).map(p => ({ name: p.name, code: p.code })), null, 2)}
 
-- Se o produto da planilha NÃO corresponder a nenhum produto existente → marcar como "error" com issue "Produto não encontrado no sistema"
-- Se corresponder → status "ready"
+- Se o produto da planilha NÃO corresponder a nenhum produto existente (mesmo após normalização) → marcar como "error" com issue "Produto não encontrado no sistema"
+- Se corresponder → status "ready" e incluir matched_product_name com o nome do produto no sistema
 `;
       }
 
@@ -534,13 +551,49 @@ RESPOSTA OBRIGATÓRIA EM JSON:
             }
           }
 
-          // Check if product exists
+          // Check if product exists using intelligent matching
           if (status !== 'error' && existingProducts && mappedData.product_name) {
-            const productNameLower = mappedData.product_name.toString().toLowerCase().trim();
-            const matchedProduct = existingProducts.find(p => 
-              p.name.toLowerCase().includes(productNameLower) ||
-              productNameLower.includes(p.name.toLowerCase())
+            const normalizeProductName = (name: string): string => {
+              if (!name) return '';
+              return name
+                .toUpperCase()
+                .trim()
+                .replace(/\bN\.\s*/gi, 'Nº')
+                .replace(/\bN\s+(\d)/gi, 'Nº$1')
+                .replace(/\bNO\.\s*/gi, 'Nº')
+                .replace(/\bNR\.\s*/gi, 'Nº')
+                .replace(/\bNUM\.\s*/gi, 'Nº')
+                .replace(/Nº\s+(\d)/g, 'Nº$1')
+                .replace(/\s+/g, ' ')
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .trim();
+            };
+
+            const normalizedInput = normalizeProductName(mappedData.product_name.toString());
+            
+            // 1. Try exact match after normalization
+            let matchedProduct = existingProducts.find(p => 
+              normalizeProductName(p.name) === normalizedInput
             );
+            
+            // 2. Try inclusion match
+            if (!matchedProduct) {
+              matchedProduct = existingProducts.find(p => {
+                const normalizedExisting = normalizeProductName(p.name);
+                return normalizedExisting.includes(normalizedInput) || 
+                       normalizedInput.includes(normalizedExisting);
+              });
+            }
+            
+            // 3. Try keyword matching (at least 2 words match)
+            if (!matchedProduct) {
+              const inputWords = normalizedInput.split(' ').filter(w => w.length > 2);
+              matchedProduct = existingProducts.find(p => {
+                const existingWords = normalizeProductName(p.name).split(' ');
+                const matches = inputWords.filter(w => existingWords.includes(w));
+                return matches.length >= 2 || matches.length === inputWords.length;
+              });
+            }
             
             if (!matchedProduct) {
               issues.push({
