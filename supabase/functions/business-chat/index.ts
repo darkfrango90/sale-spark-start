@@ -166,8 +166,6 @@ async function executeQuery(supabase: any, toolName: string, args: any) {
       const { data, error } = await query.limit(50);
       if (error) throw error;
 
-      // PostgREST não permite comparar coluna com coluna diretamente (stock < min_stock).
-      // Então filtramos no runtime quando solicitado.
       if (args.filter_critical && Array.isArray(data)) {
         return data.filter((p: any) => (p.stock ?? 0) < (p.min_stock ?? 0));
       }
@@ -184,7 +182,6 @@ async function executeQuery(supabase: any, toolName: string, args: any) {
       if (args.customer_name) {
         query = query.ilike("customer_name", `%${args.customer_name}%`);
       }
-      // Only filter by type if specified and not "all"
       if (args.type && args.type !== "all") {
         query = query.eq("type", args.type);
       }
@@ -204,7 +201,6 @@ async function executeQuery(supabase: any, toolName: string, args: any) {
       const { data, error } = await query.order("created_at", { ascending: false }).limit(50);
       if (error) throw error;
 
-      // If searching for product, filter and aggregate
       if (args.product_name && data) {
         const productSearch = args.product_name.toLowerCase();
         let totalQty = 0;
@@ -246,8 +242,6 @@ async function executeQuery(supabase: any, toolName: string, args: any) {
       const table = isPayable ? "accounts_payable" : "accounts_receivable";
       let query = supabase.from(table).select("*");
 
-      // Observação: accounts_receivable não possui due_date no schema atual.
-      // Para evitar erro, tratamos "vencido" em contas a receber como "pendente".
       if (args.status === "vencido") {
         if (isPayable) {
           query = query.eq("status", "pendente").lt("due_date", now.toISOString().split("T")[0]);
@@ -258,7 +252,6 @@ async function executeQuery(supabase: any, toolName: string, args: any) {
         query = query.eq("status", args.status);
       }
 
-      // Ordenação: payable tem due_date; receivable não.
       const orderColumn = isPayable ? "due_date" : "created_at";
       const { data, error } = await query.order(orderColumn, { ascending: true }).limit(50);
       if (error) throw error;
@@ -309,51 +302,27 @@ serve(async (req) => {
 
     const { messages } = await req.json();
     
-    // Priority: Google Gemini > OpenAI > Lovable AI
-    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY");
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    // Use Lovable AI as the provider (stable and included)
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
-    let apiKey: string;
-    let apiUrl: string;
-    let model: string;
-    let provider: "google" | "openai" | "lovable";
-    
-    if (GOOGLE_API_KEY) {
-      // Use Google Gemini API (OpenAI-compatible endpoint)
-      apiKey = GOOGLE_API_KEY;
-      apiUrl = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-      model = "gemini-2.0-flash";
-      provider = "google";
-      console.log("Using Google Gemini API (user's paid plan)");
-    } else if (OPENAI_API_KEY) {
-      apiKey = OPENAI_API_KEY;
-      apiUrl = "https://api.openai.com/v1/chat/completions";
-      model = "gpt-4o";
-      provider = "openai";
-      console.log("Using OpenAI GPT-4o");
-    } else if (LOVABLE_API_KEY) {
-      apiKey = LOVABLE_API_KEY;
-      apiUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
-      model = "google/gemini-3-flash-preview";
-      provider = "lovable";
-      console.log("Using Lovable AI (Gemini)");
-    } else {
-      throw new Error("Nenhuma API key configurada (GOOGLE_API_KEY, OPENAI_API_KEY ou LOVABLE_API_KEY)");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY não está configurada");
     }
+
+    const apiUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
+    const model = "google/gemini-3-flash-preview";
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log(`Authenticated user: ${payload.accessCode} - Model: ${model}`);
+    console.log(`Authenticated user: ${payload.accessCode} - Using Lovable AI`);
 
     // First request with tools
-    const makeToolRequest = () =>
-      fetch(apiUrl, {
+    const toolResponse = await fetch(apiUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -367,36 +336,13 @@ serve(async (req) => {
       }),
     });
 
-    let toolResponse = await makeToolRequest();
-
-    // If Gemini hits 429 (often quota/rate), fallback to OpenAI or Lovable AI if available.
-    if (!toolResponse.ok && toolResponse.status === 429 && provider === "google") {
-      const errorText = await toolResponse.text();
-      console.warn("Gemini returned 429, attempting fallback. Details:", errorText);
-
-      if (OPENAI_API_KEY) {
-        apiKey = OPENAI_API_KEY;
-        apiUrl = "https://api.openai.com/v1/chat/completions";
-        // cheaper + less likely to hit strict limits; you can switch to gpt-4o if desired
-        model = "gpt-4o-mini";
-        provider = "openai";
-        toolResponse = await makeToolRequest();
-      } else if (LOVABLE_API_KEY) {
-        apiKey = LOVABLE_API_KEY;
-        apiUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
-        model = "google/gemini-3-flash-preview";
-        provider = "lovable";
-        toolResponse = await makeToolRequest();
-      }
-    }
-
     if (!toolResponse.ok) {
       const errorText = await toolResponse.text();
-      console.error(`AI API error (${provider}):`, toolResponse.status, errorText);
+      console.error("AI API error:", toolResponse.status, errorText);
       
       if (toolResponse.status === 429) {
         return new Response(JSON.stringify({ 
-          error: "Limite de requisições da API excedido. Aguarde 10 segundos e tente novamente.",
+          error: "Limite de requisições excedido. Aguarde alguns segundos e tente novamente.",
           retryAfter: 10
         }), {
           status: 429,
@@ -404,7 +350,7 @@ serve(async (req) => {
         });
       }
       if (toolResponse.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes. Verifique sua conta no Google AI Studio." }), {
+        return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
           status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -435,47 +381,24 @@ serve(async (req) => {
         });
       }
 
-      // Second request with tool results - now with streaming
-      const makeFinalRequest = (url: string, key: string, mdl: string) =>
-        fetch(url, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${key}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: mdl,
-            messages: [
-              { role: "system", content: SYSTEM_PROMPT },
-              ...messages,
-              assistantMessage,
-              ...toolResults
-            ],
-            stream: true
-          }),
-        });
-
-      let finalResponse = await makeFinalRequest(apiUrl, apiKey, model);
-
-      // Fallback if Gemini hits 429 on final response
-      if (!finalResponse.ok && finalResponse.status === 429 && provider === "google") {
-        const errText = await finalResponse.text();
-        console.warn("Gemini 429 on final response, trying fallback:", errText);
-
-        if (OPENAI_API_KEY) {
-          finalResponse = await makeFinalRequest(
-            "https://api.openai.com/v1/chat/completions",
-            OPENAI_API_KEY,
-            "gpt-4o-mini"
-          );
-        } else if (LOVABLE_API_KEY) {
-          finalResponse = await makeFinalRequest(
-            "https://ai.gateway.lovable.dev/v1/chat/completions",
-            LOVABLE_API_KEY,
-            "google/gemini-3-flash-preview"
-          );
-        }
-      }
+      // Second request with tool results - streaming
+      const finalResponse = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            ...messages,
+            assistantMessage,
+            ...toolResults
+          ],
+          stream: true
+        }),
+      });
 
       if (!finalResponse.ok) {
         const errorText = await finalResponse.text();
@@ -483,8 +406,8 @@ serve(async (req) => {
         
         if (finalResponse.status === 429) {
           return new Response(JSON.stringify({ 
-            error: "API sobrecarregada. Aguarde 15 segundos e tente novamente.",
-            retryAfter: 15
+            error: "Limite de requisições excedido. Aguarde alguns segundos.",
+            retryAfter: 10
           }), {
             status: 429,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -502,7 +425,7 @@ serve(async (req) => {
     const streamResponse = await fetch(apiUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
