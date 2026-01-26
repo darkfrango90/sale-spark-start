@@ -96,7 +96,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       });
 
+      // Clear tokens on any non-OK response
       if (!response.ok) {
+        console.warn('Token verification failed, clearing session');
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(SESSION_KEY);
         return null;
@@ -119,13 +121,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
         return fullUser;
       }
+      
+      // Token was verified but no valid user data - clear session
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(SESSION_KEY);
+      return null;
     } catch (error) {
-      console.error('Token verification error:', error);
+      console.warn('Token verification error, clearing session:', error);
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(SESSION_KEY);
+      return null;
     }
-
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(SESSION_KEY);
-    return null;
   };
 
   useEffect(() => {
