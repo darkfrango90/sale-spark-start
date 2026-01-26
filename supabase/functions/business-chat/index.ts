@@ -309,26 +309,40 @@ serve(async (req) => {
 
     const { messages } = await req.json();
     
-    // Check for OpenAI API key first, fallback to Lovable AI
+    // Priority: Google Gemini > OpenAI > Lovable AI
+    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY");
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
-    const useOpenAI = !!OPENAI_API_KEY;
-    const apiKey = useOpenAI ? OPENAI_API_KEY : LOVABLE_API_KEY;
-    const apiUrl = useOpenAI 
-      ? "https://api.openai.com/v1/chat/completions" 
-      : "https://ai.gateway.lovable.dev/v1/chat/completions";
-    const model = useOpenAI ? "gpt-4o" : "google/gemini-3-flash-preview";
+    let apiKey: string;
+    let apiUrl: string;
+    let model: string;
     
-    if (!apiKey) {
-      throw new Error("Nenhuma API key configurada (OPENAI_API_KEY ou LOVABLE_API_KEY)");
+    if (GOOGLE_API_KEY) {
+      // Use Google Gemini API (OpenAI-compatible endpoint)
+      apiKey = GOOGLE_API_KEY;
+      apiUrl = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+      model = "gemini-2.0-flash";
+      console.log("Using Google Gemini API (user's paid plan)");
+    } else if (OPENAI_API_KEY) {
+      apiKey = OPENAI_API_KEY;
+      apiUrl = "https://api.openai.com/v1/chat/completions";
+      model = "gpt-4o";
+      console.log("Using OpenAI GPT-4o");
+    } else if (LOVABLE_API_KEY) {
+      apiKey = LOVABLE_API_KEY;
+      apiUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
+      model = "google/gemini-3-flash-preview";
+      console.log("Using Lovable AI (Gemini)");
+    } else {
+      throw new Error("Nenhuma API key configurada (GOOGLE_API_KEY, OPENAI_API_KEY ou LOVABLE_API_KEY)");
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log(`Authenticated user: ${payload.accessCode} - Using ${useOpenAI ? 'OpenAI GPT-4o' : 'Lovable AI Gemini'}`);
+    console.log(`Authenticated user: ${payload.accessCode} - Model: ${model}`);
 
     // First request with tools
     const toolResponse = await fetch(apiUrl, {
