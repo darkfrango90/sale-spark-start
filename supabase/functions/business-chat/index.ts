@@ -363,20 +363,24 @@ serve(async (req) => {
     });
 
     if (!toolResponse.ok) {
+      const errorText = await toolResponse.text();
+      console.error("AI API error:", toolResponse.status, errorText);
+      
       if (toolResponse.status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns segundos." }), {
+        return new Response(JSON.stringify({ 
+          error: "Limite de requisições da API excedido. Aguarde 10 segundos e tente novamente.",
+          retryAfter: 10
+        }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (toolResponse.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes. Entre em contato com o suporte." }), {
+        return new Response(JSON.stringify({ error: "Créditos insuficientes. Verifique sua conta no Google AI Studio." }), {
           status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const errorText = await toolResponse.text();
-      console.error("AI API error:", toolResponse.status, errorText);
       throw new Error("Erro ao processar sua pergunta");
     }
 
