@@ -99,11 +99,12 @@ const AIAssistant = () => {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         if (response.status === 429) {
-          // Apply a short cooldown to avoid hammering the API
-          cooldownUntilRef.current = Date.now() + 5000;
+          // Apply longer cooldown (10s) to respect API limits
+          const retryAfter = errorData.retryAfter || 10;
+          cooldownUntilRef.current = Date.now() + (retryAfter * 1000);
           throw new Error(
             errorData.error ||
-              "Muitas requisições em sequência. Aguarde alguns segundos e tente novamente."
+              `Limite de requisições excedido. Aguarde ${retryAfter} segundos.`
           );
         }
         if (response.status === 402) {
