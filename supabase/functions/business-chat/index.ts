@@ -317,22 +317,26 @@ serve(async (req) => {
     let apiKey: string;
     let apiUrl: string;
     let model: string;
+    let provider: "google" | "openai" | "lovable";
     
     if (GOOGLE_API_KEY) {
       // Use Google Gemini API (OpenAI-compatible endpoint)
       apiKey = GOOGLE_API_KEY;
       apiUrl = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
       model = "gemini-2.0-flash";
+      provider = "google";
       console.log("Using Google Gemini API (user's paid plan)");
     } else if (OPENAI_API_KEY) {
       apiKey = OPENAI_API_KEY;
       apiUrl = "https://api.openai.com/v1/chat/completions";
       model = "gpt-4o";
+      provider = "openai";
       console.log("Using OpenAI GPT-4o");
     } else if (LOVABLE_API_KEY) {
       apiKey = LOVABLE_API_KEY;
       apiUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
       model = "google/gemini-3-flash-preview";
+      provider = "lovable";
       console.log("Using Lovable AI (Gemini)");
     } else {
       throw new Error("Nenhuma API key configurada (GOOGLE_API_KEY, OPENAI_API_KEY ou LOVABLE_API_KEY)");
@@ -345,7 +349,8 @@ serve(async (req) => {
     console.log(`Authenticated user: ${payload.accessCode} - Model: ${model}`);
 
     // First request with tools
-    const toolResponse = await fetch(apiUrl, {
+    const makeToolRequest = () =>
+      fetch(apiUrl, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -362,9 +367,32 @@ serve(async (req) => {
       }),
     });
 
+    let toolResponse = await makeToolRequest();
+
+    // If Gemini hits 429 (often quota/rate), fallback to OpenAI or Lovable AI if available.
+    if (!toolResponse.ok && toolResponse.status === 429 && provider === "google") {
+      const errorText = await toolResponse.text();
+      console.warn("Gemini returned 429, attempting fallback. Details:", errorText);
+
+      if (OPENAI_API_KEY) {
+        apiKey = OPENAI_API_KEY;
+        apiUrl = "https://api.openai.com/v1/chat/completions";
+        // cheaper + less likely to hit strict limits; you can switch to gpt-4o if desired
+        model = "gpt-4o-mini";
+        provider = "openai";
+        toolResponse = await makeToolRequest();
+      } else if (LOVABLE_API_KEY) {
+        apiKey = LOVABLE_API_KEY;
+        apiUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
+        model = "google/gemini-3-flash-preview";
+        provider = "lovable";
+        toolResponse = await makeToolRequest();
+      }
+    }
+
     if (!toolResponse.ok) {
       const errorText = await toolResponse.text();
-      console.error("AI API error:", toolResponse.status, errorText);
+      console.error(`AI API error (${provider}):`, toolResponse.status, errorText);
       
       if (toolResponse.status === 429) {
         return new Response(JSON.stringify({ 
