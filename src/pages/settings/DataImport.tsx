@@ -29,6 +29,14 @@ interface ImportIssue {
   canAutoFix: boolean;
 }
 
+interface AppliedFix {
+  row: number;
+  field: string;
+  originalValue: any;
+  newValue: any;
+  problem: string;
+}
+
 interface ImportItem {
   row: number;
   originalData: Record<string, any>;
@@ -112,6 +120,7 @@ const DataImport = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [pdfAnalysis, setPdfAnalysis] = useState<PDFAnalysisResult | null>(null);
+  const [appliedFixes, setAppliedFixes] = useState<AppliedFix[]>([]);
 
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
@@ -136,6 +145,7 @@ const DataImport = () => {
     setFile(uploadedFile);
     setAnalysis(null);
     setPdfAnalysis(null);
+    setAppliedFixes([]);
     setFileType(isPDF ? 'pdf' : 'excel');
 
     if (isPDF) {
@@ -309,6 +319,8 @@ const DataImport = () => {
   const applyAutoFixes = () => {
     if (!analysis) return;
 
+    const fixes: AppliedFix[] = [];
+
     const updatedItems = analysis.items.map(item => {
       if (item.status === 'needs_correction') {
         const autoFixableIssues = item.issues.filter(i => i.canAutoFix && i.suggestedValue !== null);
@@ -317,7 +329,15 @@ const DataImport = () => {
           const newMappedData = { ...item.mappedData };
           const remainingIssues = item.issues.filter(i => !i.canAutoFix || i.suggestedValue === null);
           
+          // Registrar cada correção aplicada
           autoFixableIssues.forEach(issue => {
+            fixes.push({
+              row: item.row,
+              field: issue.field,
+              originalValue: issue.currentValue,
+              newValue: issue.suggestedValue,
+              problem: issue.problem
+            });
             newMappedData[issue.field] = issue.suggestedValue;
           });
 
@@ -341,13 +361,16 @@ const DataImport = () => {
       hasError: updatedItems.filter(i => i.status === 'error').length
     };
 
+    setAppliedFixes(fixes);
     setAnalysis({
       ...analysis,
       items: updatedItems,
       summary: newSummary
     });
 
-    toast.success('Correções aplicadas', { description: 'As sugestões automáticas foram aplicadas.' });
+    toast.success('Correções aplicadas', { 
+      description: `${fixes.length} campo(s) corrigido(s) automaticamente. Veja os detalhes abaixo.` 
+    });
   };
 
   // Helper to generate unique code
@@ -1150,6 +1173,48 @@ const DataImport = () => {
             </Card>
           )}
 
+          {/* Applied Fixes Card */}
+          {appliedFixes.length > 0 && (
+            <Card className="border-green-200 bg-green-50/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-green-700">
+                  <CheckCircle2 className="h-5 w-5" />
+                  Correções Aplicadas pela IA ({appliedFixes.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[200px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Linha</TableHead>
+                        <TableHead>Campo</TableHead>
+                        <TableHead>Problema</TableHead>
+                        <TableHead>Valor Original</TableHead>
+                        <TableHead>Valor Corrigido</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {appliedFixes.map((fix, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell>{fix.row}</TableCell>
+                          <TableCell className="font-medium">{fix.field}</TableCell>
+                          <TableCell className="text-muted-foreground">{fix.problem}</TableCell>
+                          <TableCell className="text-red-600 line-through">
+                            {fix.originalValue?.toString() || '-'}
+                          </TableCell>
+                          <TableCell className="text-green-600 font-medium">
+                            {fix.newValue?.toString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Pending Items (Excel) */}
           {pendingItems.length > 0 && (
             <Card>
@@ -1318,6 +1383,7 @@ const DataImport = () => {
                       setFile(null);
                       setRawData([]);
                       setAnalysis(null);
+                      setAppliedFixes([]);
                     }}
                   >
                     <X className="h-4 w-4 mr-2" />
