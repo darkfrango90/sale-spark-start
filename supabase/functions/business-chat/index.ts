@@ -436,27 +436,60 @@ serve(async (req) => {
       }
 
       // Second request with tool results - now with streaming
-      const finalResponse = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            ...messages,
-            assistantMessage,
-            ...toolResults
-          ],
-          stream: true
-        }),
-      });
+      const makeFinalRequest = (url: string, key: string, mdl: string) =>
+        fetch(url, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: mdl,
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              ...messages,
+              assistantMessage,
+              ...toolResults
+            ],
+            stream: true
+          }),
+        });
+
+      let finalResponse = await makeFinalRequest(apiUrl, apiKey, model);
+
+      // Fallback if Gemini hits 429 on final response
+      if (!finalResponse.ok && finalResponse.status === 429 && provider === "google") {
+        const errText = await finalResponse.text();
+        console.warn("Gemini 429 on final response, trying fallback:", errText);
+
+        if (OPENAI_API_KEY) {
+          finalResponse = await makeFinalRequest(
+            "https://api.openai.com/v1/chat/completions",
+            OPENAI_API_KEY,
+            "gpt-4o-mini"
+          );
+        } else if (LOVABLE_API_KEY) {
+          finalResponse = await makeFinalRequest(
+            "https://ai.gateway.lovable.dev/v1/chat/completions",
+            LOVABLE_API_KEY,
+            "google/gemini-3-flash-preview"
+          );
+        }
+      }
 
       if (!finalResponse.ok) {
         const errorText = await finalResponse.text();
         console.error("Final response error:", errorText);
+        
+        if (finalResponse.status === 429) {
+          return new Response(JSON.stringify({ 
+            error: "API sobrecarregada. Aguarde 15 segundos e tente novamente.",
+            retryAfter: 15
+          }), {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
         throw new Error("Erro ao gerar resposta final");
       }
 
