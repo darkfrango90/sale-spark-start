@@ -1,49 +1,95 @@
 
-
-# Plano: Vincular Vendas aos Vendedores Corretos
+# Plano: Adicionar Coluna Valor e Incluir Frete na Saída de Material
 
 ## Objetivo
-Atualizar o campo `seller_name` nas vendas importadas para corresponder aos nomes dos usuários cadastrados no sistema.
+1. Adicionar coluna "Valor" na tabela "Saída de Material do Dia" (conforme solicitado anteriormente)
+2. Incluir "Frete" como um item na tabela, mesmo sem M³/Toneladas, para exibir seu valor total
 
 ---
 
-## Dados Identificados
+## Mudanças Necessárias
 
-### Vendas no Sistema
-| Nome Atual | Quantidade |
-|------------|------------|
-| ANNE STEFANE | 67 vendas |
-| NAYSLLA | 85 vendas |
+### 1. Atualizar estrutura do `materialOutput` (useMemo)
 
-### Usuários Cadastrados
-| Nome | Código | ID |
-|------|--------|-----|
-| Anne Stefany | 002 | 2ce348bd-543c-40ad-be5f-fff5d8982589 |
-| Nayslla Adriana Fernando Tavares | 006 | 370835b3-834a-4487-8c27-abbd9d415b03 |
+Modificar o objeto para incluir `totalValue`:
 
----
-
-## Etapa Única: Executar UPDATE no Banco de Dados
-
-### Query 1: Vincular vendas da Anne
-```sql
-UPDATE sales 
-SET seller_name = 'Anne Stefany'
-WHERE seller_name ILIKE '%ANNE%';
+```text
+outputByProduct[item.productId] = {
+  productId: string,
+  productName: string,
+  m3: number,
+  tons: number,
+  totalValue: number  // NOVO: valor total vendido
+}
 ```
 
-### Query 2: Vincular vendas da Nayslla
-```sql
-UPDATE sales 
-SET seller_name = 'Nayslla Adriana Fernando Tavares'
-WHERE seller_name ILIKE '%NAYSLLA%';
+### 2. Incluir Frete na saída de material
+
+Atualmente, o filtro `.filter(item => item.m3 > 0 || item.tons > 0)` exclui o frete. 
+
+Mudança: `.filter(item => item.m3 > 0 || item.tons > 0 || item.totalValue > 0)`
+
+Isso permite que itens de frete apareçam na tabela mesmo sem M³/Toneladas.
+
+### 3. Atualizar `outputTotals`
+
+Adicionar soma total dos valores:
+
+```text
+outputTotals = {
+  totalM3: number,
+  totalTons: number,
+  totalValue: number  // NOVO
+}
 ```
+
+### 4. Atualizar Tabela na Tela
+
+Adicionar coluna "Valor" no cabeçalho e corpo da tabela:
+- Cabeçalho: `<TableHead className="text-right">Valor</TableHead>`
+- Células: `{formatCurrency(item.totalValue)}`
+- Linha de total: `{formatCurrency(outputTotals.totalValue)}`
+
+### 5. Atualizar Layout de Impressão (handlePrint)
+
+Incluir coluna "Valor" na tabela HTML de impressão.
 
 ---
 
-## Resultado Esperado
+## Estrutura Final da Tabela
 
-- **67 vendas** serão atualizadas para "Anne Stefany"
-- **85 vendas** serão atualizadas para "Nayslla Adriana Fernando Tavares"
-- Os nomes ficarão consistentes com os usuários cadastrados no sistema
+| Produto | M³ | Toneladas | Valor |
+|---------|-----|-----------|-------|
+| AREIA GROSSA | 407.00 | 636.55 | R$ X.XXX,XX |
+| AREIA FINA | 241.87 | 360.39 | R$ X.XXX,XX |
+| FRETE | - | - | R$ X.XXX,XX |
+| **TOTAL** | **1181.87** | **1796.29** | **R$ XX.XXX,XX** |
 
+---
+
+## Arquivo a Modificar
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/pages/reports/CashRegisterReport.tsx` | Adicionar `totalValue`, ajustar filtro para incluir frete, atualizar tabela e impressão |
+
+---
+
+## Detalhes Técnicos
+
+1. **materialOutput useMemo** (linhas 99-144):
+   - Adicionar `totalValue: 0` na inicialização
+   - Somar `item.total` para cada item
+   - Mudar filtro para: `item.m3 > 0 || item.tons > 0 || item.totalValue > 0`
+
+2. **outputTotals useMemo** (linhas 147-150):
+   - Adicionar `totalValue: materialOutput.reduce((sum, item) => sum + item.totalValue, 0)`
+
+3. **Tabela** (seção Saída de Material):
+   - Adicionar `<TableHead>` para "Valor"
+   - Adicionar `<TableCell>` com `formatCurrency(item.totalValue)`
+   - Exibir "-" para M³ e Toneladas quando forem 0
+
+4. **handlePrint**:
+   - Adicionar coluna "Valor" na tabela HTML
+   - Formatar valores com moeda brasileira
