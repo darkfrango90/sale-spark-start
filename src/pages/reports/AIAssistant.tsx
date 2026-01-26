@@ -31,6 +31,11 @@ const AIAssistant = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Prevent double-submits before React state updates propagate
+  const inFlightRef = useRef(false);
+  // Cooldown after rate-limit responses
+  const cooldownUntilRef = useRef<number>(0);
+
   const handleCopy = async (content: string, index: number) => {
     const plainText = content
       .replace(/<strong>(.*?)<\/strong>/g, '$1')
@@ -58,6 +63,17 @@ const AIAssistant = () => {
   }, [messages]);
 
   const streamChat = async (userMessage: string) => {
+    // Hard guard against rapid double sends
+    if (inFlightRef.current) return;
+    const now = Date.now();
+    if (cooldownUntilRef.current > now) {
+      const seconds = Math.ceil((cooldownUntilRef.current - now) / 1000);
+      toast.error(`Aguarde ${seconds}s antes de enviar outra pergunta.`);
+      return;
+    }
+
+    inFlightRef.current = true;
+
     const newMessages: Message[] = [...messages, { role: "user", content: userMessage }];
     setMessages(newMessages);
     setIsLoading(true);
@@ -83,7 +99,12 @@ const AIAssistant = () => {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         if (response.status === 429) {
-          throw new Error(errorData.error || "Limite de requisições excedido. Tente novamente.");
+          // Apply a short cooldown to avoid hammering the API
+          cooldownUntilRef.current = Date.now() + 5000;
+          throw new Error(
+            errorData.error ||
+              "Muitas requisições em sequência. Aguarde alguns segundos e tente novamente."
+          );
         }
         if (response.status === 402) {
           throw new Error(errorData.error || "Créditos insuficientes.");
@@ -171,6 +192,7 @@ const AIAssistant = () => {
     } finally {
       setIsLoading(false);
       inputRef.current?.focus();
+      inFlightRef.current = false;
     }
   };
 
