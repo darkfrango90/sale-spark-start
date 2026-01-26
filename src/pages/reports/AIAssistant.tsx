@@ -66,11 +66,16 @@ const AIAssistant = () => {
     let assistantContent = "";
 
     try {
+      const authToken = localStorage.getItem("cezar_auth_token");
+      if (!authToken) {
+        throw new Error("Você precisa estar logado para usar o assistente");
+      }
+
       const response = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({ messages: newMessages }),
       });
