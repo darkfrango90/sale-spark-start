@@ -1,753 +1,628 @@
 
-# Guia Completo: Criar Novo Projeto com Supabase Externo
 
-## Resumo
+# Documentacao Completa das Logicas do Sistema Cezar
 
-Este guia contém tudo que você precisa para criar um **novo projeto Lovable** conectado a um **Supabase externo** (sua própria conta), replicando todas as funcionalidades do projeto atual.
-
----
-
-## Passo 1: Criar Conta no Supabase
-
-1. Acesse **supabase.com** e crie uma conta gratuita
-2. Crie um novo projeto (anote a senha do banco de dados)
-3. Aguarde o projeto ser provisionado (~2 minutos)
-4. Copie as credenciais:
-   - **Project URL**: `https://[seu-projeto].supabase.co`
-   - **Anon Key**: Na aba Settings → API
+Este documento detalha todas as logicas de negocio, fluxos de dados e padroes de implementacao do sistema para que voce possa recria-lo em um novo projeto Lovable com Supabase externo.
 
 ---
 
-## Passo 2: Criar Novo Projeto Lovable
+## 1. Arquitetura de Autenticacao
 
-1. Acesse **lovable.dev** e crie um **NOVO PROJETO**
-2. **IMPORTANTE**: NÃO ative o Lovable Cloud
-3. Conecte seu Supabase externo usando o conector disponível
+### 1.1 Fluxo de Login (Edge Function: auth-login)
+
+```text
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│   Login Form    │────▶│  auth-login      │────▶│   app_users     │
+│ (accessCode +   │     │  Edge Function   │     │   (database)    │
+│  password)      │     └──────────────────┘     └─────────────────┘
+└─────────────────┘              │
+                                 ▼
+                    ┌──────────────────────────┐
+                    │ Token JWT-like (base64)  │
+                    │ Expira em 24 horas       │
+                    │ Armazenado em localStorage│
+                    └──────────────────────────┘
+```
+
+**Logica de Senha (PBKDF2)**:
+- Hash: SHA-256 com 100.000 iteracoes
+- Salt: 16 bytes aleatorios
+- Formato armazenado: `pbkdf2:{salt_hex}:{hash_hex}`
+- Migracaso automatica: senhas legadas (texto plano) sao hasheadas no primeiro login
+
+**Geracao de Token**:
+```javascript
+function generateToken(userId, accessCode) {
+  const payload = {
+    userId,
+    accessCode,
+    iat: Date.now(),
+    exp: Date.now() + (24 * 60 * 60 * 1000) // 24 horas
+  };
+  return btoa(JSON.stringify(payload));
+}
+```
+
+### 1.2 Verificacao de Token (Edge Function: auth-verify)
+
+- Decodifica token base64
+- Verifica expiracao (`payload.exp < Date.now()`)
+- Consulta `app_users` para confirmar usuario ativo
+- Retorna dados do usuario + role + permissions
+
+### 1.3 Redirecionamento por Role
+
+| Role | Rota de Destino |
+|------|-----------------|
+| motorista | /motorista |
+| operador | /operador |
+| outros | / (dashboard) |
 
 ---
 
-## Passo 3: Executar Scripts SQL
+## 2. Sistema de Vendas
 
-No **SQL Editor** do Supabase Dashboard, execute os scripts abaixo **NA ORDEM**:
+### 2.1 Numeracao Sequencial
 
-### Script 1: Estrutura Base (Clientes, Produtos, Vendas)
-
-```sql
--- Função para atualizar updated_at
-CREATE OR REPLACE FUNCTION public.update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Tabela de Clientes
-CREATE TABLE public.customers (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  code TEXT NOT NULL UNIQUE,
-  name TEXT NOT NULL,
-  trade_name TEXT,
-  type TEXT NOT NULL CHECK (type IN ('fisica', 'juridica')),
-  cpf_cnpj TEXT NOT NULL UNIQUE,
-  rg_ie TEXT,
-  phone TEXT,
-  cellphone TEXT,
-  email TEXT,
-  address TEXT,
-  zip_code TEXT,
-  street TEXT,
-  number TEXT,
-  complement TEXT,
-  neighborhood TEXT,
-  city TEXT,
-  state TEXT,
-  birth_date TEXT,
-  notes TEXT,
-  has_barter BOOLEAN DEFAULT false,
-  barter_credit NUMERIC DEFAULT 0,
-  barter_limit NUMERIC DEFAULT 0,
-  barter_notes TEXT,
-  active BOOLEAN NOT NULL DEFAULT true,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Tabela de Produtos
-CREATE TABLE public.products (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  code TEXT NOT NULL UNIQUE,
-  name TEXT NOT NULL,
-  description TEXT,
-  category TEXT,
-  unit TEXT NOT NULL DEFAULT 'UN',
-  density NUMERIC,
-  cost_price NUMERIC NOT NULL DEFAULT 0,
-  sale_price NUMERIC NOT NULL DEFAULT 0,
-  stock NUMERIC NOT NULL DEFAULT 0,
-  min_stock NUMERIC NOT NULL DEFAULT 0,
-  active BOOLEAN NOT NULL DEFAULT true,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Tabela de Condições de Pagamento
-CREATE TABLE public.payment_methods (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL UNIQUE,
-  active BOOLEAN NOT NULL DEFAULT true,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Tabela de Vendas/Orçamentos
-CREATE TABLE public.sales (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  type TEXT NOT NULL CHECK (type IN ('pedido', 'orcamento')),
-  number TEXT NOT NULL,
-  customer_id UUID NOT NULL REFERENCES public.customers(id),
-  customer_code TEXT NOT NULL,
-  customer_name TEXT NOT NULL,
-  customer_cpf_cnpj TEXT NOT NULL,
-  customer_phone TEXT,
-  customer_address TEXT,
-  customer_neighborhood TEXT,
-  customer_city TEXT,
-  customer_state TEXT,
-  customer_zip_code TEXT,
-  payment_method_id UUID REFERENCES public.payment_methods(id),
-  payment_method_name TEXT,
-  payment_type TEXT,
-  seller_name TEXT,
-  subtotal NUMERIC NOT NULL DEFAULT 0,
-  discount NUMERIC NOT NULL DEFAULT 0,
-  total NUMERIC NOT NULL DEFAULT 0,
-  total_weight NUMERIC NOT NULL DEFAULT 0,
-  notes TEXT,
-  status TEXT NOT NULL DEFAULT 'pendente' CHECK (status IN ('pendente', 'finalizado', 'cancelado', 'excluido')),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Tabela de Itens da Venda
-CREATE TABLE public.sale_items (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  sale_id UUID NOT NULL REFERENCES public.sales(id) ON DELETE CASCADE,
-  product_id UUID NOT NULL REFERENCES public.products(id),
-  product_code TEXT NOT NULL,
-  product_name TEXT NOT NULL,
-  unit TEXT NOT NULL,
-  quantity NUMERIC NOT NULL DEFAULT 1,
-  unit_price NUMERIC NOT NULL DEFAULT 0,
-  discount NUMERIC NOT NULL DEFAULT 0,
-  total NUMERIC NOT NULL DEFAULT 0,
-  density NUMERIC,
-  weight NUMERIC DEFAULT 0,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Dados iniciais de pagamento
-INSERT INTO public.payment_methods (name, active) VALUES 
-  ('À Vista', true),
-  ('Pix', true),
-  ('Cartão de Crédito', true),
-  ('Cartão de Débito', true),
-  ('Boleto', true),
-  ('30 dias', true),
-  ('30/60 dias', true),
-  ('30/60/90 dias', true);
-
--- Triggers
-CREATE TRIGGER update_customers_updated_at
-  BEFORE UPDATE ON public.customers
-  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
-CREATE TRIGGER update_products_updated_at
-  BEFORE UPDATE ON public.products
-  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
-CREATE TRIGGER update_sales_updated_at
-  BEFORE UPDATE ON public.sales
-  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+**Pedidos**: `00001`, `00002`, ... (5 digitos)
+```javascript
+const getNextSaleNumber = () => {
+  const pedidos = sales.filter(s => s.type === 'pedido');
+  const numbers = pedidos.map(s => parseInt(s.number)).filter(n => !isNaN(n));
+  const maxNumber = numbers.length > 0 ? Math.max(...numbers) : 0;
+  return String(maxNumber + 1).padStart(5, '0');
+};
 ```
 
-### Script 2: Empresa, Fornecedores e Financeiro
-
-```sql
--- Configurações da Empresa
-CREATE TABLE public.company_settings (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT,
-  cnpj TEXT,
-  address TEXT,
-  city TEXT,
-  state TEXT,
-  zip_code TEXT,
-  phone TEXT,
-  email TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Exclusões de Vendas
-CREATE TABLE public.sales_deletions (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  sale_id UUID,
-  sale_number TEXT NOT NULL,
-  sale_type TEXT NOT NULL,
-  customer_name TEXT NOT NULL,
-  total NUMERIC(10,2) NOT NULL,
-  reason TEXT NOT NULL,
-  deleted_by TEXT,
-  deleted_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Fornecedores
-CREATE TABLE public.suppliers (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  code TEXT NOT NULL,
-  name TEXT NOT NULL,
-  trade_name TEXT,
-  type TEXT NOT NULL,
-  cpf_cnpj TEXT NOT NULL,
-  rg_ie TEXT,
-  phone TEXT,
-  cellphone TEXT,
-  email TEXT,
-  zip_code TEXT,
-  street TEXT,
-  number TEXT,
-  complement TEXT,
-  neighborhood TEXT,
-  city TEXT,
-  state TEXT,
-  birth_date TEXT,
-  notes TEXT,
-  active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Contas de Recebimento
-CREATE TABLE public.receiving_accounts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Contas a Receber
-CREATE TABLE public.accounts_receivable (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  sale_id UUID NOT NULL REFERENCES public.sales(id) ON DELETE CASCADE,
-  original_amount NUMERIC NOT NULL,
-  interest_penalty NUMERIC DEFAULT 0,
-  final_amount NUMERIC NOT NULL,
-  status TEXT DEFAULT 'pendente',
-  receiving_account_id UUID REFERENCES public.receiving_accounts(id),
-  receipt_date DATE,
-  receipt_url TEXT,
-  notes TEXT,
-  confirmed_by TEXT,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Contas a Pagar
-CREATE TABLE public.accounts_payable (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  supplier_id UUID NOT NULL REFERENCES public.suppliers(id),
-  supplier_code TEXT NOT NULL,
-  supplier_name TEXT NOT NULL,
-  competence_date DATE NOT NULL,
-  payment_type TEXT NOT NULL,
-  invoice_number TEXT,
-  original_amount NUMERIC NOT NULL,
-  interest_penalty NUMERIC DEFAULT 0,
-  final_amount NUMERIC NOT NULL,
-  due_date DATE NOT NULL,
-  installment_number INTEGER DEFAULT 1,
-  total_installments INTEGER DEFAULT 1,
-  status TEXT DEFAULT 'pendente',
-  payment_date DATE,
-  paying_account_id UUID REFERENCES public.receiving_accounts(id),
-  notes TEXT,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Triggers
-CREATE TRIGGER update_company_settings_updated_at
-  BEFORE UPDATE ON public.company_settings
-  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
-CREATE TRIGGER update_accounts_receivable_updated_at
-  BEFORE UPDATE ON public.accounts_receivable
-  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+**Orcamentos**: `ORC-00001`, `ORC-00002`, ...
+```javascript
+const getNextQuoteNumber = () => {
+  const orcamentos = sales.filter(s => s.type === 'orcamento');
+  const match = s.number.match(/ORC-(\d+)/);
+  // Extrai numero e incrementa
+};
 ```
 
-### Script 3: Veículos e Operação
+### 2.2 Calculo de Peso
 
-```sql
--- Veículos
-CREATE TABLE public.vehicles (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  plate TEXT,
-  type TEXT NOT NULL CHECK (type IN ('caminhao', 'carro', 'maquinario')),
-  fuel_type TEXT NOT NULL DEFAULT 'diesel' CHECK (fuel_type IN ('gasolina', 'diesel', 'etanol')),
-  tank_capacity NUMERIC,
-  uses_odometer BOOLEAN NOT NULL DEFAULT true,
-  brand TEXT,
-  model TEXT,
-  year INTEGER,
-  year_model INTEGER,
-  current_km NUMERIC DEFAULT 0,
-  renavam_serial TEXT,
-  color TEXT,
-  ownership TEXT DEFAULT 'proprio',
-  notes TEXT,
-  active BOOLEAN NOT NULL DEFAULT true,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Abastecimentos
-CREATE TABLE public.fuel_entries (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  vehicle_id UUID NOT NULL REFERENCES public.vehicles(id) ON DELETE CASCADE,
-  user_id TEXT,
-  date DATE NOT NULL DEFAULT CURRENT_DATE,
-  odometer_value NUMERIC NOT NULL,
-  liters NUMERIC NOT NULL,
-  fuel_type TEXT NOT NULL CHECK (fuel_type IN ('gasolina', 'diesel', 'etanol')),
-  price_per_liter NUMERIC,
-  total_cost NUMERIC,
-  operator_name TEXT,
-  receipt_url TEXT,
-  notes TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Carregamentos de Pedidos
-CREATE TABLE public.order_loadings (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  sale_id UUID NOT NULL REFERENCES public.sales(id) ON DELETE CASCADE,
-  sale_number TEXT NOT NULL,
-  customer_name TEXT NOT NULL,
-  operator_id TEXT NOT NULL,
-  operator_name TEXT NOT NULL,
-  ticket_image_url TEXT,
-  ticket_weight_kg NUMERIC,
-  expected_weight_kg NUMERIC,
-  weight_difference_percent NUMERIC,
-  weight_verified BOOLEAN DEFAULT false,
-  ai_response JSONB,
-  loaded_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Triggers
-CREATE TRIGGER update_vehicles_updated_at
-  BEFORE UPDATE ON vehicles
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- Índices
-CREATE INDEX idx_fuel_entries_vehicle_id ON public.fuel_entries(vehicle_id);
-CREATE INDEX idx_fuel_entries_date ON public.fuel_entries(date DESC);
-CREATE INDEX idx_vehicles_active ON public.vehicles(active) WHERE active = true;
-CREATE INDEX idx_order_loadings_sale_id ON public.order_loadings(sale_id);
-CREATE INDEX idx_order_loadings_loaded_at ON public.order_loadings(loaded_at);
+```javascript
+const calculateItemWeight = (quantity, unit, density) => {
+  if ((unit === 'M³' || unit === 'M3') && density) {
+    return quantity * density; // Peso em Kg
+  } else if (unit === 'KG') {
+    return quantity;
+  }
+  return 0;
+};
 ```
 
-### Script 4: Motorista
+### 2.3 Calculo de Desconto Automatico
 
-```sql
--- Partes Diárias
-CREATE TABLE public.daily_reports (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT NOT NULL,
-  user_name TEXT NOT NULL,
-  vehicle_plate TEXT NOT NULL,
-  customer_name TEXT NOT NULL,
-  order_number TEXT NOT NULL,
-  km_initial NUMERIC NOT NULL,
-  km_final NUMERIC NOT NULL,
-  freight_value NUMERIC NOT NULL DEFAULT 0,
-  observation TEXT,
-  signature TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+- **originalPrice**: Preco cadastrado do produto
+- **unitPrice**: Preco praticado (editavel pelo vendedor)
+- **Desconto**: `(originalPrice - unitPrice) * quantity`
 
--- Checklists de Segurança (Motoristas)
-CREATE TABLE public.safety_checklists (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT NOT NULL,
-  user_name TEXT NOT NULL,
-  vehicle_plate TEXT NOT NULL,
-  agua_radiador TEXT NOT NULL DEFAULT 'não se aplica',
-  oleo_motor TEXT NOT NULL DEFAULT 'não se aplica',
-  oleo_hidraulico TEXT NOT NULL DEFAULT 'não se aplica',
-  fluido_freio TEXT NOT NULL DEFAULT 'não se aplica',
-  pneus_calibrados TEXT NOT NULL DEFAULT 'não se aplica',
-  pneus_estado TEXT NOT NULL DEFAULT 'não se aplica',
-  farois_funcionando TEXT NOT NULL DEFAULT 'não se aplica',
-  lanternas_funcionando TEXT NOT NULL DEFAULT 'não se aplica',
-  setas_funcionando TEXT NOT NULL DEFAULT 'não se aplica',
-  freio_servico TEXT NOT NULL DEFAULT 'não se aplica',
-  freio_estacionamento TEXT NOT NULL DEFAULT 'não se aplica',
-  limpador_parabrisa TEXT NOT NULL DEFAULT 'não se aplica',
-  buzina TEXT NOT NULL DEFAULT 'não se aplica',
-  espelhos_retrovisores TEXT NOT NULL DEFAULT 'não se aplica',
-  cinto_seguranca TEXT NOT NULL DEFAULT 'não se aplica',
-  extintor_incendio TEXT NOT NULL DEFAULT 'não se aplica',
-  triangulo_sinalizacao TEXT NOT NULL DEFAULT 'não se aplica',
-  macaco_chave_roda TEXT NOT NULL DEFAULT 'não se aplica',
-  documentos_veiculo TEXT NOT NULL DEFAULT 'não se aplica',
-  estepe_estado TEXT NOT NULL DEFAULT 'não se aplica',
-  limpeza_geral TEXT NOT NULL DEFAULT 'não se aplica',
-  has_repairs_needed BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Relatórios de Manutenção
-CREATE TABLE public.maintenance_reports (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT NOT NULL,
-  user_name TEXT NOT NULL,
-  vehicle_plate TEXT NOT NULL,
-  problem_description TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'pendente',
-  resolution_date DATE,
-  resolved_by TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Despesas de Motoristas
-CREATE TABLE public.driver_expenses (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id TEXT NOT NULL,
-  user_name TEXT NOT NULL,
-  amount NUMERIC NOT NULL,
-  vehicle_plate TEXT NOT NULL,
-  location_equipment TEXT NOT NULL,
-  description TEXT,
-  receipt_image_url TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Checklists de Operadores (Pá Carregadeira)
-CREATE TABLE public.operator_checklists (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT NOT NULL,
-  user_name TEXT NOT NULL,
-  equipment_id TEXT NOT NULL,
-  nivel_oleo_motor TEXT NOT NULL DEFAULT 'não se aplica',
-  nivel_oleo_hidraulico TEXT NOT NULL DEFAULT 'não se aplica',
-  nivel_liquido_arrefecimento TEXT NOT NULL DEFAULT 'não se aplica',
-  filtro_ar_limpo TEXT NOT NULL DEFAULT 'não se aplica',
-  vazamentos_hidraulicos TEXT NOT NULL DEFAULT 'não se aplica',
-  mangueiras_hidraulicas TEXT NOT NULL DEFAULT 'não se aplica',
-  cilindros_hidraulicos TEXT NOT NULL DEFAULT 'não se aplica',
-  cacamba_estado TEXT NOT NULL DEFAULT 'não se aplica',
-  dentes_cacamba TEXT NOT NULL DEFAULT 'não se aplica',
-  articulacao_central TEXT NOT NULL DEFAULT 'não se aplica',
-  pinos_buchas TEXT NOT NULL DEFAULT 'não se aplica',
-  pneus_estado TEXT NOT NULL DEFAULT 'não se aplica',
-  pneus_calibragem TEXT NOT NULL DEFAULT 'não se aplica',
-  parafusos_rodas TEXT NOT NULL DEFAULT 'não se aplica',
-  display_balanca TEXT NOT NULL DEFAULT 'não se aplica',
-  calibracao_balanca TEXT NOT NULL DEFAULT 'não se aplica',
-  sensores_balanca TEXT NOT NULL DEFAULT 'não se aplica',
-  cabo_conexao_balanca TEXT NOT NULL DEFAULT 'não se aplica',
-  cintos_seguranca TEXT NOT NULL DEFAULT 'não se aplica',
-  extintor TEXT NOT NULL DEFAULT 'não se aplica',
-  espelhos_retrovisores TEXT NOT NULL DEFAULT 'não se aplica',
-  luzes_funcionando TEXT NOT NULL DEFAULT 'não se aplica',
-  alarme_re TEXT NOT NULL DEFAULT 'não se aplica',
-  limpador_parabrisa TEXT NOT NULL DEFAULT 'não se aplica',
-  ar_condicionado TEXT NOT NULL DEFAULT 'não se aplica',
-  comandos_operacionais TEXT NOT NULL DEFAULT 'não se aplica',
-  freios TEXT NOT NULL DEFAULT 'não se aplica',
-  buzina TEXT NOT NULL DEFAULT 'não se aplica',
-  has_repairs_needed BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Trigger de manutenção
-CREATE OR REPLACE FUNCTION public.update_maintenance_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SET search_path = public;
-
-CREATE TRIGGER update_maintenance_reports_updated_at
-  BEFORE UPDATE ON public.maintenance_reports
-  FOR EACH ROW EXECUTE FUNCTION public.update_maintenance_updated_at();
-
--- Índices
-CREATE INDEX idx_daily_reports_user_id ON public.daily_reports(user_id);
-CREATE INDEX idx_daily_reports_created_at ON public.daily_reports(created_at DESC);
-CREATE INDEX idx_safety_checklists_user_id ON public.safety_checklists(user_id);
-CREATE INDEX idx_safety_checklists_created_at ON public.safety_checklists(created_at DESC);
-CREATE INDEX idx_maintenance_reports_user_id ON public.maintenance_reports(user_id);
-CREATE INDEX idx_maintenance_reports_status ON public.maintenance_reports(status);
-CREATE INDEX idx_maintenance_reports_created_at ON public.maintenance_reports(created_at DESC);
+```javascript
+const updateItemUnitPrice = (itemId, newPrice) => {
+  const calculatedDiscount = (item.originalPrice - newPrice) * item.quantity;
+  return { 
+    unitPrice: newPrice, 
+    discount: Math.max(0, calculatedDiscount),
+    total: item.quantity * newPrice 
+  };
+};
 ```
 
-### Script 5: Usuários e Autenticação
+### 2.4 Condicoes de Pagamento
 
-```sql
--- Enum de roles
-CREATE TYPE public.app_role AS ENUM (
-  'diretor', 'gerente', 'vendedor', 'caixa', 
-  'administrativo', 'motorista', 'operador'
-);
+**A Vista** (status = 'finalizado' imediato):
+- Dinheiro
+- PIX
+- Deposito
 
--- Usuários do App
-CREATE TABLE public.app_users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  access_code TEXT UNIQUE NOT NULL,
-  name TEXT NOT NULL,
-  cpf TEXT NOT NULL,
-  password_hash TEXT NOT NULL,
-  active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
+**A Prazo** (status = 'pendente', gera Conta a Receber):
+- Boleto
+- Cartao no Credito
+- Carteira
+- Permuta
+- Cartao de Debito
 
--- Roles de Usuários
-CREATE TABLE public.user_roles (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES public.app_users(id) ON DELETE CASCADE NOT NULL,
-  role app_role NOT NULL,
-  UNIQUE(user_id, role)
-);
+### 2.5 Analise de Comprovante por IA (PIX/Deposito)
 
--- Permissões de Usuários
-CREATE TABLE public.user_permissions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES public.app_users(id) ON DELETE CASCADE NOT NULL,
-  module TEXT NOT NULL,
-  actions TEXT[] NOT NULL,
-  UNIQUE(user_id, module)
-);
-
--- Função para verificar role (evita recursão RLS)
-CREATE OR REPLACE FUNCTION public.has_role(_user_id UUID, _role app_role)
-RETURNS BOOLEAN
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.user_roles
-    WHERE user_id = _user_id AND role = _role
-  )
-$$;
-
--- Função para obter role do usuário
-CREATE OR REPLACE FUNCTION public.get_user_role(_user_id UUID)
-RETURNS app_role
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public AS $$
-  SELECT role FROM public.user_roles WHERE user_id = _user_id LIMIT 1
-$$;
-
--- Trigger updated_at
-CREATE TRIGGER update_app_users_updated_at
-  BEFORE UPDATE ON public.app_users
-  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
--- Usuário padrão Diretor (senha: admin123)
-INSERT INTO public.app_users (access_code, name, cpf, password_hash)
-VALUES ('001', 'Diretor', '000.000.000-00', 'admin123');
-
--- Atribuir role diretor
-INSERT INTO public.user_roles (user_id, role)
-SELECT id, 'diretor' FROM public.app_users WHERE access_code = '001';
-
--- Permissões completas para Diretor
-INSERT INTO public.user_permissions (user_id, module, actions)
-SELECT id, 'cadastro', ARRAY['Clientes', 'Produtos', 'Fornecedores']
-FROM public.app_users WHERE access_code = '001';
-
-INSERT INTO public.user_permissions (user_id, module, actions)
-SELECT id, 'vendas', ARRAY['Nova Venda', 'Orçamentos', 'Pedidos']
-FROM public.app_users WHERE access_code = '001';
-
-INSERT INTO public.user_permissions (user_id, module, actions)
-SELECT id, 'operacao', ARRAY['Operador', 'Carregados', 'Abastecimento', 'Veículos']
-FROM public.app_users WHERE access_code = '001';
-
-INSERT INTO public.user_permissions (user_id, module, actions)
-SELECT id, 'motorista', ARRAY['Parte Diária', 'CheckList', 'Manutenção']
-FROM public.app_users WHERE access_code = '001';
-
-INSERT INTO public.user_permissions (user_id, module, actions)
-SELECT id, 'financeiro', ARRAY['Contas a Pagar', 'Contas a Receber']
-FROM public.app_users WHERE access_code = '001';
-
-INSERT INTO public.user_permissions (user_id, module, actions)
-SELECT id, 'relatorios', ARRAY['Vendas', 'Produtos', 'Financeiro', 'Clientes', 'Fornecedores', 'Permuta', 'Ticagem', 'Partes Diárias', 'Checklists', 'Manutenções']
-FROM public.app_users WHERE access_code = '001';
-
-INSERT INTO public.user_permissions (user_id, module, actions)
-SELECT id, 'configuracao', ARRAY['Empresa', 'Sistema', 'Contas de Recebimento']
-FROM public.app_users WHERE access_code = '001';
+```text
+Comprovante (foto) ──▶ analyze-receipt ──▶ Gemini 2.5 Flash
+                                               │
+                                               ▼
+                              ┌────────────────────────────┐
+                              │ Extrai: banco, valor, data │
+                              │ Confianca >= 0.8?          │
+                              │ Valor confere (+-R$0.50)?  │
+                              └────────────────────────────┘
+                                               │
+                    ┌──────────────────────────┼──────────────────────────┐
+                    ▼                          ▼                          ▼
+            Auto-confirmado              Divergencia                 Baixa confianca
+          confirmed_by: 'ia'          Alerta ao usuario           Verificacao manual
+          status: 'recebido'
 ```
 
-### Script 6: RLS Policies
+### 2.6 Soft Delete de Vendas
 
-```sql
--- Habilitar RLS em todas as tabelas
-ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.payment_methods ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.sale_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.company_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.sales_deletions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.suppliers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.receiving_accounts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.accounts_receivable ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.accounts_payable ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vehicles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.fuel_entries ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.order_loadings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.daily_reports ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.safety_checklists ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.maintenance_reports ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.driver_expenses ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.operator_checklists ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.app_users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_permissions ENABLE ROW LEVEL SECURITY;
+- Nao exclui do banco, muda `status` para 'cancelado'
+- Grava motivo nas `notes`: `[EXCLUIDO]: {reason}`
+- Registra em `sales_deletions` para auditoria
 
--- Políticas de acesso público (ajuste conforme necessário para produção)
-CREATE POLICY "Allow all access to customers" ON public.customers FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to products" ON public.products FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to payment_methods" ON public.payment_methods FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to sales" ON public.sales FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to sale_items" ON public.sale_items FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Anyone can read company settings" ON public.company_settings FOR SELECT USING (true);
-CREATE POLICY "Anyone can insert company settings" ON public.company_settings FOR INSERT WITH CHECK (true);
-CREATE POLICY "Anyone can update company settings" ON public.company_settings FOR UPDATE USING (true);
-CREATE POLICY "Anyone can read sales deletions" ON public.sales_deletions FOR SELECT USING (true);
-CREATE POLICY "Anyone can insert sales deletions" ON public.sales_deletions FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow all access to suppliers" ON public.suppliers FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to receiving_accounts" ON public.receiving_accounts FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to accounts_receivable" ON public.accounts_receivable FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to accounts_payable" ON public.accounts_payable FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to vehicles" ON public.vehicles FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to fuel_entries" ON public.fuel_entries FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Anyone can view order loadings" ON public.order_loadings FOR SELECT USING (true);
-CREATE POLICY "Anyone can insert order loadings" ON public.order_loadings FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow all access to daily_reports" ON public.daily_reports FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to safety_checklists" ON public.safety_checklists FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to maintenance_reports" ON public.maintenance_reports FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to driver_expenses" ON public.driver_expenses FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to operator_checklists" ON public.operator_checklists FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to app_users" ON public.app_users FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to user_roles" ON public.user_roles FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to user_permissions" ON public.user_permissions FOR ALL USING (true) WITH CHECK (true);
+---
 
--- Habilitar realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE public.accounts_receivable;
+## 3. Sistema Financeiro
+
+### 3.1 Contas a Receber
+
+**Criacao automatica**: Ao salvar pedido, cria registro em `accounts_receivable`
+
+**Campos**:
+- `original_amount`: Valor da venda
+- `interest_penalty`: Juros/multas (default 0)
+- `final_amount`: `original_amount + interest_penalty`
+- `status`: 'pendente' | 'recebido'
+- `confirmed_by`: 'manual' | 'ia'
+
+**Fluxo de Baixa**:
+```javascript
+const confirmReceipt = async (id, data) => {
+  const finalAmount = originalAmount + data.interestPenalty;
+  await supabase.from('accounts_receivable').update({
+    status: 'recebido',
+    receiving_account_id: data.receivingAccountId,
+    interest_penalty: data.interestPenalty,
+    final_amount: finalAmount,
+    receipt_date: data.receiptDate,
+    confirmed_by: data.confirmedBy || 'manual',
+  }).eq('id', id);
+  
+  // Atualiza status da venda
+  await supabase.from('sales').update({ status: 'finalizado' }).eq('id', saleId);
+};
 ```
 
-### Script 7: Storage Buckets
+### 3.2 Contas a Pagar
 
-```sql
--- Buckets de armazenamento
-INSERT INTO storage.buckets (id, name, public) VALUES 
-  ('receipts', 'receipts', true),
-  ('ticket-images', 'ticket-images', true),
-  ('expense-receipts', 'expense-receipts', true),
-  ('fuel-receipts', 'fuel-receipts', true);
-
--- Políticas de storage
-CREATE POLICY "Allow all uploads to receipts bucket" ON storage.objects FOR INSERT TO public WITH CHECK (bucket_id = 'receipts');
-CREATE POLICY "Allow public read from receipts bucket" ON storage.objects FOR SELECT TO public USING (bucket_id = 'receipts');
-CREATE POLICY "Allow all delete from receipts bucket" ON storage.objects FOR DELETE TO public USING (bucket_id = 'receipts');
-
-CREATE POLICY "Public can view ticket images" ON storage.objects FOR SELECT TO public USING (bucket_id = 'ticket-images');
-CREATE POLICY "Anyone can upload ticket images" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'ticket-images');
-CREATE POLICY "Anyone can delete ticket images" ON storage.objects FOR DELETE USING (bucket_id = 'ticket-images');
-
-CREATE POLICY "Anyone can view expense receipts" ON storage.objects FOR SELECT USING (bucket_id = 'expense-receipts');
-CREATE POLICY "Anyone can upload expense receipts" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'expense-receipts');
-CREATE POLICY "Anyone can delete expense receipts" ON storage.objects FOR DELETE USING (bucket_id = 'expense-receipts');
-
-CREATE POLICY "Fuel receipts are publicly accessible" ON storage.objects FOR SELECT USING (bucket_id = 'fuel-receipts');
-CREATE POLICY "Anyone can upload fuel receipts" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'fuel-receipts');
-CREATE POLICY "Anyone can delete fuel receipts" ON storage.objects FOR DELETE USING (bucket_id = 'fuel-receipts');
+**Geracao de Parcelas**:
+```javascript
+const addAccountPayable = async (data) => {
+  const { amount, installments, dueDate, daysBetween } = data;
+  const baseAmount = Math.floor((amount / installments) * 100) / 100;
+  const remainder = Math.round((amount - (baseAmount * (installments - 1))) * 100) / 100;
+  
+  let currentDate = new Date(dueDate);
+  
+  for (let i = 1; i <= installments; i++) {
+    const instAmount = i === installments ? remainder : baseAmount;
+    // Insere parcela com:
+    // - due_date: currentDate
+    // - installment_number: i
+    // - total_installments: installments
+    currentDate.setDate(currentDate.getDate() + daysBetween);
+  }
+};
 ```
 
 ---
 
-## Passo 4: Criar Edge Functions no Novo Supabase
+## 4. Sistema de Permuta (Barter)
 
-Você precisará recriar as **8 Edge Functions** no novo projeto. As principais são:
+### 4.1 Campos do Cliente
 
-| Função | Descrição |
+| Campo | Descricao |
+|-------|-----------|
+| has_barter | Cliente usa permuta (boolean) |
+| barter_credit | Saldo disponivel (positivo) |
+| barter_limit | Limite de debito permitido (negativo) |
+| barter_notes | Observacoes |
+
+### 4.2 Logica de Venda com Permuta
+
+1. Vendedor seleciona pagamento "Permuta"
+2. Sistema verifica `barter_credit >= total_venda`
+3. Se OK: Debita do `barter_credit`
+4. Se nao: Alerta que excede limite
+
+---
+
+## 5. Modulo de Operacao
+
+### 5.1 Painel do Operador
+
+**Estatisticas carregadas**:
+- Carregamentos hoje (order_loadings do usuario)
+- Abastecimentos do mes (fuel_entries do usuario)
+- Checklist diario completo?
+
+**Lembrete automatico**: Se checklist nao foi feito hoje, exibe modal de alerta
+
+### 5.2 Verificacao de Peso por IA (analyze-ticket)
+
+```text
+Foto do Ticket ──▶ analyze-ticket ──▶ Gemini 2.5 Flash
+                                           │
+                                           ▼
+                         Extrai: peso_bruto, peso_liquido, tara, data_hora
+                                           │
+                                           ▼
+                         Compara peso_liquido vs peso_esperado (totalWeight da venda)
+                                           │
+                    ┌──────────────────────┼──────────────────────┐
+                    ▼                      ▼                      ▼
+              Diferenca < 5%         5% <= Dif <= 10%       Diferenca > 10%
+               Aprovado                Alerta                   Erro
+               (verde)               (amarelo)               (vermelho)
+```
+
+**Feedback por Voz**: Usa Web Speech API para anunciar resultado
+
+### 5.3 Checklist do Operador (28 campos)
+
+Categorias inspecionadas:
+- Motor e fluidos (oleo, arrefecimento)
+- Sistema hidraulico (mangueiras, cilindros)
+- Cacamba e articulacao
+- Pneus e rodas
+- Balanca (display, calibracao, sensores)
+- Seguranca (cintos, extintor, alarme de re)
+
+---
+
+## 6. Modulo de Motorista
+
+### 6.1 Parte Diaria
+
+**Campos**:
+- vehicle_plate, customer_name, order_number
+- km_initial, km_final, freight_value
+- observation, signature
+
+**Auto-preenchimento de KM**:
+```javascript
+const loadLastKm = async () => {
+  const { data } = await supabase
+    .from('daily_reports')
+    .select('km_final')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (data?.km_final) {
+    setFormData(prev => ({ ...prev, km_initial: String(data.km_final) }));
+  }
+};
+```
+
+### 6.2 Multiplicadores de Frete por Placa
+
+```javascript
+const VEHICLE_PLATES = [
+  { plate: 'RSC7D05', multiplier: 6 },
+  { plate: 'RSC5I45', multiplier: 6 },
+  { plate: 'RSC3G57', multiplier: 6 },
+  { plate: 'RSC3D46', multiplier: 6 },
+  { plate: 'QWF1G05', multiplier: 12 },
+  { plate: 'QWM1B96', multiplier: 12 },
+  { plate: 'MWQ5551', multiplier: 12 },
+  { plate: 'QWE3E38', multiplier: 12 },
+];
+
+const getPlateMultiplier = (plate) => {
+  const found = VEHICLE_PLATES.find(v => v.plate === plate);
+  return found?.multiplier ?? 6;
+};
+```
+
+### 6.3 Checklist de Seguranca (21 itens)
+
+Itens verificados:
+- Nivel de agua/oleo/fluido
+- Pneus (calibragem e estado)
+- Farois, lanternas, setas
+- Freios (servico e estacionamento)
+- Itens de seguranca (cinto, extintor, triangulo)
+- Documentacao
+
+---
+
+## 7. Sistema de Abastecimento
+
+### 7.1 Campos do Formulario
+
+- vehicle_id (Select de veiculos ativos)
+- date
+- odometer_value (KM ou Horimetro)
+- liters
+- fuel_type (diesel, gasolina, etanol)
+- total_cost (R$)
+- notes
+
+### 7.2 Calculo Automatico de Preco/Litro
+
+```javascript
+const calculatePricePerLiter = () => {
+  const totalCost = parseFloat(formData.total_cost);
+  const liters = parseFloat(formData.liters);
+  if (totalCost > 0 && liters > 0) {
+    return totalCost / liters;
+  }
+  return null;
+};
+```
+
+### 7.3 Visibilidade por Role
+
+- **Diretor**: Ve todos os abastecimentos
+- **Outros**: Ve apenas seus proprios registros
+
+---
+
+## 8. Importacao Inteligente de Dados
+
+### 8.1 Tipos Suportados
+
+| Tipo | Formatos | IA Usada |
+|------|----------|----------|
+| Clientes | Excel (.xlsx, .xls) | Gemini 2.5 Flash |
+| Produtos | Excel (.xlsx, .xls) | Gemini 2.5 Flash |
+| Vendas | Excel + PDF | Gemini 2.5 Flash |
+
+### 8.2 Mapeamento de Colunas (Clientes)
+
+```text
+Coluna Excel              │ Campo Banco
+──────────────────────────┼────────────────
+CEP, Codigo Postal        │ zip_code
+Endereco, Rua, Logradouro │ street
+Numero, Num, No           │ number
+Complemento               │ complement
+Bairro                    │ neighborhood
+Cidade, Municipio         │ city
+Estado, UF                │ state
+```
+
+### 8.3 Normalizacao de Produtos (Vendas)
+
+```javascript
+// Variacoes normalizadas:
+"N.1", "N 1", "NO.1", "NR.1" → "Nº1"
+"SEIXO BRITADO N.1" → "SEIXO BRITADO Nº1"
+```
+
+### 8.4 Mapeamento de Pagamentos
+
+```javascript
+// A Vista
+'PIX', 'Dinheiro', 'Cartão de Débito' → paymentType: 'vista'
+
+// A Prazo
+'Carteira', 'Vale', 'Boleto', 'Cartão de Crédito' → paymentType: 'prazo'
+```
+
+### 8.5 Pre-cadastro Automatico de Clientes
+
+Se cliente nao existe pelo CPF/CNPJ durante importacao de vendas:
+1. Cria registro basico com nome + documento
+2. Atribui proximo codigo sequencial
+3. Adiciona nota: "Cadastro criado via importacao automatica"
+
+---
+
+## 9. Assistente de IA (business-chat)
+
+### 9.1 Consultas Disponiveis (Tools)
+
+| Funcao | Descricao |
 |--------|-----------|
-| `auth-login` | Autenticação de usuários |
-| `auth-verify` | Verificação de tokens |
-| `auth-hash-password` | Hash de senhas PBKDF2 |
-| `business-chat` | Assistente IA |
-| `analyze-ticket` | Análise de tickets de pesagem |
-| `analyze-receipt` | Análise de comprovantes |
-| `analyze-import` | Importação de dados |
-| `analyze-sales-pdf` | Análise de PDFs de vendas |
+| query_customers | Busca clientes, filtra por permuta |
+| query_products | Busca produtos, filtra estoque critico |
+| query_sales | Busca vendas por periodo/cliente/produto |
+| query_financial | Contas a receber/pagar por status |
+| query_suppliers | Busca fornecedores |
 
----
+### 9.2 Formato de Resposta Obrigatorio
 
-## Passo 5: Copiar Código do Projeto
+```markdown
+**📍 Onde encontrar:**
+[Caminho no sistema, ex: Menu: Cadastro → Clientes]
 
-1. No projeto atual, baixe o código-fonte (ou use o repositório Git)
-2. Copie para o novo projeto Lovable
-3. Atualize as variáveis de ambiente no `.env`:
-
-```
-VITE_SUPABASE_URL=https://[seu-projeto].supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=[sua-anon-key]
-VITE_SUPABASE_PROJECT_ID=[seu-project-id]
+**📊 Resultado:**
+[Dados encontrados]
 ```
 
----
+### 9.3 Periodos de Consulta
 
-## Resumo das Tabelas (18 tabelas)
-
-| Tabela | Descrição |
-|--------|-----------|
-| `customers` | Clientes |
-| `products` | Produtos |
-| `payment_methods` | Formas de pagamento |
-| `sales` | Vendas/Orçamentos |
-| `sale_items` | Itens das vendas |
-| `company_settings` | Configurações da empresa |
-| `sales_deletions` | Log de exclusões |
-| `suppliers` | Fornecedores |
-| `receiving_accounts` | Contas de recebimento |
-| `accounts_receivable` | Contas a receber |
-| `accounts_payable` | Contas a pagar |
-| `vehicles` | Veículos |
-| `fuel_entries` | Abastecimentos |
-| `order_loadings` | Carregamentos |
-| `daily_reports` | Partes diárias |
-| `safety_checklists` | Checklists motoristas |
-| `maintenance_reports` | Manutenções |
-| `driver_expenses` | Despesas motoristas |
-| `operator_checklists` | Checklists operadores |
-| `app_users` | Usuários do sistema |
-| `user_roles` | Roles dos usuários |
-| `user_permissions` | Permissões |
+```javascript
+switch (period) {
+  case "today": startDate = startOfDay; break;
+  case "week": startDate = startOfWeek; break;
+  case "month": startDate = startOfMonth; break;
+  case "year": startDate = startOfYear; break;
+}
+```
 
 ---
 
-## Credenciais Padrão
+## 10. Contextos React (State Management)
 
-- **Código de Acesso**: `001`
-- **Senha**: `admin123`
-- **Role**: Diretor (acesso total)
+### 10.1 Hierarquia de Providers
+
+```text
+BrowserRouter
+└── AuthProvider
+    └── CompanyProvider
+        └── CustomerProvider
+            └── ProductProvider
+                └── SalesProvider
+                    └── FinancialProvider
+                        └── SettingsProvider
+                            └── SupplierProvider
+                                └── App Routes
+```
+
+### 10.2 Padrao de Contexto
+
+```javascript
+const CustomerContext = createContext(undefined);
+
+export const CustomerProvider = ({ children }) => {
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  const fetchCustomers = async () => { /* ... */ };
+  
+  useEffect(() => { fetchCustomers(); }, []);
+  
+  return (
+    <CustomerContext.Provider value={{
+      customers,
+      loading,
+      addCustomer,
+      updateCustomer,
+      deleteCustomer,
+      getNextCustomerCode,
+      refreshCustomers: fetchCustomers
+    }}>
+      {children}
+    </CustomerContext.Provider>
+  );
+};
+
+export const useCustomers = () => {
+  const context = useContext(CustomerContext);
+  if (!context) throw new Error('useCustomers must be used within CustomerProvider');
+  return context;
+};
+```
+
+---
+
+## 11. Edge Functions - Resumo
+
+| Funcao | Autenticacao | Funcionalidade |
+|--------|--------------|----------------|
+| auth-login | Nao | Login e geracao de token |
+| auth-verify | Sim (token) | Validacao de sessao |
+| auth-hash-password | Sim (token) | Hash de novas senhas |
+| business-chat | Sim (token) | Assistente IA com queries |
+| analyze-ticket | Sim (token) | Leitura de tickets de pesagem |
+| analyze-receipt | Nao | Analise de comprovantes bancarios |
+| analyze-import | Nao | Mapeamento de dados para importacao |
+| analyze-sales-pdf | Nao | Extracao de vendas de PDFs |
+
+---
+
+## 12. Storage Buckets
+
+| Bucket | Uso |
+|--------|-----|
+| receipts | Comprovantes de pagamento (vendas) |
+| ticket-images | Fotos de tickets de pesagem |
+| expense-receipts | Comprovantes de despesas (motoristas) |
+| fuel-receipts | Comprovantes de abastecimento |
+
+---
+
+## 13. Prompt Mestre para Novo Projeto
+
+Use este prompt ao criar o novo projeto Lovable:
+
+```
+Crie um sistema de gestao comercial chamado "Sistema Cezar" com:
+
+AUTENTICACAO:
+- Login customizado via tabela app_users (nao usar Supabase Auth)
+- Tabelas: app_users, user_roles (enum app_role), user_permissions
+- Roles: diretor, gerente, vendedor, caixa, administrativo, motorista, operador
+- Edge functions: auth-login (PBKDF2), auth-verify, auth-hash-password
+- Token JWT-like em base64 com expiracao 24h
+- Redirecionar motorista para /motorista, operador para /operador
+
+VENDAS:
+- Pedidos (numeracao 00001) e orcamentos (ORC-00001)
+- Tabelas: sales, sale_items com calculo de peso (quantity * density para M3)
+- Desconto automatico: (preco_cadastrado - preco_praticado) * quantidade
+- Pagamentos A Vista (Dinheiro, PIX, Deposito) e A Prazo (Boleto, Cartao, Carteira, Permuta)
+- Analise de comprovante por IA para PIX/Deposito com auto-baixa
+
+FINANCEIRO:
+- Contas a Receber criadas automaticamente ao salvar pedido
+- Contas a Pagar com geracao de parcelas
+- Campo confirmed_by para indicar baixa manual ou por IA
+
+PERMUTA:
+- Campos no cliente: has_barter, barter_credit, barter_limit, barter_notes
+- Pagamento Permuta debita do saldo do cliente
+
+OPERACAO:
+- Painel do operador mobile-first
+- Verificacao de peso por IA (analyze-ticket) com feedback por voz
+- Checklist diario de maquinas (28 itens)
+- Abastecimento com upload de comprovante
+
+MOTORISTA:
+- Parte diaria com KM inicial auto-preenchido do ultimo registro
+- Checklist de seguranca (21 itens)
+- Relatorio de manutencao
+- Multiplicadores de frete por placa
+
+IMPORTACAO:
+- Excel para clientes, produtos, vendas
+- PDF para vendas (analyze-sales-pdf)
+- Normalizacao de nomes de produtos (N.1 → No1)
+- Pre-cadastro automatico de clientes
+
+ASSISTENTE IA:
+- Edge function business-chat com tools para consultas
+- Resposta sempre com "Onde encontrar" + "Resultado"
+- Streaming de respostas
+
+TECNOLOGIAS:
+- React + TypeScript + Vite
+- Tailwind CSS + shadcn/ui
+- Supabase (PostgreSQL, Edge Functions, Storage)
+- Recharts para graficos
+- date-fns para datas
+```
+
+---
+
+## Secao Tecnica: Detalhes de Implementacao
+
+### Chaves de LocalStorage
+
+```javascript
+const SESSION_KEY = 'cezar_session';  // { id: userId }
+const TOKEN_KEY = 'cezar_auth_token'; // Token base64
+```
+
+### Chamadas Autenticadas a Edge Functions
+
+```javascript
+const token = localStorage.getItem('cezar_auth_token');
+const response = await fetch(`${SUPABASE_URL}/functions/v1/function-name`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify(data)
+});
+```
+
+### Tratamento de Rate Limit (429)
+
+```javascript
+if (response.status === 429) {
+  return { 
+    error: "Limite de requisições excedido. Aguarde alguns segundos.",
+    retryAfter: 10
+  };
+}
+```
+
