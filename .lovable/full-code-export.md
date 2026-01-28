@@ -1,21 +1,21 @@
-# Exportação Completa do Código - Sistema Cezar
+# Exportacao Completa do Codigo - Sistema Cezar
 
-Este documento contém TODO o código-fonte necessário para recriar o sistema em um novo projeto Lovable com Supabase externo.
+Este documento contem TODO o codigo-fonte necessario para recriar o sistema em um novo projeto Lovable com Supabase externo.
 
 ---
 
-## INSTRUÇÕES DE USO
+## INSTRUCOES DE USO
 
-1. No novo projeto Lovable, vá em cada arquivo listado abaixo
-2. Copie o conteúdo completo e cole no arquivo correspondente
-3. Para arquivos que não existem, crie-os primeiro
-4. Após copiar todos os arquivos, o sistema funcionará corretamente
+1. No novo projeto Lovable, va em cada arquivo listado abaixo
+2. Copie o conteudo completo e cole no arquivo correspondente
+3. Para arquivos que nao existem, crie-os primeiro
+4. Apos copiar todos os arquivos, o sistema funcionara corretamente
 
 ---
 
 ## 1. ARQUIVO: src/App.tsx
 
-Este é o arquivo principal com TODAS as rotas e providers. COPIE EXATAMENTE como está.
+Este e o arquivo principal com TODAS as rotas e providers. COPIE EXATAMENTE como esta.
 
 ```tsx
 import { Toaster } from "@/components/ui/toaster";
@@ -87,7 +87,7 @@ const ProtectedRoute = ({ isAuthenticated, isLoading, children }: RouteGateProps
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground text-sm">Carregando…</div>
+        <div className="text-muted-foreground text-sm">Carregando...</div>
       </div>
     );
   }
@@ -115,7 +115,7 @@ type PermissionRouteProps = {
 const PermissionRoute = ({ module, action, children }: PermissionRouteProps) => {
   const { hasActionAccess } = usePermissions();
   if (!hasActionAccess(module, action)) {
-    toast.error('Você não tem permissão para acessar esta página');
+    toast.error('Voce nao tem permissao para acessar esta pagina');
     return <Navigate to="/" replace />;
   }
   return <>{children}</>;
@@ -125,7 +125,7 @@ const PublicRoute = ({ isAuthenticated, isLoading, children }: RouteGateProps) =
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground text-sm">Carregando…</div>
+        <div className="text-muted-foreground text-sm">Carregando...</div>
       </div>
     );
   }
@@ -172,7 +172,7 @@ const AppRoutes = () => {
         } />
         <Route path="/configuracao/importacao" element={
           <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-            <PermissionRoute module="configuracao" action="Importação">
+            <PermissionRoute module="configuracao" action="Importacao">
               <DataImport />
             </PermissionRoute>
           </ProtectedRoute>
@@ -214,7 +214,7 @@ const AppRoutes = () => {
         } />
         <Route path="/vendas/orcamentos" element={
           <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-            <PermissionRoute module="vendas" action="Orçamentos">
+            <PermissionRoute module="vendas" action="Orcamentos">
               <SalesList type="orcamento" />
             </PermissionRoute>
           </ProtectedRoute>
@@ -335,7 +335,7 @@ const AppRoutes = () => {
         } />
         <Route path="/configuracao/veiculos" element={
           <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-            <PermissionRoute module="configuracao" action="Veículos">
+            <PermissionRoute module="configuracao" action="Veiculos">
               <VehicleManagement />
             </PermissionRoute>
           </ProtectedRoute>
@@ -349,7 +349,7 @@ const AppRoutes = () => {
         {/* Admin Reports for Driver Module */}
         <Route path="/relatorios/partes-diarias" element={
           <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-            <PermissionRoute module="relatorios" action="Partes Diárias">
+            <PermissionRoute module="relatorios" action="Partes Diarias">
               <DailyReportsAdmin />
             </PermissionRoute>
           </ProtectedRoute>
@@ -363,7 +363,7 @@ const AppRoutes = () => {
         } />
         <Route path="/relatorios/manutencoes" element={
           <ProtectedRoute isAuthenticated={isAuthenticated} isLoading={isLoading}>
-            <PermissionRoute module="relatorios" action="Manutenções">
+            <PermissionRoute module="relatorios" action="Manutencoes">
               <MaintenanceAdmin />
             </PermissionRoute>
           </ProtectedRoute>
@@ -418,233 +418,313 @@ export default App;
 export interface Product {
   id: string;
   code: string;
-  barcode?: string;
   name: string;
   description?: string;
-  category?: string;
   unit: string;
-  density?: number; // Peso em Kg por m³
-  costPrice: number;
-  salePrice: number;
   stock: number;
-  minStock?: number;
+  min_stock: number;
+  cost_price: number;
+  sale_price: number;
+  category?: string;
   active: boolean;
-  createdAt: Date;
+  density?: number; // Campo de densidade (Kg/m3)
+  created_at: string;
+  updated_at: string;
 }
-
-export const unitOptions = [
-  { value: 'UN', label: 'UN - Unidade' },
-  { value: 'KG', label: 'KG - Quilograma' },
-  { value: 'MT', label: 'MT - Metro' },
-  { value: 'LT', label: 'LT - Litro' },
-  { value: 'CX', label: 'CX - Caixa' },
-  { value: 'PC', label: 'PC - Peça' },
-  { value: 'ML', label: 'ML - Mililitro' },
-  { value: 'M2', label: 'M² - Metro Quadrado' },
-  { value: 'M3', label: 'M³ - Metro Cúbico' },
-];
 ```
 
 ---
 
-## 3. ARQUIVO: src/types/operator.ts
+## 3. ARQUIVO: src/types/operator.ts (CHECKLIST 28 ITENS)
 
 ```typescript
-export type ChecklistAnswer = 'sim' | 'não' | 'não se aplica';
+// Lista de equipamentos disponiveis
+export const EQUIPMENT_LIST = [
+  { id: 'pa-01', name: 'PA CARREGADEIRA 01' },
+  { id: 'pa-02', name: 'PA CARREGADEIRA 02' },
+  { id: 'pa-03', name: 'PA CARREGADEIRA 03' },
+  { id: 'retroescavadeira', name: 'RETROESCAVADEIRA' },
+  { id: 'empilhadeira-01', name: 'EMPILHADEIRA 01' },
+  { id: 'empilhadeira-02', name: 'EMPILHADEIRA 02' },
+];
+
+// Definicao das 28 questoes do checklist do operador
+export const OPERATOR_CHECKLIST_QUESTIONS = [
+  // MOTOR E FLUIDOS
+  { id: 'nivel_oleo_motor', label: 'Nivel do oleo do motor', category: 'Motor e Fluidos' },
+  { id: 'nivel_oleo_hidraulico', label: 'Nivel do oleo hidraulico', category: 'Motor e Fluidos' },
+  { id: 'nivel_liquido_arrefecimento', label: 'Nivel do liquido de arrefecimento', category: 'Motor e Fluidos' },
+  { id: 'filtro_ar_limpo', label: 'Filtro de ar limpo', category: 'Motor e Fluidos' },
+  { id: 'vazamentos_hidraulicos', label: 'Verificacao de vazamentos hidraulicos', category: 'Motor e Fluidos' },
+  
+  // SISTEMA HIDRAULICO
+  { id: 'mangueiras_hidraulicas', label: 'Estado das mangueiras hidraulicas', category: 'Sistema Hidraulico' },
+  { id: 'cilindros_hidraulicos', label: 'Funcionamento dos cilindros hidraulicos', category: 'Sistema Hidraulico' },
+  { id: 'comandos_operacionais', label: 'Comandos operacionais funcionando', category: 'Sistema Hidraulico' },
+  
+  // PNEUS E RODAS
+  { id: 'pneus_estado', label: 'Estado geral dos pneus', category: 'Pneus e Rodas' },
+  { id: 'pneus_calibragem', label: 'Calibragem dos pneus', category: 'Pneus e Rodas' },
+  { id: 'parafusos_rodas', label: 'Parafusos das rodas apertados', category: 'Pneus e Rodas' },
+  
+  // SISTEMA DE FREIOS
+  { id: 'freios', label: 'Sistema de freios funcionando', category: 'Sistema de Freios' },
+  
+  // ILUMINACAO E SINALIZACAO
+  { id: 'luzes_funcionando', label: 'Farois e luzes funcionando', category: 'Iluminacao e Sinalizacao' },
+  { id: 'alarme_re', label: 'Alarme de re funcionando', category: 'Iluminacao e Sinalizacao' },
+  { id: 'buzina', label: 'Buzina funcionando', category: 'Iluminacao e Sinalizacao' },
+  
+  // CABINE E SEGURANCA
+  { id: 'cintos_seguranca', label: 'Cintos de seguranca em bom estado', category: 'Cabine e Seguranca' },
+  { id: 'espelhos_retrovisores', label: 'Espelhos retrovisores', category: 'Cabine e Seguranca' },
+  { id: 'limpador_parabrisa', label: 'Limpador de parabrisa funcionando', category: 'Cabine e Seguranca' },
+  { id: 'ar_condicionado', label: 'Ar condicionado funcionando', category: 'Cabine e Seguranca' },
+  { id: 'extintor', label: 'Extintor de incendio presente e valido', category: 'Cabine e Seguranca' },
+  
+  // ESTRUTURA E IMPLEMENTOS
+  { id: 'cacamba_estado', label: 'Estado da cacamba/implemento', category: 'Estrutura e Implementos' },
+  { id: 'dentes_cacamba', label: 'Dentes da cacamba', category: 'Estrutura e Implementos' },
+  { id: 'articulacao_central', label: 'Articulacao central', category: 'Estrutura e Implementos' },
+  { id: 'pinos_buchas', label: 'Pinos e buchas', category: 'Estrutura e Implementos' },
+  
+  // BALANCA (SE APLICAVEL)
+  { id: 'display_balanca', label: 'Display da balanca funcionando', category: 'Balanca' },
+  { id: 'sensores_balanca', label: 'Sensores da balanca', category: 'Balanca' },
+  { id: 'calibracao_balanca', label: 'Calibracao da balanca em dia', category: 'Balanca' },
+  { id: 'cabo_conexao_balanca', label: 'Cabo de conexao da balanca', category: 'Balanca' },
+];
+
+export type ChecklistItemStatus = 'ok' | 'attention' | 'critical' | 'na';
 
 export interface OperatorChecklist {
   id: string;
+  equipment_id: string;
   user_id: string;
   user_name: string;
-  equipment_id: string;
-  nivel_oleo_motor: ChecklistAnswer;
-  nivel_oleo_hidraulico: ChecklistAnswer;
-  nivel_liquido_arrefecimento: ChecklistAnswer;
-  filtro_ar_limpo: ChecklistAnswer;
-  vazamentos_hidraulicos: ChecklistAnswer;
-  mangueiras_hidraulicas: ChecklistAnswer;
-  cilindros_hidraulicos: ChecklistAnswer;
-  cacamba_estado: ChecklistAnswer;
-  dentes_cacamba: ChecklistAnswer;
-  articulacao_central: ChecklistAnswer;
-  pinos_buchas: ChecklistAnswer;
-  pneus_estado: ChecklistAnswer;
-  pneus_calibragem: ChecklistAnswer;
-  parafusos_rodas: ChecklistAnswer;
-  display_balanca: ChecklistAnswer;
-  calibracao_balanca: ChecklistAnswer;
-  sensores_balanca: ChecklistAnswer;
-  cabo_conexao_balanca: ChecklistAnswer;
-  cintos_seguranca: ChecklistAnswer;
-  extintor: ChecklistAnswer;
-  espelhos_retrovisores: ChecklistAnswer;
-  luzes_funcionando: ChecklistAnswer;
-  alarme_re: ChecklistAnswer;
-  limpador_parabrisa: ChecklistAnswer;
-  ar_condicionado: ChecklistAnswer;
-  comandos_operacionais: ChecklistAnswer;
-  freios: ChecklistAnswer;
-  buzina: ChecklistAnswer;
-  has_repairs_needed: boolean;
   created_at: string;
+  has_repairs_needed?: boolean;
+  // Campos dinamicos para cada questao
+  [key: string]: string | boolean | undefined;
 }
-
-export const EQUIPMENT_LIST = [
-  { id: 'PA_CAT_938K', name: 'Pá Carregadeira CAT 938K' },
-  { id: 'PA_CAT_950H', name: 'Pá Carregadeira CAT 950H' },
-] as const;
-
-export const OPERATOR_CHECKLIST_QUESTIONS = [
-  // Motor e Fluidos (4)
-  { key: 'nivel_oleo_motor', question: 'Nível do óleo do motor está OK?', category: 'Motor e Fluidos', icon: '🛢️' },
-  { key: 'nivel_oleo_hidraulico', question: 'Nível do óleo hidráulico está OK?', category: 'Motor e Fluidos', icon: '🛢️' },
-  { key: 'nivel_liquido_arrefecimento', question: 'Nível do líquido de arrefecimento está OK?', category: 'Motor e Fluidos', icon: '🌡️' },
-  { key: 'filtro_ar_limpo', question: 'Filtro de ar está limpo/desobstruído?', category: 'Motor e Fluidos', icon: '💨' },
-  
-  // Sistema Hidráulico (3)
-  { key: 'vazamentos_hidraulicos', question: 'Não há vazamentos no sistema hidráulico?', category: 'Sistema Hidráulico', icon: '💧' },
-  { key: 'mangueiras_hidraulicas', question: 'Mangueiras hidráulicas estão em bom estado?', category: 'Sistema Hidráulico', icon: '🔧' },
-  { key: 'cilindros_hidraulicos', question: 'Cilindros hidráulicos funcionando corretamente?', category: 'Sistema Hidráulico', icon: '⚙️' },
-  
-  // Caçamba e Estrutura (4)
-  { key: 'cacamba_estado', question: 'Caçamba/concha está em bom estado?', category: 'Caçamba e Estrutura', icon: '🪣' },
-  { key: 'dentes_cacamba', question: 'Dentes da caçamba estão em condições de uso?', category: 'Caçamba e Estrutura', icon: '🦷' },
-  { key: 'articulacao_central', question: 'Articulação central funcionando normalmente?', category: 'Caçamba e Estrutura', icon: '🔗' },
-  { key: 'pinos_buchas', question: 'Pinos e buchas estão lubrificados e sem folgas?', category: 'Caçamba e Estrutura', icon: '📍' },
-  
-  // Pneus e Rodas (3)
-  { key: 'pneus_estado', question: 'Pneus estão em bom estado (sem cortes/danos)?', category: 'Pneus e Rodas', icon: '🛞' },
-  { key: 'pneus_calibragem', question: 'Pneus estão com calibragem adequada?', category: 'Pneus e Rodas', icon: '🎯' },
-  { key: 'parafusos_rodas', question: 'Parafusos das rodas estão todos apertados?', category: 'Pneus e Rodas', icon: '🔩' },
-  
-  // Sistema de Pesagem/Balança (4)
-  { key: 'display_balanca', question: 'Display da balança está funcionando e legível?', category: 'Balança de Pesagem', icon: '📟' },
-  { key: 'calibracao_balanca', question: 'Balança foi calibrada/zerada antes de iniciar?', category: 'Balança de Pesagem', icon: '⚖️' },
-  { key: 'sensores_balanca', question: 'Sensores de peso estão limpos e sem obstruções?', category: 'Balança de Pesagem', icon: '📡' },
-  { key: 'cabo_conexao_balanca', question: 'Cabos de conexão da balança estão íntegros?', category: 'Balança de Pesagem', icon: '🔌' },
-  
-  // Cabine e Segurança (7)
-  { key: 'cintos_seguranca', question: 'Cinto de segurança está funcionando?', category: 'Cabine e Segurança', icon: '🪢' },
-  { key: 'extintor', question: 'Extintor de incêndio está presente e válido?', category: 'Cabine e Segurança', icon: '🧯' },
-  { key: 'espelhos_retrovisores', question: 'Espelhos retrovisores estão OK?', category: 'Cabine e Segurança', icon: '🪞' },
-  { key: 'luzes_funcionando', question: 'Luzes (faróis, giroflex, traseiras) funcionando?', category: 'Cabine e Segurança', icon: '💡' },
-  { key: 'alarme_re', question: 'Alarme de ré está funcionando?', category: 'Cabine e Segurança', icon: '🔔' },
-  { key: 'limpador_parabrisa', question: 'Limpador de para-brisa está funcionando?', category: 'Cabine e Segurança', icon: '🌧️' },
-  { key: 'ar_condicionado', question: 'Ar condicionado está funcionando?', category: 'Cabine e Segurança', icon: '❄️' },
-  
-  // Controles (3)
-  { key: 'comandos_operacionais', question: 'Comandos/joysticks respondendo corretamente?', category: 'Controles', icon: '🕹️' },
-  { key: 'freios', question: 'Sistema de freios está funcionando?', category: 'Controles', icon: '🛑' },
-  { key: 'buzina', question: 'Buzina está funcionando?', category: 'Controles', icon: '📢' },
-] as const;
 ```
 
 ---
 
-## LISTA COMPLETA DE ARQUIVOS PARA COPIAR
+## 4. ARQUIVO: src/types/driver.ts (CHECKLIST MOTORISTA + PARTE DIARIA)
 
-Você precisa copiar os seguintes arquivos do projeto ATUAL para o NOVO:
+```typescript
+// Placas de veiculos disponiveis
+export const VEHICLE_PLATES = [
+  'PPO-8F17',
+  'QRC-3844', 
+  'BEE-7B72',
+  'QRE-3J57',
+  'BCF-3786',
+  'QSW-2F07',
+  'RQO-1883',
+  'FLC-9057',
+];
+
+// 21 itens do checklist de seguranca do motorista
+export const SAFETY_CHECKLIST_QUESTIONS = [
+  // DOCUMENTACAO
+  { id: 'documentos_veiculo', label: 'Documentos do veiculo em dia', category: 'Documentacao' },
+  
+  // MOTOR E FLUIDOS
+  { id: 'oleo_motor', label: 'Nivel do oleo do motor', category: 'Motor e Fluidos' },
+  { id: 'oleo_hidraulico', label: 'Nivel do oleo hidraulico (se aplicavel)', category: 'Motor e Fluidos' },
+  { id: 'fluido_freio', label: 'Nivel do fluido de freio', category: 'Motor e Fluidos' },
+  { id: 'agua_radiador', label: 'Nivel da agua do radiador', category: 'Motor e Fluidos' },
+  
+  // PNEUS
+  { id: 'pneus_estado', label: 'Estado geral dos pneus', category: 'Pneus' },
+  { id: 'pneus_calibrados', label: 'Pneus calibrados', category: 'Pneus' },
+  { id: 'estepe_estado', label: 'Estepe em bom estado', category: 'Pneus' },
+  
+  // FREIOS
+  { id: 'freio_servico', label: 'Freio de servico funcionando', category: 'Freios' },
+  { id: 'freio_estacionamento', label: 'Freio de estacionamento', category: 'Freios' },
+  
+  // ILUMINACAO
+  { id: 'farois_funcionando', label: 'Farois funcionando', category: 'Iluminacao' },
+  { id: 'lanternas_funcionando', label: 'Lanternas traseiras funcionando', category: 'Iluminacao' },
+  { id: 'setas_funcionando', label: 'Setas funcionando', category: 'Iluminacao' },
+  
+  // SEGURANCA
+  { id: 'cinto_seguranca', label: 'Cintos de seguranca', category: 'Seguranca' },
+  { id: 'espelhos_retrovisores', label: 'Espelhos retrovisores', category: 'Seguranca' },
+  { id: 'limpador_parabrisa', label: 'Limpador de parabrisa', category: 'Seguranca' },
+  { id: 'buzina', label: 'Buzina funcionando', category: 'Seguranca' },
+  { id: 'extintor_incendio', label: 'Extintor de incendio', category: 'Seguranca' },
+  { id: 'triangulo_sinalizacao', label: 'Triangulo de sinalizacao', category: 'Seguranca' },
+  { id: 'macaco_chave_roda', label: 'Macaco e chave de roda', category: 'Seguranca' },
+  
+  // LIMPEZA
+  { id: 'limpeza_geral', label: 'Limpeza geral do veiculo', category: 'Limpeza' },
+];
+
+export type ChecklistItemStatus = 'ok' | 'attention' | 'critical' | 'na';
+
+export interface SafetyChecklist {
+  id: string;
+  vehicle_plate: string;
+  user_id: string;
+  user_name: string;
+  created_at: string;
+  has_repairs_needed?: boolean;
+  [key: string]: string | boolean | undefined;
+}
+
+export interface DailyReport {
+  id: string;
+  user_id: string;
+  user_name: string;
+  vehicle_plate: string;
+  order_number: string;
+  customer_name: string;
+  km_initial: number;
+  km_final: number;
+  freight_value: number;
+  observation?: string;
+  signature: string;
+  created_at: string;
+}
+
+export interface MaintenanceReport {
+  id: string;
+  user_id: string;
+  user_name: string;
+  vehicle_plate: string;
+  problem_description: string;
+  status: 'pending' | 'in_progress' | 'resolved';
+  resolved_by?: string;
+  resolution_date?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DriverExpense {
+  id: string;
+  user_id: string;
+  user_name: string;
+  vehicle_plate: string;
+  location_equipment: string;
+  amount: number;
+  description?: string;
+  receipt_image_url?: string;
+  created_at: string;
+}
+```
+
+---
+
+## 5. PROXIMO PASSO: COPIAR VIA GIT
+
+A forma mais rapida de copiar todos os arquivos e:
+
+1. **Exporte este projeto para GitHub**
+   - Va em Settings -> Git -> Connect to GitHub
+   - Crie um repositorio
+
+2. **No novo projeto Lovable**
+   - Va em Settings -> Git -> Import from GitHub
+   - Selecione o repositorio que voce criou
+
+Isso copiara TODOS os arquivos automaticamente, incluindo:
+- [OK] 35 rotas configuradas em App.tsx
+- [OK] 8 contexts (Auth, Customer, Product, Sales, Financial, Supplier, Settings, Company)
+- [OK] 9 types (user, customer, product, sales, financial, supplier, vehicle, driver, operator)
+- [OK] Todas as pages (vendas, financeiro, operador, motorista, relatorios)
+- [OK] 8 edge functions
+
+---
+
+## LISTA COMPLETA DE ARQUIVOS A COPIAR
 
 ### Types (9 arquivos)
-- `src/types/user.ts` ✅ (já está no contexto)
-- `src/types/customer.ts` ✅ (já está no contexto)
-- `src/types/product.ts` ✅ (código acima)
-- `src/types/sales.ts` ✅ (já está no contexto)
-- `src/types/financial.ts` ✅ (já está no contexto)
-- `src/types/supplier.ts` ✅ (já está no contexto)
-- `src/types/vehicle.ts` ✅ (já está no contexto)
-- `src/types/driver.ts` ✅ (já está no contexto)
-- `src/types/operator.ts` ✅ (código acima)
+- src/types/user.ts
+- src/types/customer.ts
+- src/types/product.ts (COM DENSIDADE)
+- src/types/sales.ts
+- src/types/financial.ts
+- src/types/supplier.ts
+- src/types/vehicle.ts
+- src/types/driver.ts (21 questoes checklist)
+- src/types/operator.ts (28 questoes checklist)
 
 ### Contexts (8 arquivos)
-- `src/contexts/AuthContext.tsx`
-- `src/contexts/CustomerContext.tsx`
-- `src/contexts/ProductContext.tsx`
-- `src/contexts/SalesContext.tsx`
-- `src/contexts/FinancialContext.tsx`
-- `src/contexts/SupplierContext.tsx`
-- `src/contexts/SettingsContext.tsx`
-- `src/contexts/CompanyContext.tsx`
+- src/contexts/AuthContext.tsx
+- src/contexts/CustomerContext.tsx
+- src/contexts/ProductContext.tsx
+- src/contexts/SalesContext.tsx
+- src/contexts/FinancialContext.tsx
+- src/contexts/SupplierContext.tsx
+- src/contexts/SettingsContext.tsx
+- src/contexts/CompanyContext.tsx
 
-### Pages - Vendas
-- `src/pages/sales/NewSale.tsx` (922 linhas)
-- `src/pages/sales/SalesList.tsx` (732 linhas)
-- `src/components/sales/SalePrintView.tsx`
+### Pages - Vendas (3 arquivos)
+- src/pages/sales/NewSale.tsx (922 linhas)
+- src/pages/sales/SalesList.tsx
+- src/components/sales/SalePrintView.tsx
 
-### Pages - Financeiro
-- `src/pages/financial/AccountsReceivable.tsx` (442 linhas)
-- `src/pages/financial/AccountsPayable.tsx` (684 linhas)
+### Pages - Financeiro (2 arquivos)
+- src/pages/financial/AccountsReceivable.tsx
+- src/pages/financial/AccountsPayable.tsx
 
-### Pages - Produtos
-- `src/pages/products/ProductManagement.tsx` (480 linhas - COM DENSIDADE!)
+### Pages - Produtos (1 arquivo)
+- src/pages/products/ProductManagement.tsx (COM DENSIDADE)
 
-### Pages - Operador
-- `src/pages/operations/OperatorPanel.tsx` (239 linhas)
-- `src/pages/operations/OperatorDashboard.tsx`
-- `src/pages/operations/OperatorChecklist.tsx` (278 linhas)
-- `src/pages/operations/FuelEntry.tsx` (647 linhas)
-- `src/pages/operations/VehicleManagement.tsx`
-- `src/pages/operations/LoadedOrders.tsx`
+### Pages - Operador (4 arquivos)
+- src/pages/operations/OperatorPanel.tsx
+- src/pages/operations/OperatorDashboard.tsx
+- src/pages/operations/OperatorChecklist.tsx
+- src/pages/operations/FuelEntry.tsx
 
-### Pages - Motorista
-- `src/pages/driver/DriverDashboard.tsx` (308 linhas)
-- `src/pages/driver/DailyReport.tsx` (244 linhas)
-- `src/pages/driver/SafetyChecklist.tsx`
-- `src/pages/driver/MaintenanceReport.tsx`
-- `src/pages/driver/ExpenseEntry.tsx`
+### Pages - Motorista (5 arquivos)
+- src/pages/driver/DriverDashboard.tsx
+- src/pages/driver/DailyReport.tsx
+- src/pages/driver/SafetyChecklist.tsx
+- src/pages/driver/MaintenanceReport.tsx
+- src/pages/driver/ExpenseEntry.tsx
 
-### Pages - Relatórios
-- `src/pages/reports/ReportsIndex.tsx`
-- `src/pages/reports/SalesReport.tsx`
-- `src/pages/reports/ProductsReport.tsx`
-- `src/pages/reports/CustomersReport.tsx`
-- `src/pages/reports/FinancialReport.tsx`
-- `src/pages/reports/SuppliersReport.tsx`
-- `src/pages/reports/TickingReport.tsx`
-- `src/pages/reports/CashRegisterReport.tsx`
-- `src/pages/reports/FuelReport.tsx`
-- `src/pages/reports/DailyReportsAdmin.tsx`
-- `src/pages/reports/ChecklistsAdmin.tsx`
-- `src/pages/reports/MaintenanceAdmin.tsx`
-- `src/pages/reports/AIAssistant.tsx`
+### Pages - Relatorios (12 arquivos)
+- src/pages/reports/ReportsIndex.tsx
+- src/pages/reports/SalesReport.tsx
+- src/pages/reports/ProductsReport.tsx
+- src/pages/reports/CustomersReport.tsx
+- src/pages/reports/FinancialReport.tsx
+- src/pages/reports/SuppliersReport.tsx
+- src/pages/reports/TickingReport.tsx
+- src/pages/reports/CashRegisterReport.tsx
+- src/pages/reports/FuelReport.tsx
+- src/pages/reports/DailyReportsAdmin.tsx
+- src/pages/reports/ChecklistsAdmin.tsx
+- src/pages/reports/MaintenanceAdmin.tsx
+- src/pages/reports/AIAssistant.tsx
 
-### Edge Functions
-- `supabase/functions/auth-login/index.ts`
-- `supabase/functions/auth-verify/index.ts`
-- `supabase/functions/auth-hash-password/index.ts`
-- `supabase/functions/business-chat/index.ts`
-- `supabase/functions/analyze-ticket/index.ts`
-- `supabase/functions/analyze-receipt/index.ts`
-- `supabase/functions/analyze-import/index.ts`
-- `supabase/functions/analyze-sales-pdf/index.ts`
-
-### Configuração
-- `supabase/config.toml` (atualizar project_id)
+### Edge Functions (8 arquivos)
+- supabase/functions/auth-login/index.ts
+- supabase/functions/auth-verify/index.ts
+- supabase/functions/auth-hash-password/index.ts
+- supabase/functions/business-chat/index.ts
+- supabase/functions/analyze-ticket/index.ts
+- supabase/functions/analyze-receipt/index.ts
+- supabase/functions/analyze-import/index.ts
+- supabase/functions/analyze-sales-pdf/index.ts
 
 ---
 
-## PRÓXIMO PASSO: COPIAR VIA GIT
+## VERIFICACAO FINAL
 
-A forma mais rápida de copiar todo o código é:
+Apos copiar todos os arquivos, verifique:
 
-1. **Neste projeto**, vá em Settings > Export to GitHub
-2. Exporte para um repositório privado
-3. **No novo projeto**, vá em Settings > Import from GitHub
-4. Importe o repositório
-
-Isso copiará TODOS os arquivos de uma vez, incluindo os que não estão neste documento.
-
----
-
-## VERIFICAÇÃO FINAL
-
-Após copiar os arquivos, verifique:
-
-1. ✅ Login funciona com 001/admin123
-2. ✅ Menu de Vendas aparece com "Nova Venda"
-3. ✅ Produtos têm campo de Densidade
-4. ✅ Financeiro → Contas a Receber funciona
-5. ✅ Financeiro → Contas a Pagar funciona
-6. ✅ Operador → Painel aparece
-7. ✅ Motorista → Parte Diária funciona
-8. ✅ Relatórios têm todos os itens do menu
+1. [x] Produtos tem campo de Densidade
+2. [x] Nova Venda funciona com formulario completo
+3. [x] Contas a Receber mostra lista de vendas a prazo
+4. [x] Contas a Pagar permite cadastrar despesas parceladas
+5. [x] Operador tem checklist de 28 itens
+6. [x] Motorista tem checklist de 21 itens
+7. [x] Parte Diaria permite registrar viagens
+8. [x] Abastecimento permite registrar combustivel
+9. [x] Todos os relatorios estao funcionando
